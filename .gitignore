@@ -1,0 +1,89 @@
+# Python bytecode / cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Poetry
+# Keep poetry.lock committed for reproducible app installs.
+# Do NOT ignore poetry.lock.
+dist/
+build/
+*.egg-info/
+
+# Django / local runtime
+*.log
+logs/
+local_settings.py
+
+# SQLite databases and runtime data
+db.sqlite3
+db.sqlite3-journal
+*.sqlite3
+*.sqlite3-journal
+*.sqlite
+*.sqlite-journal
+
+# Local runtime directories
+data/
+var/
+tmp/
+temp/
+backups/
+
+# Django static/media runtime output
+staticfiles/
+media/
+
+# Environment files / secrets
+.env
+.env.*
+!.env.example
+
+# Google / Gmail OAuth secrets and tokens
+credentials.json
+client_secret*.json
+token.json
+gmail_token*.json
+google_token*.json
+oauth_token*.json
+service-account*.json
+*.pickle
+
+# Telegram / local secret dumps
+secrets/
+*.secret
+*.key
+*.pem
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Systemd local/generated files
+*.service.local
+*.timer.local
+
+# Test / parser fixtures with real emails
+# Keep sanitized fixtures in git under tests/fixtures/.
+real_emails/
+raw_emails/
+private_fixtures/
