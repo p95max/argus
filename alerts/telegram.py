@@ -76,7 +76,7 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
 
     return "\n".join(
         [
-            "🚨 <b>Новое обращение</b>",
+            _build_alert_header(alert),
             f"🆔 <b>ID:</b> {alert.id}",
             f"📌 <b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
             f"👤 <b>Покупатель:</b> {html.escape(buyer)}",
@@ -90,21 +90,54 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
     )
 
 
+def _build_alert_header(alert: MarketplaceAlert) -> str:
+    if alert.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
+        return "🚨 <b>Новое обращение</b>"
+
+    if alert.event_type == MarketplaceAlert.EventType.LISTING_EXPIRING:
+        return "⏳ <b>Kleinanzeigen: объявление истекает</b>"
+
+    if alert.event_type == MarketplaceAlert.EventType.SYSTEM_NOTICE:
+        return "⚙️ <b>Kleinanzeigen: системное уведомление</b>"
+
+    if alert.event_type == MarketplaceAlert.EventType.NOISE:
+        return "🧹 <b>Kleinanzeigen: noise / промо</b>"
+
+    return "📣 <b>Argus alert</b>"
+
+
 def build_system_message(title: str, details: str = "") -> str:
+    icon = _system_message_icon(title, details)
+
     lines = [
-        "<b>Argus: системное уведомление</b>",
-        html.escape(title),
+        f"{icon} <b>Argus: системное уведомление</b>",
+        f"📌 {html.escape(title)}",
     ]
 
     if details:
         lines.extend(
             [
                 "",
-                html.escape(_truncate(details, 1200)),
+                f"🧾 {html.escape(_truncate(details, 1200))}",
             ]
         )
 
     return "\n".join(lines)
+
+
+def _system_message_icon(title: str, details: str = "") -> str:
+    text = f"{title} {details}".lower()
+
+    if "error" in text or "failed" in text or "ошибка" in text:
+        return "🔴"
+
+    if "recovered" in text or "restored" in text or "восстанов" in text:
+        return "🟢"
+
+    if "warning" in text or "partial" in text or "предупреж" in text:
+        return "🟠"
+
+    return "⚙️"
 
 
 def build_mailbox_status_message() -> str:
