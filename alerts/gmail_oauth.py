@@ -66,7 +66,6 @@ def build_gmail_authorization_url(request, mailbox: MailboxAccount) -> str:
 
     authorization_url, _ = flow.authorization_url(
         access_type="offline",
-        include_granted_scopes="true",
         prompt="consent",
         state=state,
         code_challenge=code_challenge,

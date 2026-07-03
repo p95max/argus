@@ -18,7 +18,12 @@ from .models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
 from .parser import parse_kleinanzeigen_email
 
 
-GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+GMAIL_SCOPES = [
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/gmail.readonly",
+]
 logger = logging.getLogger(__name__)
 
 
