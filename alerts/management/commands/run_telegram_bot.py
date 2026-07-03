@@ -30,7 +30,7 @@ class Command(BaseCommand):
         application.add_handler(
             CallbackQueryHandler(
                 handle_alert_callback,
-                pattern=r"^alert:\d+:(in_work|unread|ignored)$",
+                pattern=r"^alert:\d+:(status|in_work|unread|ignored)$",
             )
         )
 

@@ -7,6 +7,7 @@ from alerts.telegram import (
     async_send_telegram_alert,
     build_alert_message,
     build_system_message,
+    handle_alert_callback_action,
     update_alert_status_from_callback,
 )
 
@@ -125,3 +126,30 @@ def test_update_alert_status_rejects_unknown_user(monkeypatch, alert):
             chat_id="42",
             user_id="999",
         )
+
+
+@pytest.mark.django_db
+def test_status_callback_does_not_change_alert_status(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+
+    alert.alert_status = MarketplaceAlert.AlertStatus.UNREAD
+    alert.save(update_fields=["alert_status", "updated_at"])
+
+    result = handle_alert_callback_action(
+        f"alert:{alert.id}:status",
+        chat_id="42",
+    )
+
+    alert.refresh_from_db()
+
+    assert alert.alert_status == MarketplaceAlert.AlertStatus.UNREAD
+    assert result.status_changed is False
+    assert "Новое" in result.answer_text
+
+
+@pytest.mark.django_db
+def test_build_alert_message_contains_status(alert):
+    message = build_alert_message(alert)
+
+    assert "Статус" in message
+    assert alert.get_alert_status_display() in message
