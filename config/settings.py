@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +34,18 @@ def env_bool(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def env_int(name: str, default: int) -> int:
+    value = os.environ.get(name)
+
+    if value is None:
+        return default
+
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise ImproperlyConfigured(f"{name} must be an integer.") from exc
+
+
 def env_list(name: str, default: list[str] | None = None) -> list[str]:
     value = os.environ.get(name)
     if value is None:
@@ -63,6 +76,8 @@ CORS_ALLOWED_ORIGINS = env_list("DJANGO_CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_ALL_ORIGINS = env_bool("DJANGO_CORS_ALLOW_ALL_ORIGINS", default=False)
 DJANGO_ADMIN_URL = env_path("DJANGO_ADMIN_URL", "control")
 GOOGLE_OAUTH_REDIRECT_URI = os.environ.get("GOOGLE_OAUTH_REDIRECT_URI", "").strip()
+GMAIL_CHECK_MAX_RESULTS = env_int("GMAIL_CHECK_MAX_RESULTS", 25)
+GMAIL_CHECK_FAIL_ON_ERROR = env_bool("GMAIL_CHECK_FAIL_ON_ERROR", default=False)
 
 
 # Application definition

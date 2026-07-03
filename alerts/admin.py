@@ -139,7 +139,7 @@ class MailboxAccountAdmin(admin.ModelAdmin):
                     <i class="fas fa-plug"></i> OAuth
                 </a>
                 <a class="btn btn-sm btn-outline-success" href="{}">
-                    <i class="fas fa-play"></i> Check
+                    <i class="fas fa-play"></i> Check updates
                 </a>
                 <a class="btn btn-sm btn-outline-danger" href="{}">
                     <i class="fas fa-times"></i> Disconnect
