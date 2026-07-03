@@ -29,6 +29,8 @@ env = environ.Env(
     GMAIL_CHECK_MAX_RESULTS=(int, 25),
     GMAIL_CHECK_FAIL_ON_ERROR=(bool, False),
     TELEGRAM_SEND_ON_GMAIL_CHECK=(bool, False),
+    DATABASE_CONN_MAX_AGE=(int, 60),
+    DATABASE_CONN_HEALTH_CHECKS=(bool, True),
 )
 
 environ.Env.read_env(BASE_DIR / ".env", overwrite=False)
@@ -180,12 +182,34 @@ TEMPLATES = [
 # Database
 # =============================================================================
 
-DATABASES = {
-    "default": env.db(
-        "DATABASE_URL",
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-    )
-}
+DATABASE_URL = env.str("DATABASE_URL", default="").strip()
+DATABASE_CONN_MAX_AGE = env.int("DATABASE_CONN_MAX_AGE", default=60)
+DATABASE_CONN_HEALTH_CHECKS = env.bool("DATABASE_CONN_HEALTH_CHECKS", default=True)
+
+if DEBUG:
+    if DATABASE_URL:
+        DATABASES = {
+            "default": env.db_url_config(DATABASE_URL),
+        }
+    else:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
+else:
+    if not DATABASE_URL:
+        raise ImproperlyConfigured(
+            "DATABASE_URL must be configured when DJANGO_DEBUG=False."
+        )
+
+    DATABASES = {
+        "default": env.db_url_config(DATABASE_URL),
+    }
+
+    DATABASES["default"]["CONN_MAX_AGE"] = DATABASE_CONN_MAX_AGE
+    DATABASES["default"]["CONN_HEALTH_CHECKS"] = DATABASE_CONN_HEALTH_CHECKS
 
 
 # =============================================================================
