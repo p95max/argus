@@ -14,8 +14,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from .models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
-from .parser import parse_kleinanzeigen_email
+from ..models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
+from ..parser import parse_kleinanzeigen_email
 
 
 GMAIL_SCOPES = [
@@ -292,9 +292,9 @@ def _send_telegram_if_enabled(alert: MarketplaceAlert | None) -> None:
     if alert is None:
         return
 
-    from .telegram.config import get_telegram_config
-    from .telegram.messages import should_send_telegram_for_alert
-    from .telegram.sender import send_telegram_alert
+    from ..telegram.config import get_telegram_config
+    from ..telegram.messages import should_send_telegram_for_alert
+    from ..telegram.sender import send_telegram_alert
 
     if not get_telegram_config().send_on_gmail_check or not should_send_telegram_for_alert(alert):
         return

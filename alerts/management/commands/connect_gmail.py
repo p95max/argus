@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from alerts.gmail import connect_gmail, gmail_credentials_paths
+from alerts.gmail.gmail import connect_gmail, gmail_credentials_paths
 
 
 class Command(BaseCommand):

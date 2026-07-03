@@ -4,7 +4,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from alerts.gmail import MailboxCheckResult
+from alerts.gmail.gmail import MailboxCheckResult
 from alerts.models import MailboxAccount
 
 

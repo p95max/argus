@@ -2,7 +2,7 @@ import base64
 
 import pytest
 
-from alerts.gmail import GmailMessage, check_mailbox, parse_gmail_api_message, process_gmail_message
+from alerts.gmail.gmail import GmailMessage, check_mailbox, parse_gmail_api_message, process_gmail_message
 from alerts.models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
 from alerts.seed_data import seed_lead_flags
 

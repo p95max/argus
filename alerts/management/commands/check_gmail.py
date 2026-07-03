@@ -2,7 +2,7 @@ import logging
 
 from django.core.management.base import BaseCommand, CommandError
 
-from alerts.gmail import check_mailbox
+from alerts.gmail.gmail import check_mailbox
 from alerts.models import MailboxAccount
 
 

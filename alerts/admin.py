@@ -8,8 +8,8 @@ from django.urls import path, reverse
 
 from .models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
-from .gmail import check_mailbox
-from .gmail_oauth import build_gmail_authorization_url, complete_gmail_oauth_callback
+from .gmail.gmail import check_mailbox
+from .gmail.gmail_oauth import build_gmail_authorization_url, complete_gmail_oauth_callback
 from .models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
 

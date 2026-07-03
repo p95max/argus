@@ -6,7 +6,7 @@ from django.test import RequestFactory
 from django.urls import reverse
 from django.utils import timezone
 
-from alerts.gmail_oauth import (
+from alerts.gmail.gmail_oauth import (
     OAUTH_CODE_VERIFIER_SESSION_KEY,
     OAUTH_STATE_SESSION_KEY,
     build_gmail_authorization_url,

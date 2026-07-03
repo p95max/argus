@@ -14,7 +14,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
 from .gmail import GMAIL_SCOPES, gmail_credentials_paths
-from .models import MailboxAccount
+from ..models import MailboxAccount
 
 
 OAUTH_STATE_SALT = "argus.gmail.admin.oauth"
