@@ -8,6 +8,7 @@ Argus is a Django-based monitoring tool for Gmail alerts from Kleinanzeigen, wit
 poetry install
 copy .env.example .env.local
 poetry run python manage.py migrate
+poetry run python manage.py init_dev
 poetry run python manage.py runserver
 ```
 
@@ -18,3 +19,8 @@ curl http://127.0.0.1:8000/health/
 ```
 
 The Django Admin URL is configured with `DJANGO_ADMIN_URL` and defaults to `/control/`.
+The Admin UI uses Jazzmin with the standard dark `darkly` theme.
+
+For local development, `init_dev` creates or updates a single admin user from
+`DEV_ADMIN_USERNAME`, `DEV_ADMIN_EMAIL`, and `DEV_ADMIN_PASSWORD` in `.env.local`.
+The command is idempotent and only runs with `DEBUG=True`.
