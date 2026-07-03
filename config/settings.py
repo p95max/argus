@@ -87,7 +87,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -184,7 +184,7 @@ JAZZMIN_SETTINGS = {
 
 JAZZMIN_UI_TWEAKS = {
     "theme": "darkly",
-    "dark_mode_theme": "darkly",
+    "default_theme_mode": "dark",
     "navbar": "navbar-dark",
     "sidebar": "sidebar-dark-primary",
     "accent": "accent-info",
