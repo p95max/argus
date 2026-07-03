@@ -76,16 +76,16 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
 
     return "\n".join(
         [
-            "<b>Новое обращение</b>",
-            f"<b>ID:</b> {alert.id}",
-            f"<b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
-            f"<b>Покупатель:</b> {html.escape(buyer)}",
-            f"<b>Объявление:</b> {html.escape(title)}",
-            f"<b>Приоритет:</b> {html.escape(alert.get_priority_display())}",
-            f"<b>Тип:</b> {html.escape(alert.get_event_type_display())}",
-            f"<b>Флаги:</b> {html.escape(flags)}",
+            "🚨 <b>Новое обращение</b>",
+            f"🆔 <b>ID:</b> {alert.id}",
+            f"📌 <b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
+            f"👤 <b>Покупатель:</b> {html.escape(buyer)}",
+            f"🚗 <b>Объявление:</b> {html.escape(title)}",
+            f"🔥 <b>Приоритет:</b> {html.escape(alert.get_priority_display())}",
+            f"🏷️ <b>Тип:</b> {html.escape(alert.get_event_type_display())}",
+            f"🚩 <b>Флаги:</b> {html.escape(flags)}",
             "",
-            html.escape(_truncate(message, 1200)),
+            f"💬 {html.escape(_truncate(message, 1200))}",
         ]
     )
 
@@ -143,24 +143,41 @@ def build_mailbox_status_message() -> str:
         last_error = mailbox.last_error or "нет"
         lines.extend(
             [
-                f"<b>{html.escape(mailbox.name)}</b>",
-                f"Email: <code>{html.escape(mailbox.email)}</code>",
-                f"Активен: {'да' if mailbox.is_active else 'нет'}",
-                f"Подключение: {html.escape(mailbox.get_connection_status_display())}",
-                f"Последняя проверка: {_format_dt(mailbox.last_checked_at)}",
-                f"Последний успех: {_format_dt(mailbox.last_success_at)}",
-                f"Ошибка: {html.escape(_truncate(last_error, 220))}",
+                f"📬 <b>{html.escape(mailbox.name)}</b>",
+                f"✉️ Email: <code>{html.escape(mailbox.email)}</code>",
+                f"🩺 Health: {_build_mailbox_health_label(mailbox)}",
+                f"🔌 Активен: {'да' if mailbox.is_active else 'нет'}",
+                f"🔐 Подключение: {html.escape(mailbox.get_connection_status_display())}",
+                f"🕒 Последняя проверка: {_format_dt(mailbox.last_checked_at)}",
+                f"✅ Последний успех: {_format_dt(mailbox.last_success_at)}",
+                f"⚠️ Ошибка: {html.escape(_truncate(last_error, 220))}",
                 (
-                    "Alerts: "
+                    "📊 Alerts: "
                     f"сегодня {mailbox.today_alerts}, "
-                    f"новые {mailbox.unread_alerts}, "
-                    f"в работе {mailbox.in_work_alerts}"
+                    f"🆕 новые {mailbox.unread_alerts}, "
+                    f"🛠️ в работе {mailbox.in_work_alerts}"
                 ),
                 "",
             ]
         )
 
     return "\n".join(lines).strip()
+
+
+def _build_mailbox_health_label(mailbox: MailboxAccount) -> str:
+    if mailbox.connection_status == MailboxAccount.ConnectionStatus.ERROR:
+        return "ERROR"
+
+    if mailbox.last_error:
+        return "WARNING"
+
+    if mailbox.last_checked_at and mailbox.last_success_at:
+        return "OK"
+
+    if mailbox.gmail_oauth_token:
+        return "OAUTH ONLY"
+
+    return "NOT READY"
 
 
 def build_daily_summary_message() -> str:
@@ -639,6 +656,22 @@ def _format_dt(value) -> str:
         return "—"
 
     return timezone.localtime(value).strftime("%d.%m.%Y %H:%M")
+
+
+def _build_mailbox_health_label(mailbox: MailboxAccount) -> str:
+    if mailbox.connection_status == MailboxAccount.ConnectionStatus.ERROR:
+        return "🔴 ERROR"
+
+    if mailbox.last_error:
+        return "🟠 WARNING"
+
+    if mailbox.last_checked_at and mailbox.last_success_at:
+        return "🟢 OK"
+
+    if mailbox.gmail_oauth_token:
+        return "🟡 OAUTH ONLY"
+
+    return "⚪ NOT READY"
 
 
 def _truncate(value: str, limit: int) -> str:
