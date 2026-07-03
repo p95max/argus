@@ -27,15 +27,43 @@ The command is idempotent, seeds starter classification flags/demo alerts, and o
 
 ## Gmail MVP
 
-Place your Google OAuth client secrets file at `GOOGLE_CLIENT_SECRETS_FILE`, then run:
+Place your Google OAuth client secrets file at `GOOGLE_CLIENT_SECRETS_FILE`.
+
+```env
+GOOGLE_CLIENT_SECRETS_FILE=secrets/google/credentials.json
+```
+
+Create a mailbox in Django Admin, then open the mailbox page and click:
+
+```text
+Connect / Reconnect
+```
+
+Argus stores the OAuth token per `MailboxAccount`, so each mailbox is connected and refreshed independently.
+
+To check Gmail manually for all active mailboxes:
 
 ```bash
-poetry run python manage.py connect_gmail
-poetry run python manage.py check_gmail --max-results 10
+poetry run python manage.py check_gmail --max-results 25
+```
+
+To check one mailbox only:
+
+```bash
+poetry run python manage.py check_gmail --mailbox email@example.com --max-results 25
 ```
 
 `check_gmail` reads active mailboxes, skips already processed Gmail message IDs, creates alerts, and updates mailbox health fields.
-Use `--mailbox email@example.com` to check one mailbox; without it, all active mailboxes are checked.
+
+For production, run `check_gmail` from an external scheduler, for example a systemd timer every 5 minutes.
+
+Recommended production command:
+
+```bash
+python manage.py check_gmail --max-results 25 --fail-on-error
+```
+
+Legacy local OAuth through `connect_gmail` and `GOOGLE_TOKEN_FILE` is intended only for local debugging, not as the main production flow.
 
 ## Telegram MVP
 
