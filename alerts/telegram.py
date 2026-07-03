@@ -73,17 +73,18 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
     buyer = alert.buyer_name or "Неизвестно"
     message = alert.message_text or alert.normalized_body or alert.raw_body or "Текст не найден"
     flags = ", ".join(alert.flags.values_list("name", flat=True)) or "нет"
+    event_time = alert.received_at or alert.created_at
 
     return "\n".join(
         [
             _build_alert_header(alert),
-            f"📅 <b>Дата:</b> {_format_date(today)}",
-            f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
+            f"📅 <b>Дата:</b> {_format_date_from_datetime(event_time)}",
+            f"🕒 <b>Время:</b> {_format_time(event_time)}",
             f"🆔 <b>ID:</b> {alert.id}",
             f"📌 <b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
             f"👤 <b>Покупатель:</b> {html.escape(buyer)}",
             f"🚗 <b>Объявление:</b> {html.escape(title)}",
-            f"🔥 <b>Приоритет:</b> {html.escape(alert.get_priority_display())}",
+            f"{_priority_emoji(alert)} <b>Приоритет:</b> {html.escape(alert.get_priority_display())}",
             f"🏷️ <b>Тип:</b> {html.escape(alert.get_event_type_display())}",
             f"🚩 <b>Флаги:</b> {html.escape(flags)}",
             "",
@@ -695,6 +696,13 @@ def _format_date(value) -> str:
     return value.strftime("%d.%m.%Y")
 
 
+def _format_date_from_datetime(value) -> str:
+    if value is None:
+        return "—"
+
+    return timezone.localtime(value).strftime("%d.%m.%Y")
+
+
 def _format_time(value) -> str:
     if value is None:
         return "—"
@@ -710,8 +718,23 @@ def _format_dt(value) -> str:
     if value is None:
         return "—"
 
+    return timezone.localtime(value).strftime("%d.%m.%Y %H:%M")
+    if value is None:
+        return "—"
+
     return timezone.localtime(value).strftime("%H:%M")
 
+def _priority_emoji(alert: MarketplaceAlert) -> str:
+    if alert.priority == MarketplaceAlert.Priority.URGENT:
+        return "🔴"
+
+    if alert.priority == MarketplaceAlert.Priority.HIGH:
+        return "🔥"
+
+    if alert.priority == MarketplaceAlert.Priority.NORMAL:
+        return "🔵"
+
+    return "⚪"
 
 def _build_mailbox_health_label(mailbox: MailboxAccount) -> str:
     if mailbox.connection_status == MailboxAccount.ConnectionStatus.ERROR:
