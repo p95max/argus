@@ -47,7 +47,7 @@ def alert(db):
 def test_build_alert_message_contains_main_details(alert):
     message = build_alert_message(alert)
 
-    assert "Новое обращение" in message
+    assert "<b>Новое обращение</b>" in message
     assert "Max" in message
     assert "BMW 320d Touring" in message
     assert "Ich kann heute" in message
@@ -153,3 +153,47 @@ def test_build_alert_message_contains_status(alert):
 
     assert "Статус" in message
     assert alert.get_alert_status_display() in message
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_send_telegram_alert_saves_telegram_delivery(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
+
+    bot = FakeTelegramBot()
+
+    asyncio.run(
+        async_send_telegram_alert(
+            alert,
+            chat_id="42",
+            bot=bot,
+        )
+    )
+
+    alert.refresh_from_db()
+
+    assert bot.calls[0]["chat_id"] == "42"
+    assert bot.calls[0]["reply_markup"] is not None
+    assert alert.telegram_chat_id == "42"
+    assert alert.telegram_message_id == "987"
+    assert alert.telegram_sent_at is not None
+    assert alert.telegram_error == ""
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_send_telegram_alert_saves_error(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
+
+    with pytest.raises(RuntimeError, match="telegram is down"):
+        asyncio.run(
+            async_send_telegram_alert(
+                alert,
+                chat_id="42",
+                bot=BrokenTelegramBot(),
+            )
+        )
+
+    alert.refresh_from_db()
+
+    assert alert.telegram_error == "telegram is down"

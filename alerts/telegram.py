@@ -75,7 +75,7 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
 
     return "\n".join(
         [
-            "<b>Обращение Argus</b>",
+            "<b>Новое обращение</b>",
             f"<b>ID:</b> {alert.id}",
             f"<b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
             f"<b>Покупатель:</b> {html.escape(buyer)}",
