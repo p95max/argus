@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import html
 
 from django.db.models import Count, Q
@@ -87,25 +89,12 @@ def _system_message_icon(title: str, details: str = "") -> str:
 
 def build_mailbox_status_message() -> str:
     today = timezone.localdate()
-
-    mailboxes = (
-        MailboxAccount.objects.filter(is_active=True)
-        .annotate(
-            today_alerts=Count(
-                "alerts",
-                filter=Q(alerts__created_at__date=today),
-            ),
-            unread_alerts=Count(
-                "alerts",
-                filter=Q(alerts__alert_status=MarketplaceAlert.AlertStatus.UNREAD),
-            ),
-            in_work_alerts=Count(
-                "alerts",
-                filter=Q(alerts__alert_status=MarketplaceAlert.AlertStatus.IN_WORK),
-            ),
-        )
-        .order_by("email")
+    day_start = timezone.make_aware(
+        timezone.datetime.combine(today, timezone.datetime.min.time())
     )
+    day_end = day_start + timedelta(days=1)
+
+    mailboxes = MailboxAccount.objects.filter(is_active=True).order_by("email")
 
     lines = [
         "📡 <b>Argus: статус ящиков</b>",
@@ -114,12 +103,28 @@ def build_mailbox_status_message() -> str:
         "",
     ]
 
-    if not mailboxes:
-        lines.append("⚠️Активных ящиков нет.")
+    if not mailboxes.exists():
+        lines.append("⚠️ Активных ящиков нет.")
         return "\n".join(lines)
 
     for mailbox in mailboxes:
+        mailbox_alerts = MarketplaceAlert.objects.filter(mailbox=mailbox)
+
+        today_alerts = mailbox_alerts.filter(
+            created_at__gte=day_start,
+            created_at__lt=day_end,
+        ).count()
+
+        unread_alerts = mailbox_alerts.filter(
+            alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+        ).count()
+
+        in_work_alerts = mailbox_alerts.filter(
+            alert_status=MarketplaceAlert.AlertStatus.IN_WORK,
+        ).count()
+
         last_error = mailbox.last_error or "нет"
+
         lines.extend(
             [
                 f"📬 <b>{html.escape(mailbox.name)}</b>",
@@ -132,9 +137,9 @@ def build_mailbox_status_message() -> str:
                 f"⚠️ Ошибка: {html.escape(_truncate(last_error, 220))}",
                 (
                     "📊 Alerts: "
-                    f"сегодня {mailbox.today_alerts}, "
-                    f"🆕 новые {mailbox.unread_alerts}, "
-                    f"🛠️ в работе {mailbox.in_work_alerts}"
+                    f"сегодня {today_alerts}, "
+                    f"🆕 новые {unread_alerts}, "
+                    f"🛠️ в работе {in_work_alerts}"
                 ),
                 "",
             ]

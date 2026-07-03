@@ -85,7 +85,7 @@ def test_build_gmail_authorization_url_stores_state_and_pkce(
 
     monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(credentials_file))
     monkeypatch.setenv("GOOGLE_TOKEN_FILE", str(tmp_path / "token.json"))
-    monkeypatch.setattr("alerts.gmail_oauth.Flow", FakeFlow)
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
 
     settings.GOOGLE_OAUTH_REDIRECT_URI = (
         "http://127.0.0.1:8000/control/alerts/mailboxaccount/oauth/callback/"
@@ -124,8 +124,8 @@ def test_complete_gmail_oauth_callback_saves_mailbox_token(
 
     monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(credentials_file))
     monkeypatch.setenv("GOOGLE_TOKEN_FILE", str(tmp_path / "token.json"))
-    monkeypatch.setattr("alerts.gmail_oauth.Flow", FakeFlow)
-    monkeypatch.setattr("alerts.gmail_oauth.fetch_google_email", lambda credentials: mailbox.email)
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.fetch_google_email", lambda credentials: mailbox.email)
 
     settings.GOOGLE_OAUTH_REDIRECT_URI = (
         "http://127.0.0.1:8000/control/alerts/mailboxaccount/oauth/callback/"
@@ -200,7 +200,7 @@ def test_complete_gmail_oauth_callback_rejects_missing_code_verifier(
 
     monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(credentials_file))
     monkeypatch.setenv("GOOGLE_TOKEN_FILE", str(tmp_path / "token.json"))
-    monkeypatch.setattr("alerts.gmail_oauth.Flow", FakeFlow)
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
 
     settings.GOOGLE_OAUTH_REDIRECT_URI = (
         "http://127.0.0.1:8000/control/alerts/mailboxaccount/oauth/callback/"
@@ -241,8 +241,8 @@ def test_complete_gmail_oauth_callback_rejects_wrong_google_account(
 
     monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(credentials_file))
     monkeypatch.setenv("GOOGLE_TOKEN_FILE", str(tmp_path / "token.json"))
-    monkeypatch.setattr("alerts.gmail_oauth.Flow", FakeFlow)
-    monkeypatch.setattr("alerts.gmail_oauth.fetch_google_email", lambda credentials: "other@example.com")
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.fetch_google_email", lambda credentials: "other@example.com")
 
     settings.GOOGLE_OAUTH_REDIRECT_URI = (
         "http://127.0.0.1:8000/control/alerts/mailboxaccount/oauth/callback/"
