@@ -77,6 +77,8 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
     return "\n".join(
         [
             _build_alert_header(alert),
+            f"📅 <b>Дата:</b> {_format_date(today)}",
+            f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
             f"🆔 <b>ID:</b> {alert.id}",
             f"📌 <b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
             f"👤 <b>Покупатель:</b> {html.escape(buyer)}",
@@ -163,13 +165,14 @@ def build_mailbox_status_message() -> str:
     )
 
     lines = [
-        "<b>Argus: статус ящиков</b>",
-        f"<b>Дата:</b> {today.isoformat()}",
+        "📡 <b>Argus: статус ящиков</b>",
+        f"📅 <b>Дата:</b> {_format_date(today)}",
+        f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
         "",
     ]
 
     if not mailboxes:
-        lines.append("Активных ящиков нет.")
+        lines.append("⚠️Активных ящиков нет.")
         return "\n".join(lines)
 
     for mailbox in mailboxes:
@@ -281,7 +284,8 @@ def build_daily_summary_message() -> str:
     return "\n".join(
         [
             "<b>Argus: дневная сводка</b>",
-            f"<b>Дата:</b> {today.isoformat()}",
+            f"📅 <b>Дата:</b> {_format_date(today)}",
+            f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
             "",
             f"Всего событий сегодня: {counts['total']}",
             f"Сообщения покупателей: {counts['buyer_messages']}",
@@ -684,11 +688,29 @@ async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
         raise
 
 
+def _format_date(value) -> str:
+    if value is None:
+        return "—"
+
+    return value.strftime("%d.%m.%Y")
+
+
+def _format_time(value) -> str:
+    if value is None:
+        return "—"
+
+    return timezone.localtime(value).strftime("%H:%M")
+
+
 def _format_dt(value) -> str:
     if value is None:
         return "—"
 
     return timezone.localtime(value).strftime("%d.%m.%Y %H:%M")
+    if value is None:
+        return "—"
+
+    return timezone.localtime(value).strftime("%H:%M")
 
 
 def _build_mailbox_health_label(mailbox: MailboxAccount) -> str:
