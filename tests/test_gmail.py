@@ -112,6 +112,27 @@ def test_check_mailbox_updates_success_health(mailbox):
 
 
 @pytest.mark.django_db
+def test_check_mailbox_sends_telegram_when_enabled(monkeypatch, mailbox):
+    sent = []
+    monkeypatch.setenv("TELEGRAM_SEND_ON_GMAIL_CHECK", "True")
+    monkeypatch.setattr("alerts.telegram.send_telegram_alert", lambda alert: sent.append(alert.id))
+
+    check_mailbox(
+        mailbox,
+        messages=[
+            GmailMessage(
+                message_id="gmail-telegram",
+                thread_id="thread-telegram",
+                subject='Neue Nachricht von Anna zu "Audi A4"',
+                body="Von: Anna\nNachricht: Noch verfÃ¼gbar?\nAnzeigen-ID: 777888999",
+            )
+        ],
+    )
+
+    assert sent == [MarketplaceAlert.objects.get().id]
+
+
+@pytest.mark.django_db
 def test_check_mailbox_updates_error_health(mailbox):
     class BrokenService:
         pass

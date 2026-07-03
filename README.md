@@ -36,3 +36,26 @@ poetry run python manage.py check_gmail --max-results 10
 
 `check_gmail` reads active mailboxes, skips already processed Gmail message IDs, creates alerts, and updates mailbox health fields.
 Use `--mailbox email@example.com` to check one mailbox; without it, all active mailboxes are checked.
+
+## Telegram MVP
+
+Set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_DEFAULT_CHAT_ID`, and `TELEGRAM_ALLOWED_CHAT_IDS` in `.env.local`.
+To send one existing alert manually:
+
+```bash
+poetry run python manage.py send_telegram_alert 1
+```
+
+To send an operational message:
+
+```bash
+poetry run python manage.py send_telegram_system "Argus is running"
+```
+
+To process inline buttons (`В работу`, `Снять / не в работе`, `Игнор`), run:
+
+```bash
+poetry run python manage.py run_telegram_bot
+```
+
+Automatic sending from Gmail checks is off by default. Enable it with `TELEGRAM_SEND_ON_GMAIL_CHECK=True`.

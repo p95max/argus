@@ -142,6 +142,10 @@ class MarketplaceAlert(TimestampedModel):
 
     gmail_message_id = models.CharField("Gmail message ID", max_length=255, blank=True)
     gmail_thread_id = models.CharField("Gmail thread ID", max_length=255, blank=True)
+    telegram_chat_id = models.CharField("Telegram chat ID", max_length=64, blank=True)
+    telegram_message_id = models.CharField("Telegram message ID", max_length=64, blank=True)
+    telegram_sent_at = models.DateTimeField("отправлено в Telegram", null=True, blank=True)
+    telegram_error = models.TextField("ошибка Telegram", blank=True)
     received_at = models.DateTimeField("получено", null=True, blank=True)
     processed_at = models.DateTimeField("обработано", default=timezone.now)
 

@@ -114,6 +114,10 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
     readonly_fields = (
         "gmail_message_id",
         "gmail_thread_id",
+        "telegram_chat_id",
+        "telegram_message_id",
+        "telegram_sent_at",
+        "telegram_error",
         "created_at",
         "updated_at",
         "processed_at",
@@ -165,6 +169,10 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
                 "fields": (
                     "gmail_message_id",
                     "gmail_thread_id",
+                    "telegram_chat_id",
+                    "telegram_message_id",
+                    "telegram_sent_at",
+                    "telegram_error",
                     "received_at",
                     "processed_at",
                     "created_at",

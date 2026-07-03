@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 import base64
+import logging
 import os
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from .parser import parse_kleinanzeigen_email
 
 
 GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -153,6 +155,7 @@ def check_mailbox(
                 duplicates += 1
             elif result.created:
                 created += 1
+                _send_telegram_if_enabled(result.alert)
 
         mailbox.connection_status = MailboxAccount.ConnectionStatus.CONNECTED
         mailbox.last_success_at = timezone.now()
@@ -208,6 +211,21 @@ def process_gmail_message(mailbox: MailboxAccount, message: GmailMessage) -> Pro
         received_at=message.received_at,
     )
     return ProcessedGmailResult(created=True, duplicate=False, alert=alert, processed_email=processed_email)
+
+
+def _send_telegram_if_enabled(alert: MarketplaceAlert | None) -> None:
+    if alert is None:
+        return
+
+    from .telegram import get_telegram_config, send_telegram_alert, should_send_telegram_for_alert
+
+    if not get_telegram_config().send_on_gmail_check or not should_send_telegram_for_alert(alert):
+        return
+
+    try:
+        send_telegram_alert(alert)
+    except Exception:
+        logger.exception("Telegram alert send failed for alert %s", alert.id)
 
 
 def _resolve_paths(credentials_file: Path | None, token_file: Path | None) -> tuple[Path, Path]:

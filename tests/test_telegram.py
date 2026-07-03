@@ -1,0 +1,100 @@
+import asyncio
+
+import pytest
+
+from alerts.models import MailboxAccount, MarketplaceAlert
+from alerts.telegram import (
+    async_send_telegram_alert,
+    build_alert_message,
+    build_system_message,
+    update_alert_status_from_callback,
+)
+
+
+class FakeTelegramMessage:
+    message_id = 987
+
+
+class FakeTelegramBot:
+    def __init__(self):
+        self.calls = []
+
+    async def send_message(self, **kwargs):
+        self.calls.append(kwargs)
+        return FakeTelegramMessage()
+
+
+class BrokenTelegramBot:
+    async def send_message(self, **kwargs):
+        raise RuntimeError("telegram is down")
+
+
+@pytest.fixture
+def alert(db):
+    mailbox = MailboxAccount.objects.create(name="Inbox", email="inbox@example.local")
+    return MarketplaceAlert.objects.create(
+        mailbox=mailbox,
+        buyer_name="Max",
+        listing_title="BMW 320d Touring",
+        message_text="Ich kann heute zur Besichtigung kommen.",
+        priority=MarketplaceAlert.Priority.HIGH,
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+    )
+
+
+@pytest.mark.django_db
+def test_build_alert_message_contains_main_details(alert):
+    message = build_alert_message(alert)
+
+    assert "Новое обращение" in message
+    assert "Max" in message
+    assert "BMW 320d Touring" in message
+    assert "Ich kann heute" in message
+
+
+def test_build_system_message_escapes_html():
+    message = build_system_message("Gmail error", "<bad>")
+
+    assert "Argus: системное уведомление" in message
+    assert "&lt;bad&gt;" in message
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_send_telegram_alert_saves_telegram_delivery(alert):
+    bot = FakeTelegramBot()
+
+    asyncio.run(async_send_telegram_alert(alert, chat_id="42", bot=bot))
+
+    alert.refresh_from_db()
+    assert bot.calls[0]["chat_id"] == "42"
+    assert bot.calls[0]["reply_markup"] is not None
+    assert alert.telegram_chat_id == "42"
+    assert alert.telegram_message_id == "987"
+    assert alert.telegram_sent_at is not None
+    assert alert.telegram_error == ""
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_send_telegram_alert_saves_error(alert):
+    with pytest.raises(RuntimeError, match="telegram is down"):
+        asyncio.run(async_send_telegram_alert(alert, chat_id="42", bot=BrokenTelegramBot()))
+
+    alert.refresh_from_db()
+    assert alert.telegram_error == "telegram is down"
+
+
+@pytest.mark.django_db
+def test_update_alert_status_from_allowed_callback(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+
+    updated = update_alert_status_from_callback(f"alert:{alert.id}:in_work", chat_id="42")
+
+    assert updated.alert_status == MarketplaceAlert.AlertStatus.IN_WORK
+
+
+@pytest.mark.django_db
+def test_update_alert_status_rejects_unknown_chat(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+
+    with pytest.raises(PermissionError):
+        update_alert_status_from_callback(f"alert:{alert.id}:ignored", chat_id="99")
