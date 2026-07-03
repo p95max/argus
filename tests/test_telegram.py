@@ -98,3 +98,30 @@ def test_update_alert_status_rejects_unknown_chat(monkeypatch, alert):
 
     with pytest.raises(PermissionError):
         update_alert_status_from_callback(f"alert:{alert.id}:ignored", chat_id="99")
+
+
+@pytest.mark.django_db
+def test_update_alert_status_accepts_allowed_user(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "100")
+
+    updated = update_alert_status_from_callback(
+        f"alert:{alert.id}:in_work",
+        chat_id="42",
+        user_id="100",
+    )
+
+    assert updated.alert_status == MarketplaceAlert.AlertStatus.IN_WORK
+
+
+@pytest.mark.django_db
+def test_update_alert_status_rejects_unknown_user(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "100")
+
+    with pytest.raises(PermissionError):
+        update_alert_status_from_callback(
+            f"alert:{alert.id}:ignored",
+            chat_id="42",
+            user_id="999",
+        )
