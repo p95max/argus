@@ -35,3 +35,4 @@ poetry run python manage.py check_gmail --max-results 10
 ```
 
 `check_gmail` reads active mailboxes, skips already processed Gmail message IDs, creates alerts, and updates mailbox health fields.
+Use `--mailbox email@example.com` to check one mailbox; without it, all active mailboxes are checked.

@@ -1,7 +1,10 @@
 from django.core.management.base import BaseCommand, CommandError
+import logging
 
 from alerts.gmail import build_gmail_service, check_mailbox
 from alerts.models import MailboxAccount
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -31,15 +34,25 @@ class Command(BaseCommand):
 
         total_created = 0
         total_duplicates = 0
+        total_failed = 0
         for mailbox in mailboxes:
             try:
                 result = check_mailbox(mailbox, service=service, max_results=options["max_results"])
             except Exception as exc:
+                total_failed += 1
+                logger.exception("Gmail check failed for mailbox %s", mailbox.email)
                 self.stderr.write(self.style.ERROR(f"{mailbox.email}: {exc}"))
                 continue
 
             total_created += result.created
             total_duplicates += result.duplicates
+            logger.info(
+                "Gmail check completed for %s: fetched=%s created=%s duplicates=%s",
+                mailbox.email,
+                result.fetched,
+                result.created,
+                result.duplicates,
+            )
             self.stdout.write(
                 self.style.SUCCESS(
                     f"{mailbox.email}: fetched {result.fetched}, created {result.created}, duplicates {result.duplicates}"
@@ -47,5 +60,7 @@ class Command(BaseCommand):
             )
 
         self.stdout.write(
-            self.style.SUCCESS(f"Done. Created {total_created}, duplicates {total_duplicates}.")
+            self.style.SUCCESS(
+                f"Done. Created {total_created}, duplicates {total_duplicates}, failed {total_failed}."
+            )
         )
