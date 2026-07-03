@@ -88,3 +88,7 @@ Thumbs.db
 real_emails/
 raw_emails/
 private_fixtures/
+
+
+dev_notes.txt
+.agents

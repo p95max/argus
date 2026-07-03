@@ -133,9 +133,19 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         check_url = reverse("admin:alerts_mailboxaccount_gmail_check_now", args=[obj.pk])
 
         return format_html(
-            '<a class="button" href="{}">Connect / Reconnect Gmail</a> '
-            '<a class="button" href="{}">Check now</a> '
-            '<a class="button" href="{}">Disconnect</a>',
+            """
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a class="btn btn-sm btn-outline-info" href="{}">
+                    <i class="fas fa-plug"></i> OAuth
+                </a>
+                <a class="btn btn-sm btn-outline-success" href="{}">
+                    <i class="fas fa-play"></i> Check
+                </a>
+                <a class="btn btn-sm btn-outline-danger" href="{}">
+                    <i class="fas fa-times"></i> Disconnect
+                </a>
+            </div>
+            """,
             connect_url,
             check_url,
             disconnect_url,
