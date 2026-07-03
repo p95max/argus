@@ -6,6 +6,8 @@ from alerts.models import MailboxAccount, MarketplaceAlert
 from alerts.telegram import (
     async_send_telegram_alert,
     build_alert_message,
+    build_daily_summary_message,
+    build_mailbox_status_message,
     build_system_message,
     handle_alert_callback_action,
     update_alert_status_from_callback,
@@ -197,3 +199,32 @@ def test_async_send_telegram_alert_saves_error(monkeypatch, alert):
     alert.refresh_from_db()
 
     assert alert.telegram_error == "telegram is down"
+
+
+@pytest.mark.django_db
+def test_build_mailbox_status_message_contains_mailbox_health(alert):
+    mailbox = alert.mailbox
+    mailbox.last_error = "old gmail error"
+    mailbox.save(update_fields=["last_error", "updated_at"])
+
+    message = build_mailbox_status_message()
+
+    assert "Argus: статус ящиков" in message
+    assert mailbox.email in message
+    assert "Последняя проверка" in message
+    assert "Последний успех" in message
+    assert "old gmail error" in message
+    assert "новые" in message
+    assert "в работе" in message
+
+
+@pytest.mark.django_db
+def test_build_daily_summary_message_contains_today_counters(alert):
+    message = build_daily_summary_message()
+
+    assert "Argus: дневная сводка" in message
+    assert "Всего событий сегодня" in message
+    assert "Сообщения покупателей" in message
+    assert "Новые" in message
+    assert "В работе" in message
+    assert "Активные ящики" in message

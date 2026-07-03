@@ -4,11 +4,12 @@ import os
 from dataclasses import dataclass
 
 from asgiref.sync import sync_to_async
+from django.db.models import Count, Q
 from django.utils import timezone
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import BadRequest
 
-from .models import MarketplaceAlert
+from .models import MailboxAccount, MarketplaceAlert
 
 
 CALLBACK_PREFIX = "alert"
@@ -104,6 +105,150 @@ def build_system_message(title: str, details: str = "") -> str:
         )
 
     return "\n".join(lines)
+
+
+def build_mailbox_status_message() -> str:
+    today = timezone.localdate()
+
+    mailboxes = (
+        MailboxAccount.objects.filter(is_active=True)
+        .annotate(
+            today_alerts=Count(
+                "alerts",
+                filter=Q(alerts__created_at__date=today),
+            ),
+            unread_alerts=Count(
+                "alerts",
+                filter=Q(alerts__alert_status=MarketplaceAlert.AlertStatus.UNREAD),
+            ),
+            in_work_alerts=Count(
+                "alerts",
+                filter=Q(alerts__alert_status=MarketplaceAlert.AlertStatus.IN_WORK),
+            ),
+        )
+        .order_by("email")
+    )
+
+    lines = [
+        "<b>Argus: статус ящиков</b>",
+        f"<b>Дата:</b> {today.isoformat()}",
+        "",
+    ]
+
+    if not mailboxes:
+        lines.append("Активных ящиков нет.")
+        return "\n".join(lines)
+
+    for mailbox in mailboxes:
+        last_error = mailbox.last_error or "нет"
+        lines.extend(
+            [
+                f"<b>{html.escape(mailbox.name)}</b>",
+                f"Email: <code>{html.escape(mailbox.email)}</code>",
+                f"Активен: {'да' if mailbox.is_active else 'нет'}",
+                f"Подключение: {html.escape(mailbox.get_connection_status_display())}",
+                f"Последняя проверка: {_format_dt(mailbox.last_checked_at)}",
+                f"Последний успех: {_format_dt(mailbox.last_success_at)}",
+                f"Ошибка: {html.escape(_truncate(last_error, 220))}",
+                (
+                    "Alerts: "
+                    f"сегодня {mailbox.today_alerts}, "
+                    f"новые {mailbox.unread_alerts}, "
+                    f"в работе {mailbox.in_work_alerts}"
+                ),
+                "",
+            ]
+        )
+
+    return "\n".join(lines).strip()
+
+
+def build_daily_summary_message() -> str:
+    today = timezone.localdate()
+
+    alerts = MarketplaceAlert.objects.filter(created_at__date=today)
+    counts = alerts.aggregate(
+        total=Count("id"),
+        buyer_messages=Count(
+            "id",
+            filter=Q(event_type=MarketplaceAlert.EventType.BUYER_MESSAGE),
+        ),
+        listing_expiring=Count(
+            "id",
+            filter=Q(event_type=MarketplaceAlert.EventType.LISTING_EXPIRING),
+        ),
+        system_notice=Count(
+            "id",
+            filter=Q(event_type=MarketplaceAlert.EventType.SYSTEM_NOTICE),
+        ),
+        noise=Count(
+            "id",
+            filter=Q(event_type=MarketplaceAlert.EventType.NOISE),
+        ),
+        unread=Count(
+            "id",
+            filter=Q(alert_status=MarketplaceAlert.AlertStatus.UNREAD),
+        ),
+        in_work=Count(
+            "id",
+            filter=Q(alert_status=MarketplaceAlert.AlertStatus.IN_WORK),
+        ),
+        ignored=Count(
+            "id",
+            filter=Q(alert_status=MarketplaceAlert.AlertStatus.IGNORED),
+        ),
+        high_priority=Count(
+            "id",
+            filter=Q(
+                priority__in=[
+                    MarketplaceAlert.Priority.HIGH,
+                    MarketplaceAlert.Priority.URGENT,
+                ]
+            ),
+        ),
+        parser_attention=Count(
+            "id",
+            filter=Q(
+                parse_status__in=[
+                    MarketplaceAlert.ParseStatus.PARTIAL,
+                    MarketplaceAlert.ParseStatus.ERROR,
+                ]
+            ),
+        ),
+    )
+
+    mailbox_counts = MailboxAccount.objects.aggregate(
+        active=Count(
+            "id",
+            filter=Q(is_active=True),
+        ),
+        errors=Count(
+            "id",
+            filter=Q(connection_status=MailboxAccount.ConnectionStatus.ERROR),
+        ),
+    )
+
+    return "\n".join(
+        [
+            "<b>Argus: дневная сводка</b>",
+            f"<b>Дата:</b> {today.isoformat()}",
+            "",
+            f"Всего событий сегодня: {counts['total']}",
+            f"Сообщения покупателей: {counts['buyer_messages']}",
+            f"Истекающие объявления: {counts['listing_expiring']}",
+            f"Системные уведомления: {counts['system_notice']}",
+            f"Шум/noise: {counts['noise']}",
+            "",
+            f"Новые: {counts['unread']}",
+            f"В работе: {counts['in_work']}",
+            f"Игнор: {counts['ignored']}",
+            f"Высокий приоритет: {counts['high_priority']}",
+            f"Parser attention: {counts['parser_attention']}",
+            "",
+            f"Активные ящики: {mailbox_counts['active']}",
+            f"Ящики с ошибкой: {mailbox_counts['errors']}",
+        ]
+    )
 
 
 def build_alert_keyboard(alert: MarketplaceAlert) -> InlineKeyboardMarkup:
@@ -299,6 +444,39 @@ async def handle_alert_callback(update, context):
         result.alert,
     )
 
+
+async def handle_mailbox_status_command(update, context):
+    if not is_allowed_update(update):
+        await update.effective_message.reply_text(
+            "Этот пользователь или чат не имеет доступа к Argus.",
+        )
+        return
+
+    text = await sync_to_async(build_mailbox_status_message)()
+
+    await update.effective_message.reply_text(
+        text,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+
+async def handle_daily_summary_command(update, context):
+    if not is_allowed_update(update):
+        await update.effective_message.reply_text(
+            "Этот пользователь или чат не имеет доступа к Argus.",
+        )
+        return
+
+    text = await sync_to_async(build_daily_summary_message)()
+
+    await update.effective_message.reply_text(
+        text,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+
 def handle_alert_callback_action(
     callback_data: str,
     chat_id: str,
@@ -347,6 +525,16 @@ def update_alert_status_from_callback(
         user_id=user_id,
     )
     return result.alert
+
+
+def is_allowed_update(update) -> bool:
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    return is_allowed_telegram_actor(
+        chat_id=chat_id,
+        user_id=user_id,
+    )
 
 
 def is_allowed_chat(chat_id: str) -> bool:
@@ -444,6 +632,13 @@ async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
             return
 
         raise
+
+
+def _format_dt(value) -> str:
+    if value is None:
+        return "—"
+
+    return timezone.localtime(value).strftime("%d.%m.%Y %H:%M")
 
 
 def _truncate(value: str, limit: int) -> str:
