@@ -129,6 +129,7 @@ class MarketplaceAlert(TimestampedModel):
         default=ParseStatus.SUCCESS,
     )
     parse_error = models.TextField("ошибка парсинга", blank=True)
+    classification_reason = models.TextField("объяснение классификации", blank=True)
 
     listing_id = models.CharField("ID объявления", max_length=120, blank=True)
     listing_title = models.CharField("название объявления", max_length=255, blank=True)

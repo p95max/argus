@@ -1,9 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from html import unescape
 from html.parser import HTMLParser
 import re
 
 from .models import MarketplaceAlert
+from .classifier import classify_marketplace_message
 
 
 class BodyTextExtractor(HTMLParser):
@@ -41,6 +42,9 @@ class ParsedMarketplaceEmail:
     raw_body: str = ""
     normalized_body: str = ""
     subject: str = ""
+    priority: str = MarketplaceAlert.Priority.NORMAL
+    flag_codes: tuple[str, ...] = ()
+    classification_reason: str = ""
 
 
 SYSTEM_PATTERNS = (
@@ -116,6 +120,11 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
         parse_status = MarketplaceAlert.ParseStatus.PARTIAL
         parse_error = "Missing fields: " + ", ".join(missing)
 
+    classification = classify_marketplace_message(f"{raw_subject}\n{normalized_body}")
+    priority = classification.priority
+    if event_type == MarketplaceAlert.EventType.NOISE:
+        priority = MarketplaceAlert.Priority.LOW
+
     return ParsedMarketplaceEmail(
         event_type=event_type,
         parse_status=parse_status,
@@ -128,6 +137,9 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
         raw_body=raw_body,
         normalized_body=normalized_body,
         subject=raw_subject.strip(),
+        priority=priority,
+        flag_codes=classification.flag_codes,
+        classification_reason=classification.reason,
     )
 
 

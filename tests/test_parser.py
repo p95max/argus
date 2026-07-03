@@ -23,6 +23,8 @@ def test_parse_buyer_message():
     assert result.listing_title == "BMW 320d Touring"
     assert result.listing_id == "123456789"
     assert "Besichtigung" in result.message_text
+    assert result.priority == MarketplaceAlert.Priority.HIGH
+    assert "inspection_request" in result.flag_codes
 
 
 def test_parse_listing_expiring_system_notice():
@@ -78,6 +80,7 @@ def test_noise_email(subject, body):
 
     assert result.event_type == MarketplaceAlert.EventType.NOISE
     assert result.parse_status == MarketplaceAlert.ParseStatus.SKIPPED
+    assert result.priority == MarketplaceAlert.Priority.LOW
 
 
 def test_normalize_body_removes_signature_noise():

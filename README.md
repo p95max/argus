@@ -23,4 +23,4 @@ The Admin UI uses Jazzmin with the standard dark `darkly` theme.
 
 For local development, `init_dev` creates or updates a single admin user from
 `DEV_ADMIN_USERNAME`, `DEV_ADMIN_EMAIL`, and `DEV_ADMIN_PASSWORD` in `.env.local`.
-The command is idempotent and only runs with `DEBUG=True`.
+The command is idempotent, seeds starter classification flags/demo alerts, and only runs with `DEBUG=True`.

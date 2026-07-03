@@ -137,7 +137,7 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
                     "Рабочая классификация обращения: тип события, текущий статус обработки, "
                     "важность и флаги риска/качества."
                 ),
-                "fields": ("event_type", "alert_status", "priority", "flags"),
+                "fields": ("event_type", "alert_status", "priority", "flags", "classification_reason"),
             },
         ),
         (

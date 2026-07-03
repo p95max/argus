@@ -4,6 +4,15 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
+from alerts.seed_data import seed_demo_alerts, seed_lead_flags
+
+
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
 
 class Command(BaseCommand):
     help = "Create or update the local development admin user."
@@ -59,10 +68,24 @@ class Command(BaseCommand):
         user.set_password(password)
         changed_fields.append("password")
         user.save()
+        created_flags, updated_flags = seed_lead_flags()
 
         if created:
             self.stdout.write(self.style.SUCCESS(f"Created dev admin user '{username}'."))
-            return
+        else:
+            changed = ", ".join(changed_fields)
+            self.stdout.write(self.style.SUCCESS(f"Updated dev admin user '{username}' ({changed})."))
 
-        changed = ", ".join(changed_fields)
-        self.stdout.write(self.style.SUCCESS(f"Updated dev admin user '{username}' ({changed})."))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Seeded lead flags: created {created_flags}, updated {updated_flags}."
+            )
+        )
+
+        if env_bool("DEV_SEED_SAMPLE_DATA", default=True):
+            created_alerts, updated_alerts = seed_demo_alerts()
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Seeded demo alerts: created {created_alerts}, updated {updated_alerts}."
+                )
+            )
