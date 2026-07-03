@@ -65,8 +65,8 @@ class LeadFlag(TimestampedModel):
 
     class Meta:
         ordering = ["category", "name"]
-        verbose_name = "флаг лида"
-        verbose_name_plural = "флаги лидов"
+        verbose_name = "флаг обращения"
+        verbose_name_plural = "флаги обращений"
 
     def __str__(self):
         return self.name
@@ -151,8 +151,8 @@ class MarketplaceAlert(TimestampedModel):
             models.Index(fields=["event_type"]),
             models.Index(fields=["listing_id"]),
         ]
-        verbose_name = "alert"
-        verbose_name_plural = "alerts"
+        verbose_name = "обращение"
+        verbose_name_plural = "обращения"
 
     def __str__(self):
         title = self.listing_title or self.subject or self.get_event_type_display()
