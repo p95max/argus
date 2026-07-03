@@ -1,3 +1,5 @@
+import logging
+
 from django.core.management.base import BaseCommand, CommandError
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler
 
@@ -7,6 +9,16 @@ from alerts.telegram.handlers import (
     handle_daily_summary_command,
     handle_mailbox_status_command,
 )
+
+logger = logging.getLogger(__name__)
+
+
+async def log_telegram_error(update, context):
+    logger.error(
+        "Telegram bot error. update=%s",
+        update,
+        exc_info=context.error,
+    )
 
 
 class Command(BaseCommand):
@@ -23,15 +35,21 @@ class Command(BaseCommand):
                 "TELEGRAM_ALLOWED_CHAT_IDS or TELEGRAM_DEFAULT_CHAT_ID is not configured."
             )
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                "Telegram bot polling started. "
-                f"Allowed chats: {', '.join(sorted(config.allowed_chat_ids))}. "
-                f"Allowed users: {', '.join(sorted(config.allowed_user_ids)) or 'any'}."
-            )
+        allowed_chats = ", ".join(sorted(config.allowed_chat_ids))
+        allowed_users = ", ".join(sorted(config.allowed_user_ids)) or "any"
+
+        message = (
+            "Telegram bot polling started. "
+            f"Allowed chats: {allowed_chats}. "
+            f"Allowed users: {allowed_users}."
         )
 
+        self.stdout.write(self.style.SUCCESS(message))
+        logger.info(message)
+
         application = ApplicationBuilder().token(config.bot_token).build()
+
+        application.add_error_handler(log_telegram_error)
 
         application.add_handler(
             CallbackQueryHandler(
@@ -52,10 +70,13 @@ class Command(BaseCommand):
             )
         )
 
-        application.run_polling(
-            allowed_updates=[
-                "callback_query",
-                "message",
-            ],
-            drop_pending_updates=True,
-        )
+        try:
+            application.run_polling(
+                allowed_updates=[
+                    "callback_query",
+                    "message",
+                ],
+                drop_pending_updates=True,
+            )
+        finally:
+            logger.info("Telegram bot polling stopped.")

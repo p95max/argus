@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 
 from asgiref.sync import sync_to_async
@@ -20,6 +21,9 @@ from .messages import (
 from .permissions import is_allowed_telegram_actor, is_allowed_update
 
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass(frozen=True)
 class AlertCallbackResult:
     alert: MarketplaceAlert
@@ -31,10 +35,18 @@ async def handle_alert_callback(update, context):
     query = update.callback_query
 
     if query is None:
+        logger.warning("Telegram callback handler called without callback_query.")
         return
 
     chat_id = str(query.message.chat_id) if query.message else ""
     user_id = str(query.from_user.id) if query.from_user else ""
+
+    logger.info(
+        "Telegram callback received. chat_id=%s user_id=%s data=%s",
+        chat_id,
+        user_id,
+        query.data,
+    )
 
     try:
         result = await sync_to_async(handle_alert_callback_action)(
@@ -43,6 +55,12 @@ async def handle_alert_callback(update, context):
             user_id=user_id,
         )
     except PermissionError:
+        logger.warning(
+            "Telegram callback rejected by permission. chat_id=%s user_id=%s data=%s",
+            chat_id,
+            user_id,
+            query.data,
+        )
         await _safe_answer_callback(
             query,
             "Этот пользователь или чат не имеет доступа к Argus.",
@@ -50,6 +68,13 @@ async def handle_alert_callback(update, context):
         )
         return
     except ValueError as exc:
+        logger.warning(
+            "Telegram callback rejected. chat_id=%s user_id=%s data=%s error=%s",
+            chat_id,
+            user_id,
+            query.data,
+            exc,
+        )
         await _safe_answer_callback(
             query,
             str(exc),
@@ -63,6 +88,12 @@ async def handle_alert_callback(update, context):
             result.answer_text,
             show_alert=True,
         )
+        logger.info(
+            "Telegram callback status checked. chat_id=%s user_id=%s alert_id=%s",
+            chat_id,
+            user_id,
+            result.alert.id,
+        )
         return
 
     await _safe_answer_callback(
@@ -75,9 +106,31 @@ async def handle_alert_callback(update, context):
         result.alert,
     )
 
+    logger.info(
+        "Telegram callback status changed. chat_id=%s user_id=%s alert_id=%s status=%s",
+        chat_id,
+        user_id,
+        result.alert.id,
+        result.alert.alert_status,
+    )
+
 
 async def handle_mailbox_status_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    logger.info(
+        "Telegram status command received. chat_id=%s user_id=%s",
+        chat_id,
+        user_id,
+    )
+
     if not is_allowed_update(update):
+        logger.warning(
+            "Telegram status command rejected by permission. chat_id=%s user_id=%s",
+            chat_id,
+            user_id,
+        )
         await update.effective_message.reply_text(
             "Этот пользователь или чат не имеет доступа к Argus.",
         )
@@ -91,9 +144,29 @@ async def handle_mailbox_status_command(update, context):
         disable_web_page_preview=True,
     )
 
+    logger.info(
+        "Telegram status command handled. chat_id=%s user_id=%s",
+        chat_id,
+        user_id,
+    )
+
 
 async def handle_daily_summary_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    logger.info(
+        "Telegram summary command received. chat_id=%s user_id=%s",
+        chat_id,
+        user_id,
+    )
+
     if not is_allowed_update(update):
+        logger.warning(
+            "Telegram summary command rejected by permission. chat_id=%s user_id=%s",
+            chat_id,
+            user_id,
+        )
         await update.effective_message.reply_text(
             "Этот пользователь или чат не имеет доступа к Argus.",
         )
@@ -105,6 +178,12 @@ async def handle_daily_summary_command(update, context):
         text,
         parse_mode="HTML",
         disable_web_page_preview=True,
+    )
+
+    logger.info(
+        "Telegram summary command handled. chat_id=%s user_id=%s",
+        chat_id,
+        user_id,
     )
 
 
@@ -167,9 +246,13 @@ async def _safe_answer_callback(query, text: str, show_alert: bool = False) -> N
     except BadRequest as exc:
         message = str(exc).lower()
 
-        if "query is too old" in message or "query id is invalid" in message:
+        if "query is too old" in message or "query id is invalid":
+            logger.warning(
+                "Telegram callback answer skipped because query is too old or invalid."
+            )
             return
 
+        logger.exception("Telegram callback answer failed.")
         raise
 
 
@@ -187,9 +270,21 @@ async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
         message = str(exc).lower()
 
         if "message is not modified" in message:
+            logger.info(
+                "Telegram alert message edit skipped because message is not modified. alert_id=%s",
+                alert.id,
+            )
             return
 
         if "query is too old" in message or "query id is invalid" in message:
+            logger.warning(
+                "Telegram alert message edit skipped because query is too old or invalid. alert_id=%s",
+                alert.id,
+            )
             return
 
+        logger.exception(
+            "Telegram alert message edit failed. alert_id=%s",
+            alert.id,
+        )
         raise
