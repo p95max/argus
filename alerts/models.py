@@ -26,6 +26,13 @@ class MailboxAccount(TimestampedModel):
         default="from:(kleinanzeigen.de)",
         blank=True,
     )
+
+    gmail_connected_email = models.EmailField("подключенный Gmail", blank=True)
+    gmail_oauth_token = models.TextField("Gmail OAuth token JSON", blank=True)
+    gmail_oauth_connected_at = models.DateTimeField("Gmail подключен", null=True, blank=True)
+    gmail_oauth_last_refresh_at = models.DateTimeField("последнее обновление Gmail token", null=True, blank=True)
+    gmail_oauth_error = models.TextField("ошибка Gmail OAuth", blank=True)
+
     connection_status = models.CharField(
         "статус подключения",
         max_length=32,

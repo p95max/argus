@@ -5,11 +5,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-def load_dotenv(path: Path) -> None:
+def load_dotenv(path: Path, *, override: bool = False) -> None:
     if not path.exists():
         return
 
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -17,11 +17,13 @@ def load_dotenv(path: Path) -> None:
         key, value = line.split("=", 1)
         key = key.strip()
         value = value.strip().strip('"').strip("'")
-        os.environ.setdefault(key, value)
+
+        if override or key not in os.environ:
+            os.environ[key] = value
 
 
 load_dotenv(BASE_DIR / ".env")
-load_dotenv(BASE_DIR / ".env.local")
+load_dotenv(BASE_DIR / ".env.local", override=True)
 
 
 def env_bool(name: str, default: bool = False) -> bool:
@@ -52,11 +54,15 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool("DJANGO_DEBUG", default=True)
 
+if DEBUG and env_bool("OAUTHLIB_INSECURE_TRANSPORT", default=False):
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 CORS_ALLOWED_ORIGINS = env_list("DJANGO_CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_ALL_ORIGINS = env_bool("DJANGO_CORS_ALLOW_ALL_ORIGINS", default=False)
 DJANGO_ADMIN_URL = env_path("DJANGO_ADMIN_URL", "control")
+GOOGLE_OAUTH_REDIRECT_URI = os.environ.get("GOOGLE_OAUTH_REDIRECT_URI", "").strip()
 
 
 # Application definition

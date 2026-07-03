@@ -1,3 +1,5 @@
+import json
+
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 import base64
@@ -56,7 +58,18 @@ def gmail_credentials_paths() -> tuple[Path, Path]:
     return Path(credentials_file), Path(token_file)
 
 
-def build_gmail_service(credentials_file: Path | None = None, token_file: Path | None = None):
+def build_gmail_service(
+    credentials_file: Path | None = None,
+    token_file: Path | None = None,
+    mailbox: MailboxAccount | None = None,
+):
+    if mailbox is not None and mailbox.gmail_oauth_token:
+        credentials = load_or_refresh_mailbox_credentials(mailbox)
+        return build("gmail", "v1", credentials=credentials)
+
+    credentials_file, token_file = _resolve_paths(credentials_file, token_file)
+    credentials = load_or_refresh_credentials(credentials_file, token_file)
+    return build("gmail", "v1", credentials=credentials)
     credentials_file, token_file = _resolve_paths(credentials_file, token_file)
     credentials = load_or_refresh_credentials(credentials_file, token_file)
     return build("gmail", "v1", credentials=credentials)
@@ -92,6 +105,63 @@ def load_or_refresh_credentials(credentials_file: Path, token_file: Path) -> Cre
     if not credentials_file.exists():
         raise FileNotFoundError(f"Gmail client secrets file not found: {credentials_file}")
     raise RuntimeError("Gmail credentials are invalid. Run `python manage.py connect_gmail` again.")
+
+
+def load_or_refresh_mailbox_credentials(mailbox: MailboxAccount) -> Credentials:
+    if not mailbox.gmail_oauth_token:
+        raise FileNotFoundError(
+            f"Gmail OAuth token is not configured for mailbox {mailbox.email}."
+        )
+
+    try:
+        token_info = json.loads(mailbox.gmail_oauth_token)
+    except json.JSONDecodeError as exc:
+        mailbox.connection_status = MailboxAccount.ConnectionStatus.ERROR
+        mailbox.gmail_oauth_error = "Stored Gmail OAuth token is not valid JSON."
+        mailbox.last_error = mailbox.gmail_oauth_error
+        mailbox.save(
+            update_fields=[
+                "connection_status",
+                "gmail_oauth_error",
+                "last_error",
+                "updated_at",
+            ]
+        )
+        raise RuntimeError(mailbox.gmail_oauth_error) from exc
+
+    credentials = Credentials.from_authorized_user_info(token_info, GMAIL_SCOPES)
+    if credentials.valid:
+        return credentials
+
+    if credentials.expired and credentials.refresh_token:
+        credentials.refresh(Request())
+        mailbox.gmail_oauth_token = credentials.to_json()
+        mailbox.gmail_oauth_last_refresh_at = timezone.now()
+        mailbox.gmail_oauth_error = ""
+        mailbox.last_error = ""
+        mailbox.save(
+            update_fields=[
+                "gmail_oauth_token",
+                "gmail_oauth_last_refresh_at",
+                "gmail_oauth_error",
+                "last_error",
+                "updated_at",
+            ]
+        )
+        return credentials
+
+    mailbox.connection_status = MailboxAccount.ConnectionStatus.ERROR
+    mailbox.gmail_oauth_error = "Gmail OAuth credentials are invalid. Reconnect Gmail from Admin."
+    mailbox.last_error = mailbox.gmail_oauth_error
+    mailbox.save(
+        update_fields=[
+            "connection_status",
+            "gmail_oauth_error",
+            "last_error",
+            "updated_at",
+        ]
+    )
+    raise RuntimeError(mailbox.gmail_oauth_error)
 
 
 def fetch_gmail_messages(service, query: str, max_results: int = 25) -> list[GmailMessage]:
@@ -144,7 +214,7 @@ def check_mailbox(
     try:
         if messages is None:
             if service is None:
-                service = build_gmail_service()
+                service = build_gmail_service(mailbox=mailbox)
             messages = fetch_gmail_messages(service, mailbox.gmail_search_query, max_results=max_results)
 
         created = 0
