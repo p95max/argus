@@ -115,7 +115,7 @@ def test_check_mailbox_updates_success_health(mailbox):
 def test_check_mailbox_sends_telegram_when_enabled(monkeypatch, mailbox):
     sent = []
     monkeypatch.setenv("TELEGRAM_SEND_ON_GMAIL_CHECK", "True")
-    monkeypatch.setattr("alerts.telegram.send_telegram_alert", lambda alert: sent.append(alert.id))
+    monkeypatch.setattr("alerts.telegram.sender.send_telegram_alert", lambda alert: sent.append(alert.id))
 
     check_mailbox(
         mailbox,

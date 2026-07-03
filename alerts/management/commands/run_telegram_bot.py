@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler
 
-from alerts.telegram import (
-    get_telegram_config,
+from alerts.telegram.config import get_telegram_config
+from alerts.telegram.handlers import (
     handle_alert_callback,
     handle_daily_summary_command,
     handle_mailbox_status_command,

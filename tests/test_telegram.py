@@ -3,15 +3,37 @@ import asyncio
 import pytest
 
 from alerts.models import MailboxAccount, MarketplaceAlert
-from alerts.telegram import (
+from alerts.telegram.sender import (
+    send_telegram_alert,
     async_send_telegram_alert,
+    send_system_telegram_alert,
+    send_system_telegram_message,
+)
+
+from alerts.telegram.messages import (
     build_alert_message,
-    build_daily_summary_message,
-    build_mailbox_status_message,
     build_system_message,
+    build_mailbox_status_message,
+    build_daily_summary_message,
+    should_send_telegram_for_alert,
+)
+
+from alerts.telegram.handlers import (
     handle_alert_callback_action,
     update_alert_status_from_callback,
 )
+
+from alerts.telegram.keyboards import (
+    build_alert_keyboard,
+    _parse_callback_data,
+)
+
+from alerts.telegram.permissions import (
+    is_allowed_chat,
+    is_allowed_telegram_actor,
+)
+
+from alerts.telegram.config import get_telegram_config
 
 
 class FakeTelegramMessage:

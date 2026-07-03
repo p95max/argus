@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from alerts.models import MarketplaceAlert
-from alerts.telegram import send_telegram_alert
+from alerts.telegram.sender import send_telegram_alert
 
 
 class Command(BaseCommand):

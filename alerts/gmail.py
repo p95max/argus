@@ -292,7 +292,9 @@ def _send_telegram_if_enabled(alert: MarketplaceAlert | None) -> None:
     if alert is None:
         return
 
-    from .telegram import get_telegram_config, send_telegram_alert, should_send_telegram_for_alert
+    from .telegram.config import get_telegram_config
+    from .telegram.messages import should_send_telegram_for_alert
+    from .telegram.sender import send_telegram_alert
 
     if not get_telegram_config().send_on_gmail_check or not should_send_telegram_for_alert(alert):
         return
