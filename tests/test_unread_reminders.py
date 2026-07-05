@@ -127,6 +127,7 @@ def test_async_send_telegram_reminder_saves_last_reminded_at(monkeypatch, mailbo
     monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
     monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
     alert = create_alert(mailbox, minutes_old=45)
+    alert._telegram_mailbox_label = "Reminder inbox (reminders@example.local)"
     bot = FakeTelegramBot()
 
     asyncio.run(async_send_telegram_reminder(alert, chat_id="42", bot=bot))
@@ -134,6 +135,7 @@ def test_async_send_telegram_reminder_saves_last_reminded_at(monkeypatch, mailbo
     alert.refresh_from_db()
     assert bot.calls[0]["chat_id"] == "42"
     assert "Reminder" in bot.calls[0]["text"]
+    assert "Reminder inbox (reminders@example.local)" in bot.calls[0]["text"]
     assert bot.calls[0]["reply_markup"] is not None
     assert alert.last_reminded_at is not None
     assert alert.telegram_error == ""

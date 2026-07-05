@@ -19,10 +19,12 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
     message = alert.message_text or alert.normalized_body or alert.raw_body or "Текст не найден"
     flags = _alert_flag_names(alert)
     event_time = alert.received_at or alert.created_at
+    mailbox_label = _alert_mailbox_label(alert)
 
     return "\n".join(
         [
             _build_alert_header(alert),
+            f"📬 <b>Ящик:</b> {html.escape(mailbox_label)}",
             f"📅 <b>Дата:</b> {_format_date_from_datetime(event_time)}",
             f"🕒 <b>Время:</b> {_format_time(event_time)}",
             f"🆔 <b>ID:</b> {alert.id}",
@@ -75,6 +77,24 @@ def _alert_flag_names(alert: MarketplaceAlert) -> str:
         return ", ".join(alert.flags.values_list("name", flat=True)) or "нет"
 
     return "нет"
+
+
+def _alert_mailbox_label(alert: MarketplaceAlert) -> str:
+    preloaded = getattr(alert, "_telegram_mailbox_label", None)
+    if preloaded is not None:
+        return preloaded or "Неизвестно"
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    else:
+        return "Неизвестно"
+
+    mailbox = alert.mailbox
+    if mailbox.name and mailbox.email:
+        return f"{mailbox.name} ({mailbox.email})"
+    return mailbox.name or mailbox.email or "Неизвестно"
 
 
 def build_system_message(title: str, details: str = "") -> str:

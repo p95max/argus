@@ -21,7 +21,7 @@ def send_telegram_alert(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
-    alert._telegram_flag_names = ", ".join(alert.flags.values_list("name", flat=True))
+    _preload_alert_message_fields(alert)
     return asyncio.run(
         async_send_telegram_alert(
             alert,
@@ -36,7 +36,7 @@ def send_telegram_reminder(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
-    alert._telegram_flag_names = ", ".join(alert.flags.values_list("name", flat=True))
+    _preload_alert_message_fields(alert)
     return asyncio.run(
         async_send_telegram_reminder(
             alert,
@@ -328,6 +328,15 @@ async def _async_send_alert_message(
     )
 
     return message
+
+
+def _preload_alert_message_fields(alert: MarketplaceAlert) -> None:
+    alert._telegram_flag_names = ", ".join(alert.flags.values_list("name", flat=True))
+    mailbox = alert.mailbox
+    if mailbox.name and mailbox.email:
+        alert._telegram_mailbox_label = f"{mailbox.name} ({mailbox.email})"
+    else:
+        alert._telegram_mailbox_label = mailbox.name or mailbox.email or "Неизвестно"
 
 
 @contextmanager

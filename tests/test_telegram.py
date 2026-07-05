@@ -72,6 +72,8 @@ def test_build_alert_message_contains_main_details(alert):
     message = build_alert_message(alert)
 
     assert "<b>Новое обращение</b>" in message
+    assert "Ящик" in message
+    assert "Inbox (inbox@example.local)" in message
     assert "Max" in message
     assert "BMW 320d Touring" in message
     assert "Ich kann heute" in message
