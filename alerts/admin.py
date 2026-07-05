@@ -1,17 +1,14 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import Q
 from django.utils.html import format_html
-from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.urls import path, reverse
 
-from .models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
+from .models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail, ServiceEvent
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
 from .gmail.gmail import check_mailbox
 from .gmail.gmail_oauth import build_gmail_authorization_url, complete_gmail_oauth_callback
-from .models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
-from .permissions import can_manage_mailboxes, can_view_mailbox_operations
 
 
 def status_badge(text, css_class):
@@ -494,3 +491,42 @@ class ProcessedEmailAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
+
+
+@admin.register(ServiceEvent)
+class ServiceEventAdmin(admin.ModelAdmin):
+    list_display = (
+        "created_at",
+        "event_type",
+        "severity",
+        "status",
+        "title",
+        "mailbox",
+        "alert",
+        "occurrences",
+        "telegram_sent_at",
+    )
+    list_filter = ("event_type", "severity", "status", "source", "mailbox")
+    search_fields = ("title", "details", "fingerprint", "mailbox__email")
+    readonly_fields = (
+        "mailbox",
+        "alert",
+        "event_type",
+        "severity",
+        "status",
+        "source",
+        "title",
+        "details",
+        "fingerprint",
+        "occurrences",
+        "first_seen_at",
+        "last_seen_at",
+        "resolved_at",
+        "telegram_sent_at",
+        "telegram_error",
+        "created_at",
+        "updated_at",
+    )
+
+    def has_add_permission(self, request):
+        return False

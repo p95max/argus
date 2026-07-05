@@ -213,6 +213,8 @@ def check_mailbox(
     messages: list[GmailMessage] | None = None,
     max_results: int = 25,
 ) -> MailboxCheckResult:
+    was_in_error = mailbox.connection_status == MailboxAccount.ConnectionStatus.ERROR
+    previous_error = mailbox.last_error
     mailbox.last_checked_at = timezone.now()
     mailbox.save(update_fields=["last_checked_at", "updated_at"])
 
@@ -236,11 +238,18 @@ def check_mailbox(
         mailbox.last_success_at = timezone.now()
         mailbox.last_error = ""
         mailbox.save(update_fields=["connection_status", "last_success_at", "last_error", "updated_at"])
+        if was_in_error:
+            from ..service_health import record_mailbox_recovery
+
+            record_mailbox_recovery(mailbox, previous_error=previous_error)
         return MailboxCheckResult(fetched=len(messages), created=created, duplicates=duplicates)
     except Exception as exc:
         mailbox.connection_status = MailboxAccount.ConnectionStatus.ERROR
         mailbox.last_error = str(exc)
         mailbox.save(update_fields=["connection_status", "last_error", "updated_at"])
+        from ..service_health import record_mailbox_error
+
+        record_mailbox_error(mailbox, exc)
         raise
 
 
@@ -285,6 +294,11 @@ def process_gmail_message(mailbox: MailboxAccount, message: GmailMessage) -> Pro
         subject=message.subject,
         received_at=message.received_at,
     )
+    if parsed.parse_status in {
+        MarketplaceAlert.ParseStatus.PARTIAL,
+        MarketplaceAlert.ParseStatus.ERROR,
+    }:
+        transaction.on_commit(lambda alert_id=alert.id: _record_parser_service_event(alert_id))
     return ProcessedGmailResult(created=True, duplicate=False, alert=alert, processed_email=processed_email)
 
 
@@ -303,6 +317,16 @@ def _send_telegram_if_enabled(alert: MarketplaceAlert | None) -> None:
         send_telegram_alert(alert)
     except Exception:
         logger.exception("Telegram alert send failed for alert %s", alert.id)
+
+
+def _record_parser_service_event(alert_id: int) -> None:
+    from ..service_health import record_parser_error
+
+    try:
+        alert = MarketplaceAlert.objects.select_related("mailbox").get(id=alert_id)
+    except MarketplaceAlert.DoesNotExist:
+        return
+    record_parser_error(alert)
 
 
 def _resolve_paths(credentials_file: Path | None, token_file: Path | None) -> tuple[Path, Path]:

@@ -197,3 +197,64 @@ class ProcessedEmail(TimestampedModel):
 
     def __str__(self):
         return f"{self.mailbox.email}: {self.gmail_message_id}"
+
+
+class ServiceEvent(TimestampedModel):
+    class EventType(models.TextChoices):
+        MAILBOX_ERROR = "mailbox_error", "Ошибка mailbox"
+        PARSER_ERROR = "parser_error", "Ошибка parser"
+        TELEGRAM_SEND_ERROR = "telegram_send_error", "Ошибка Telegram send"
+        RECOVERY = "recovery", "Восстановление"
+
+    class Severity(models.TextChoices):
+        INFO = "info", "Info"
+        WARNING = "warning", "Warning"
+        ERROR = "error", "Error"
+        CRITICAL = "critical", "Critical"
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Открыто"
+        RECOVERED = "recovered", "Восстановлено"
+
+    mailbox = models.ForeignKey(
+        MailboxAccount,
+        verbose_name="почтовый ящик",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="service_events",
+    )
+    alert = models.ForeignKey(
+        MarketplaceAlert,
+        verbose_name="обращение",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="service_events",
+    )
+    event_type = models.CharField("тип события", max_length=32, choices=EventType.choices)
+    severity = models.CharField("важность", max_length=16, choices=Severity.choices)
+    status = models.CharField("статус", max_length=16, choices=Status.choices, default=Status.OPEN)
+    source = models.CharField("источник", max_length=80, blank=True)
+    title = models.CharField("заголовок", max_length=255)
+    details = models.TextField("детали", blank=True)
+    fingerprint = models.CharField("fingerprint", max_length=255, db_index=True)
+    occurrences = models.PositiveIntegerField("повторы", default=1)
+    first_seen_at = models.DateTimeField("первое событие", default=timezone.now)
+    last_seen_at = models.DateTimeField("последнее событие", default=timezone.now)
+    resolved_at = models.DateTimeField("восстановлено", null=True, blank=True)
+    telegram_sent_at = models.DateTimeField("отправлено в Telegram", null=True, blank=True)
+    telegram_error = models.TextField("ошибка Telegram", blank=True)
+
+    class Meta:
+        ordering = ["-last_seen_at", "-created_at"]
+        indexes = [
+            models.Index(fields=["event_type", "status"]),
+            models.Index(fields=["severity", "status"]),
+            models.Index(fields=["fingerprint", "status"]),
+        ]
+        verbose_name = "service event"
+        verbose_name_plural = "service events"
+
+    def __str__(self):
+        return f"{self.get_event_type_display()}: {self.title}"

@@ -1,7 +1,8 @@
 import asyncio
+from contextlib import contextmanager
 import logging
+import os
 
-from asgiref.sync import sync_to_async
 from django.utils import timezone
 from telegram import Bot
 
@@ -20,6 +21,7 @@ def send_telegram_alert(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
+    alert._telegram_flag_names = ", ".join(alert.flags.values_list("name", flat=True))
     return asyncio.run(
         async_send_telegram_alert(
             alert,
@@ -68,7 +70,7 @@ async def async_send_telegram_alert(
 
         bot = Bot(token=config.bot_token)
 
-    text = await sync_to_async(build_alert_message)(alert)
+    text = build_alert_message(alert)
     reply_markup = build_alert_keyboard(alert)
 
     try:
@@ -80,13 +82,19 @@ async def async_send_telegram_alert(
             disable_web_page_preview=True,
         )
     except Exception as exc:
-        alert.telegram_error = str(exc)
-        await sync_to_async(alert.save)(
-            update_fields=[
-                "telegram_error",
-                "updated_at",
-            ]
-        )
+        error = str(exc)
+        alert.telegram_error = error
+        with _allow_async_unsafe_orm():
+            alert.save(
+                update_fields=[
+                    "telegram_error",
+                    "updated_at",
+                ]
+            )
+        from ..service_health import record_telegram_send_error
+
+        with _allow_async_unsafe_orm():
+            record_telegram_send_error(alert, exc)
 
         logger.exception(
             "Telegram alert send failed. alert_id=%s target_chat_id=%s",
@@ -100,15 +108,16 @@ async def async_send_telegram_alert(
     alert.telegram_sent_at = timezone.now()
     alert.telegram_error = ""
 
-    await sync_to_async(alert.save)(
-        update_fields=[
-            "telegram_chat_id",
-            "telegram_message_id",
-            "telegram_sent_at",
-            "telegram_error",
-            "updated_at",
-        ]
-    )
+    with _allow_async_unsafe_orm():
+        alert.save(
+            update_fields=[
+                "telegram_chat_id",
+                "telegram_message_id",
+                "telegram_sent_at",
+                "telegram_error",
+                "updated_at",
+            ]
+        )
 
     logger.info(
         "Telegram alert sent. alert_id=%s target_chat_id=%s telegram_message_id=%s",
@@ -199,3 +208,16 @@ def send_system_telegram_alert(
             bot=bot,
         )
     )
+
+
+@contextmanager
+def _allow_async_unsafe_orm():
+    previous = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
+    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
+        else:
+            os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = previous

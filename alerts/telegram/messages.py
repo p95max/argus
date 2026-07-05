@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+import asyncio
 import html
 
 from django.db.models import Count, Q
@@ -16,7 +17,7 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
     title = alert.listing_title or alert.subject or alert.get_event_type_display()
     buyer = alert.buyer_name or "Неизвестно"
     message = alert.message_text or alert.normalized_body or alert.raw_body or "Текст не найден"
-    flags = ", ".join(alert.flags.values_list("name", flat=True)) or "нет"
+    flags = _alert_flag_names(alert)
     event_time = alert.received_at or alert.created_at
 
     return "\n".join(
@@ -51,6 +52,19 @@ def _build_alert_header(alert: MarketplaceAlert) -> str:
         return "🧹 <b>Kleinanzeigen: noise / промо</b>"
 
     return "📣 <b>Argus alert</b>"
+
+
+def _alert_flag_names(alert: MarketplaceAlert) -> str:
+    preloaded = getattr(alert, "_telegram_flag_names", None)
+    if preloaded is not None:
+        return preloaded or "нет"
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return ", ".join(alert.flags.values_list("name", flat=True)) or "нет"
+
+    return "нет"
 
 
 def build_system_message(title: str, details: str = "") -> str:

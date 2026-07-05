@@ -3,7 +3,7 @@ import base64
 import pytest
 
 from alerts.gmail.gmail import GmailMessage, check_mailbox, parse_gmail_api_message, process_gmail_message
-from alerts.models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
+from alerts.models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail, ServiceEvent
 from alerts.seed_data import seed_lead_flags
 
 
@@ -133,7 +133,11 @@ def test_check_mailbox_sends_telegram_when_enabled(monkeypatch, mailbox):
 
 
 @pytest.mark.django_db
-def test_check_mailbox_updates_error_health(mailbox):
+def test_check_mailbox_updates_error_health(monkeypatch, mailbox):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_DEFAULT_CHAT_ID", raising=False)
+    monkeypatch.delenv("TELEGRAM_ALLOWED_CHAT_IDS", raising=False)
+
     class BrokenService:
         pass
 
@@ -143,3 +147,7 @@ def test_check_mailbox_updates_error_health(mailbox):
     mailbox.refresh_from_db()
     assert mailbox.connection_status == MailboxAccount.ConnectionStatus.ERROR
     assert mailbox.last_error
+    assert ServiceEvent.objects.filter(
+        event_type=ServiceEvent.EventType.MAILBOX_ERROR,
+        mailbox=mailbox,
+    ).exists()
