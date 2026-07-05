@@ -56,6 +56,10 @@ class Command(BaseCommand):
             )
             raise CommandError(str(exc)) from exc
 
+        if message is None:
+            self.stdout.write(self.style.WARNING(f"Telegram alert skipped for alert {alert.id}."))
+            return
+
         telegram_message_id = getattr(message, "message_id", "") or alert.telegram_message_id
 
         logger.info(

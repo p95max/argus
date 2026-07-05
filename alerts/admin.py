@@ -5,7 +5,14 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.urls import path, reverse
 
-from .models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail, ServiceEvent
+from .models import (
+    LeadFlag,
+    MailboxAccount,
+    MarketplaceAlert,
+    ProcessedEmail,
+    ServiceEvent,
+    TelegramSettings,
+)
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
 from .gmail.gmail import check_mailbox
 from .gmail.gmail_oauth import build_gmail_authorization_url, complete_gmail_oauth_callback
@@ -13,6 +20,48 @@ from .gmail.gmail_oauth import build_gmail_authorization_url, complete_gmail_oau
 
 def status_badge(text, css_class):
     return format_html('<span class="badge {}">{}</span>', css_class, text)
+
+
+@admin.register(TelegramSettings)
+class TelegramSettingsAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "quiet_hours_enabled",
+        "quiet_hours_start",
+        "quiet_hours_end",
+        "allow_urgent_during_quiet_hours",
+        "updated_at",
+    )
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (
+            "Quiet hours",
+            {
+                "description": (
+                    "Когда quiet hours включены, обычные Telegram alerts не отправляются "
+                    "в заданное окно. По умолчанию окно 22:00-07:00, но функция выключена."
+                ),
+                "fields": (
+                    "quiet_hours_enabled",
+                    "quiet_hours_start",
+                    "quiet_hours_end",
+                    "allow_urgent_during_quiet_hours",
+                ),
+            },
+        ),
+        (
+            "Audit",
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def has_add_permission(self, request):
+        if TelegramSettings.objects.exists():
+            return False
+        return super().has_add_permission(request)
 
 
 @admin.register(MailboxAccount)

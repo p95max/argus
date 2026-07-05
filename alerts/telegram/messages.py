@@ -7,10 +7,13 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from ..models import MailboxAccount, MarketplaceAlert
+from .quiet_hours import quiet_hours_allows_alert
 
 
-def should_send_telegram_for_alert(alert: MarketplaceAlert) -> bool:
-    return alert.event_type != MarketplaceAlert.EventType.NOISE
+def should_send_telegram_for_alert(alert: MarketplaceAlert, at_time=None) -> bool:
+    if alert.event_type == MarketplaceAlert.EventType.NOISE:
+        return False
+    return quiet_hours_allows_alert(alert, at_time=at_time)
 
 
 def build_alert_message(alert: MarketplaceAlert) -> str:

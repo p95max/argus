@@ -7,6 +7,7 @@ from alerts.reminders import (
     DEFAULT_REMINDER_INTERVAL_MINUTES,
     unread_alerts_due_for_reminder,
 )
+from alerts.telegram.messages import should_send_telegram_for_alert
 from alerts.telegram.sender import send_telegram_reminder
 
 
@@ -63,9 +64,15 @@ class Command(BaseCommand):
 
         sent = 0
         failed = 0
+        skipped_quiet = 0
 
         for alert in alerts:
             label = f"alert #{alert.id} ({alert.mailbox.email})"
+            if not should_send_telegram_for_alert(alert):
+                skipped_quiet += 1
+                self.stdout.write(f"Quiet hours skipped: {label}")
+                continue
+
             if dry_run:
                 self.stdout.write(f"Due reminder: {label}")
                 continue
@@ -87,6 +94,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Done. Sent {sent}, failed {failed}, skipped by limit or filters handled by queryset."
+                f"Done. Sent {sent}, failed {failed}, quiet-hours skipped {skipped_quiet}, "
+                "skipped by limit or filters handled by queryset."
             )
         )

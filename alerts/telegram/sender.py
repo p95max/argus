@@ -9,7 +9,12 @@ from telegram import Bot
 from ..models import MarketplaceAlert
 from .config import get_telegram_config
 from .keyboards import build_alert_keyboard
-from .messages import build_alert_message, build_alert_reminder_message, build_system_message
+from .messages import (
+    build_alert_message,
+    build_alert_reminder_message,
+    build_system_message,
+    should_send_telegram_for_alert,
+)
 from .permissions import is_allowed_chat
 
 
@@ -51,6 +56,12 @@ async def async_send_telegram_alert(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
+    with _allow_async_unsafe_orm():
+        should_send = should_send_telegram_for_alert(alert)
+    if not should_send:
+        logger.info("Telegram alert send skipped by filters. alert_id=%s", alert.id)
+        return None
+
     config = get_telegram_config()
     target_chat_id = str(chat_id or config.default_chat_id).strip()
 
@@ -149,6 +160,12 @@ async def async_send_telegram_reminder(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
+    with _allow_async_unsafe_orm():
+        should_send = should_send_telegram_for_alert(alert)
+    if not should_send:
+        logger.info("Telegram reminder send skipped by filters. alert_id=%s", alert.id)
+        return None
+
     return await _async_send_alert_message(
         alert,
         text=build_alert_reminder_message(alert),

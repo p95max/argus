@@ -1,12 +1,12 @@
 import asyncio
-from datetime import timedelta
+from datetime import time, timedelta
 from io import StringIO
 
 import pytest
 from django.core.management import call_command
 from django.utils import timezone
 
-from alerts.models import MailboxAccount, MarketplaceAlert
+from alerts.models import MailboxAccount, MarketplaceAlert, TelegramSettings
 from alerts.reminders import unread_alerts_due_for_reminder
 from alerts.telegram.sender import async_send_telegram_reminder
 
@@ -120,6 +120,29 @@ def test_send_unread_reminders_dry_run_does_not_send(monkeypatch, mailbox):
     assert sent == []
     assert due.last_reminded_at is None
     assert "Due reminders 1" in stdout.getvalue()
+
+
+@pytest.mark.django_db
+def test_send_unread_reminders_skips_quiet_hours(monkeypatch, mailbox):
+    sent = []
+    due = create_alert(mailbox, minutes_old=45)
+    TelegramSettings.objects.create(
+        quiet_hours_enabled=True,
+        quiet_hours_start=time(0, 0),
+        quiet_hours_end=time(0, 0),
+    )
+    monkeypatch.setattr(
+        "alerts.management.commands.send_unread_reminders.send_telegram_reminder",
+        lambda alert: sent.append(alert.id),
+    )
+
+    stdout = StringIO()
+    call_command("send_unread_reminders", stdout=stdout)
+
+    due.refresh_from_db()
+    assert sent == []
+    assert due.last_reminded_at is None
+    assert "quiet-hours skipped 1" in stdout.getvalue()
 
 
 @pytest.mark.django_db(transaction=True)

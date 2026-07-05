@@ -1,3 +1,5 @@
+from datetime import time
+
 from django.db import models
 from django.utils import timezone
 
@@ -259,3 +261,28 @@ class ServiceEvent(TimestampedModel):
 
     def __str__(self):
         return f"{self.get_event_type_display()}: {self.title}"
+
+
+class TelegramSettings(TimestampedModel):
+    quiet_hours_enabled = models.BooleanField("quiet hours включены", default=False)
+    quiet_hours_start = models.TimeField("quiet hours начало", default=time(22, 0))
+    quiet_hours_end = models.TimeField("quiet hours конец", default=time(7, 0))
+    allow_urgent_during_quiet_hours = models.BooleanField(
+        "отправлять срочные alerts в quiet hours",
+        default=False,
+    )
+
+    class Meta:
+        verbose_name = "настройки Telegram"
+        verbose_name_plural = "настройки Telegram"
+
+    def __str__(self):
+        status = "включены" if self.quiet_hours_enabled else "выключены"
+        return f"Telegram settings: quiet hours {status}"
+
+    @classmethod
+    def load(cls):
+        settings = cls.objects.order_by("id").first()
+        if settings:
+            return settings
+        return cls.objects.create()
