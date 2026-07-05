@@ -153,6 +153,7 @@ class MarketplaceAlert(TimestampedModel):
     telegram_message_id = models.CharField("Telegram message ID", max_length=64, blank=True)
     telegram_sent_at = models.DateTimeField("отправлено в Telegram", null=True, blank=True)
     telegram_error = models.TextField("ошибка Telegram", blank=True)
+    last_reminded_at = models.DateTimeField("последний reminder", null=True, blank=True)
     received_at = models.DateTimeField("получено", null=True, blank=True)
     processed_at = models.DateTimeField("обработано", default=timezone.now)
 

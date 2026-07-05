@@ -38,6 +38,16 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
     )
 
 
+def build_alert_reminder_message(alert: MarketplaceAlert) -> str:
+    return "\n".join(
+        [
+            "⏰ <b>Reminder: alert всё ещё unread</b>",
+            "",
+            build_alert_message(alert),
+        ]
+    )
+
+
 def _build_alert_header(alert: MarketplaceAlert) -> str:
     if alert.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
         return "🚨 <b>Новое обращение</b>"

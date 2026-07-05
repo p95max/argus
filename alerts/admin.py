@@ -298,6 +298,7 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
         "status_badge",
         "priority_badge",
         "parse_status_badge",
+        "last_reminded_at",
         "received_at",
     )
     list_filter = ("mailbox", "alert_status", "priority", "event_type", "parse_status", "flags")
@@ -309,6 +310,7 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
         "telegram_chat_id",
         "telegram_message_id",
         "telegram_sent_at",
+        "last_reminded_at",
         "telegram_error",
         "created_at",
         "updated_at",
@@ -364,6 +366,7 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
                     "telegram_chat_id",
                     "telegram_message_id",
                     "telegram_sent_at",
+                    "last_reminded_at",
                     "telegram_error",
                     "received_at",
                     "processed_at",
