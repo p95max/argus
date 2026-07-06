@@ -124,3 +124,22 @@ button { cursor: pointer; }
     color: var(--warn);
     border-color: rgba(246, 200, 95, .5);
 }
+
+.compact-actions {
+    gap: 6px;
+}
+
+.compact-actions form {
+    display: inline-flex;
+}
+
+.small-action {
+    min-height: 30px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
