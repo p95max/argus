@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path
+from django.views.generic import RedirectView
 
 from django.conf import settings
 from alerts import mobile
@@ -12,6 +13,11 @@ def health_check(request):
 
 urlpatterns = [
     path("health/", health_check, name="health"),
+    path(
+        "favicon.ico",
+        RedirectView.as_view(url=f"/{settings.STATIC_URL}favicon.svg", permanent=True),
+        name="favicon",
+    ),
     path("m/", mobile.mobile_dashboard, name="mobile_dashboard"),
     path("m/alerts/<int:alert_id>/", mobile.mobile_alert_detail, name="mobile_alert_detail"),
     path(

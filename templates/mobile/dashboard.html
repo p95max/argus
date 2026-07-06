@@ -1,35 +1,9 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Argus mobile</title>
-    <style>{% include "mobile/styles.css" %}</style>
-</head>
-<body>
-<header>
-    <h1>Argus</h1>
-    <a
-        class="icon-button"
-        href="{{ admin_alert_changelist_url }}"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Admin"
-        title="Admin"
-    >
-        ⚙️
-    </a>
-</header>
-<main>
-    {% if messages %}
-        <section>
-            {% for message in messages %}
-                <div class="notice {{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </section>
-    {% endif %}
+{% extends "base.html" %}
+
+{% block title %}Argus mobile{% endblock %}
+{% block header_title %}Argus{% endblock %}
+
+{% block content %}
 
     <section>
         <nav class="mobile-panel-nav" aria-label="Фильтры обращений">
@@ -251,7 +225,4 @@
             </div>
         </details>
     </section>
-
-</main>
-</body>
-</html>
+{% endblock %}

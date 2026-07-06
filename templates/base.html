@@ -1,0 +1,52 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Argus{% endblock %}</title>
+    {% block favicon %}
+        <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
+    {% endblock %}
+    {% block styles %}
+        <style>{% include "mobile/styles.css" %}</style>
+    {% endblock %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<header>
+    {% block header %}
+        <h1>{% block header_title %}Argus{% endblock %}</h1>
+        {% block header_actions %}
+            {% if admin_alert_changelist_url %}
+                <a
+                    class="icon-button"
+                    href="{{ admin_alert_changelist_url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Admin"
+                    title="Admin"
+                >
+                    ⚙️
+                </a>
+            {% endif %}
+        {% endblock %}
+    {% endblock %}
+</header>
+<main>
+    {% block messages %}
+        {% if messages %}
+            <section>
+                {% for message in messages %}
+                    <div class="notice {{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endblock %}
+
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

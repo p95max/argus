@@ -1,18 +1,12 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Argus alert #{{ alert.id }}</title>
-    <style>{% include "mobile/styles.css" %}</style>
-</head>
-<body>
-<header>
-    <h1>📋 Обращение #{{ alert.id }}</h1>
-    <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← Назад</a>
-</header>
+{% extends "base.html" %}
 
-<main>
+{% block title %}Argus alert #{{ alert.id }}{% endblock %}
+{% block header_title %}📋 Обращение #{{ alert.id }}{% endblock %}
+{% block header_actions %}
+    <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← Назад</a>
+{% endblock %}
+
+{% block content %}
     <section>
         <article class="card alert-card">
             <div class="title">
@@ -224,6 +218,4 @@
             {% endif %}
         </div>
     </section>
-</main>
-</body>
-</html>
+{% endblock %}

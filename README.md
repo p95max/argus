@@ -4,7 +4,7 @@ Argus is a Django monitoring tool for Gmail alerts from Kleinanzeigen. It parses
 
 ## Current Capabilities
 
-- Multiple Gmail mailboxes, each with its own OAuth token and health state.
+- Multiple Gmail mailboxes, each with an encrypted OAuth token and health state.
 - Kleinanzeigen email parsing into `MarketplaceAlert` records.
 - Dedupe by `ProcessedEmail(mailbox, gmail_message_id)`.
 - Alert statuses: `unread`, `in_work`, `ignored`, including who took an alert into work.
@@ -13,6 +13,7 @@ Argus is a Django monitoring tool for Gmail alerts from Kleinanzeigen. It parses
 - Quiet hours for Telegram notifications through `TelegramSettings` in Admin.
 - Service health events for Gmail, parser, Telegram send failures, and recovery.
 - Case cleanup by branch: alerts grouped by `mailbox + listing_id`.
+- Security hardening: Fernet-encrypted Gmail OAuth tokens, admin login lockout, safe mobile redirects, and Gmail OAuth PKCE/state validation.
 
 ## Local Bootstrap
 
@@ -67,12 +68,46 @@ For local non-HTTPS OAuth testing, set `OAUTHLIB_INSECURE_TRANSPORT=True`.
 
 Admin login is protected by a small cache-backed lockout middleware. `ADMIN_LOGIN_FAILURE_LIMIT` controls failed attempts per IP/username and `ADMIN_LOGIN_LOCKOUT_SECONDS` controls the lockout window.
 
+## Database
+
+Local development defaults to SQLite. Production is expected to use PostgreSQL through `DATABASE_URL`, for example:
+
+```env
+DATABASE_URL=postgres://argus_user:strong_password@127.0.0.1:5432/argus
+```
+
+For SQLite to PostgreSQL migration, use a normal Django data move: dump data from SQLite, configure `DATABASE_URL`, run migrations on PostgreSQL, then load the dump. Keep `GMAIL_OAUTH_TOKEN_FERNET_KEY` unchanged during the move so encrypted Gmail tokens remain readable.
+
+## Security
+
+- Gmail OAuth refresh tokens are encrypted before they are stored in `MailboxAccount.gmail_oauth_token`.
+- Existing plaintext mailbox tokens are encrypted by migration `0012_encrypt_gmail_oauth_tokens`.
+- `GMAIL_OAUTH_TOKEN_FERNET_KEY` should be set explicitly in production and kept stable across deploys, backups, and restores.
+- If `GMAIL_OAUTH_TOKEN_FERNET_KEY` is empty, Argus derives a local Fernet key from `DJANGO_SECRET_KEY`; this is convenient for local dev but production should use a dedicated key.
+- Admin login has cache-backed lockout by IP plus username.
+- Mobile POST actions validate `next` redirects against the current host.
+- Telegram async sending uses async-safe ORM calls instead of `DJANGO_ALLOW_ASYNC_UNSAFE`.
+
 ## Gmail Flow
 
 1. Put the Google OAuth client secrets file at `GOOGLE_CLIENT_SECRETS_FILE`.
 2. Create a `MailboxAccount` in Admin.
 3. Open the mailbox page and use the Gmail OAuth action.
 4. Use "Check updates" in Admin or run `check_gmail`.
+
+For local OAuth, keep the browser host and Google redirect URI identical. Recommended local setting:
+
+```env
+GOOGLE_OAUTH_REDIRECT_URI=http://127.0.0.1:8000/control/alerts/mailboxaccount/oauth/callback/
+```
+
+Add the same value in Google Cloud Console under the OAuth client "Authorized redirect URIs", and open Admin through:
+
+```text
+http://127.0.0.1:8000/control/
+```
+
+`localhost` and `127.0.0.1` are different redirect URIs for Google. The callback also keeps a short-lived cached PKCE verifier so a callback can survive a forced Admin re-login, while signed `state` and `user_id` are still checked.
 
 Manual check for all active mailboxes:
 
@@ -88,11 +123,11 @@ poetry run python manage.py check_gmail --mailbox email@example.com --max-result
 
 `check_gmail` checks active mailboxes, skips already processed Gmail message IDs, creates alerts, updates mailbox health fields, and records service events on failures. If one mailbox fails, the command logs the error and continues with the rest.
 
+Gmail message details are fetched through Gmail batch API when available, with a single-message fallback for test or non-standard service objects.
+
 For production, run `check_gmail` from an external scheduler, for example every 5 minutes.
 
 Legacy local OAuth through `connect_gmail` and `GOOGLE_TOKEN_FILE` is still available for debugging, but the main flow is per-mailbox OAuth from Admin.
-
-Per-mailbox Gmail OAuth tokens are stored encrypted with Fernet. Set `GMAIL_OAUTH_TOKEN_FERNET_KEY` in production and keep it stable across deploys; if it is not set, Argus derives a local key from `DJANGO_SECRET_KEY`.
 
 ## Alerts And Cases
 
@@ -193,6 +228,8 @@ Main Admin models:
 Admin has an "Обзор" dashboard, status/priority/risk badges, a "Требует внимания" filter, and a test Telegram alert action on selected alerts.
 
 Mailbox management requires superuser access or add/change/delete permissions for `MailboxAccount`. Staff users can view mailbox operations.
+
+Admin code is split under `alerts/admin_site/`; `alerts/admin.py` only re-exports registrations and helper symbols.
 
 ## Mobile Control Panel
 
