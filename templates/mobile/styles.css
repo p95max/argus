@@ -99,3 +99,28 @@ a { color: var(--accent); text-decoration: none; }
 }
 form { margin: 0; }
 button { cursor: pointer; }
+
+
+.notice {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 11px 12px;
+    background: var(--panel);
+    color: var(--text);
+    line-height: 1.35;
+}
+
+.notice.success {
+    color: var(--accent);
+    border-color: rgba(54, 194, 163, .5);
+}
+
+.notice.error {
+    color: var(--danger);
+    border-color: rgba(255, 107, 107, .5);
+}
+
+.notice.warning {
+    color: var(--warn);
+    border-color: rgba(246, 200, 95, .5);
+}
