@@ -70,13 +70,25 @@ Admin login is protected by a small cache-backed lockout middleware. `ADMIN_LOGI
 
 ## Database
 
-Local development defaults to SQLite. Production is expected to use PostgreSQL through `DATABASE_URL`, for example:
+Local development defaults to SQLite when `DATABASE_URL` is empty. Set `DATABASE_URL` to use PostgreSQL locally, including a hosted Neon database. Production requires PostgreSQL through `DATABASE_URL`, for example:
 
 ```env
 DATABASE_URL=postgres://argus_user:strong_password@127.0.0.1:5432/argus
+POSTGRES_VERSION=19
+POSTGRES_DB=argus
+POSTGRES_USER=argus_user
+POSTGRES_PASSWORD=strong_password
+POSTGRES_PORT=5432
 ```
 
-For SQLite to PostgreSQL migration, use a normal Django data move: dump data from SQLite, configure `DATABASE_URL`, run migrations on PostgreSQL, then load the dump. Keep `GMAIL_OAUTH_TOKEN_FERNET_KEY` unchanged during the move so encrypted Gmail tokens remain readable.
+For a fresh PostgreSQL/Neon database:
+
+```powershell
+python -m poetry run python manage.py migrate
+python -m poetry run python manage.py init_dev
+```
+
+`init_dev` is the starter fixture for local MVP work: it creates/updates the dev admin user and seeds default priority/risk rules. Demo alerts are added only when `DEV_SEED_SAMPLE_DATA=True`.
 
 ## Security
 
