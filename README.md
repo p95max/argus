@@ -18,9 +18,9 @@ Argus is a Django monitoring tool for Gmail alerts from Kleinanzeigen. It parses
 ```bash
 poetry install
 copy .env.example .env.local
-poetry run python manage.py migrate
-poetry run python manage.py init_dev
-poetry run python manage.py runserver
+python -m poetry run python manage.py migrate
+python -m poetry run python manage.py init_dev
+python -m poetry run python manage.py runserver
 ```
 
 Health check:
