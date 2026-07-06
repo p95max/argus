@@ -6,6 +6,7 @@ import hashlib
 import secrets
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core import signing
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
@@ -21,6 +22,8 @@ from ..models import MailboxAccount
 OAUTH_STATE_SALT = "argus.gmail.admin.oauth"
 OAUTH_STATE_SESSION_KEY = "argus_gmail_oauth_state"
 OAUTH_CODE_VERIFIER_SESSION_KEY = "argus_gmail_oauth_code_verifier"
+OAUTH_CODE_VERIFIER_CACHE_PREFIX = "argus:gmail-oauth-code-verifier:"
+OAUTH_CALLBACK_MAX_AGE_SECONDS = 10 * 60
 
 
 @dataclass(frozen=True)
@@ -58,6 +61,11 @@ def build_gmail_authorization_url(request, mailbox: MailboxAccount) -> str:
     request.session[OAUTH_STATE_SESSION_KEY] = state
     request.session[OAUTH_CODE_VERIFIER_SESSION_KEY] = code_verifier
     request.session.modified = True
+    cache.set(
+        _code_verifier_cache_key(state),
+        code_verifier,
+        timeout=OAUTH_CALLBACK_MAX_AGE_SECONDS,
+    )
 
     flow = Flow.from_client_secrets_file(
         str(credentials_file),
@@ -81,8 +89,14 @@ def complete_gmail_oauth_callback(request) -> GmailOAuthResult:
     code_verifier = request.session.pop(OAUTH_CODE_VERIFIER_SESSION_KEY, "")
     request.session.modified = True
 
-    if not state or not expected_state or state != expected_state:
+    if not state:
         raise PermissionDenied("Invalid Gmail OAuth state.")
+
+    if expected_state and state != expected_state:
+        raise PermissionDenied("Invalid Gmail OAuth state.")
+
+    if not code_verifier:
+        code_verifier = cache.get(_code_verifier_cache_key(state), "")
 
     if not code_verifier:
         raise PermissionDenied("Missing Gmail OAuth code verifier.")
@@ -90,11 +104,13 @@ def complete_gmail_oauth_callback(request) -> GmailOAuthResult:
     payload = signing.loads(
         state,
         salt=OAUTH_STATE_SALT,
-        max_age=10 * 60,
+        max_age=OAUTH_CALLBACK_MAX_AGE_SECONDS,
     )
 
     if payload.get("user_id") != request.user.id:
         raise PermissionDenied("Gmail OAuth user mismatch.")
+
+    cache.delete(_code_verifier_cache_key(state))
 
     mailbox = MailboxAccount.objects.get(id=payload["mailbox_id"])
 
@@ -155,3 +171,8 @@ def _generate_code_verifier() -> str:
 def _build_code_challenge(code_verifier: str) -> str:
     digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
     return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+
+
+def _code_verifier_cache_key(state: str) -> str:
+    digest = hashlib.sha256(state.encode("utf-8")).hexdigest()
+    return f"{OAUTH_CODE_VERIFIER_CACHE_PREFIX}{digest}"

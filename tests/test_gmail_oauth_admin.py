@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from django.utils import timezone
@@ -165,6 +166,45 @@ def test_complete_gmail_oauth_callback_saves_mailbox_token(
 
 
 @pytest.mark.django_db
+def test_complete_gmail_oauth_callback_uses_cached_pkce_after_login_redirect(
+    monkeypatch,
+    settings,
+    google_credentials_file,
+    rf,
+    admin_user,
+    mailbox,
+):
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(google_credentials_file))
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.fetch_google_email", lambda credentials: mailbox.email)
+
+    settings.GOOGLE_OAUTH_REDIRECT_URI = (
+        "http://127.0.0.1:8000/control/alerts/mailboxaccount/oauth/callback/"
+    )
+
+    start_request = rf.get(f"/control/alerts/mailboxaccount/{mailbox.id}/gmail/connect/")
+    start_request.user = admin_user
+    attach_session(start_request)
+    build_gmail_authorization_url(start_request, mailbox)
+
+    callback_request = rf.get(
+        "/control/alerts/mailboxaccount/oauth/callback/",
+        {
+            "state": start_request.session[OAUTH_STATE_SESSION_KEY],
+            "code": "google-auth-code",
+        },
+    )
+    callback_request.user = admin_user
+    attach_session(callback_request)
+
+    result = complete_gmail_oauth_callback(callback_request)
+
+    assert result.mailbox == mailbox
+    flow = FakeFlow.last_instance
+    assert flow.fetch_token_kwargs["code_verifier"]
+
+
+@pytest.mark.django_db
 def test_complete_gmail_oauth_callback_rejects_invalid_state(
     rf,
     admin_user,
@@ -217,6 +257,7 @@ def test_complete_gmail_oauth_callback_rejects_missing_code_verifier(
     callback_request.user = admin_user
     callback_request.session = start_request.session
     del callback_request.session[OAUTH_CODE_VERIFIER_SESSION_KEY]
+    cache.clear()
 
     with pytest.raises(PermissionDenied, match="Missing Gmail OAuth code verifier"):
         complete_gmail_oauth_callback(callback_request)
