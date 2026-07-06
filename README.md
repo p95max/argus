@@ -19,7 +19,6 @@ Argus is a Django monitoring tool for Gmail alerts from Kleinanzeigen. It parses
 poetry install
 copy .env.example .env.local
 # Windows
-python -m poetry run python manage.py migrate
 python -m poetry run python manage.py init_dev
 python -m poetry run python manage.py runserver
 python -m poetry run pytest
@@ -188,6 +187,7 @@ poetry run pytest
 Useful focused checks:
 
 ```bash
+poetry run pytest tests/test_local_qa_flow.py
 poetry run pytest tests/test_cleanup.py tests/test_gmail.py tests/test_quiet_hours.py tests/test_unread_reminders.py
 poetry run python manage.py makemigrations --check --dry-run
 poetry run ruff check alerts

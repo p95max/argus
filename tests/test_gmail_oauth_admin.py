@@ -2,7 +2,6 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.core.exceptions import PermissionDenied
-from django.test import RequestFactory
 from django.urls import reverse
 from django.utils import timezone
 
@@ -46,6 +45,11 @@ class FakeFlow:
 
 
 @pytest.fixture
+def google_credentials_file(settings):
+    return settings.BASE_DIR / "manage.py"
+
+
+@pytest.fixture
 def admin_user(db):
     User = get_user_model()
     return User.objects.create_superuser(
@@ -75,16 +79,12 @@ def attach_session(request):
 def test_build_gmail_authorization_url_stores_state_and_pkce(
     monkeypatch,
     settings,
-    tmp_path,
+    google_credentials_file,
     rf,
     admin_user,
     mailbox,
 ):
-    credentials_file = tmp_path / "credentials.json"
-    credentials_file.write_text("{}", encoding="utf-8")
-
-    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(credentials_file))
-    monkeypatch.setenv("GOOGLE_TOKEN_FILE", str(tmp_path / "token.json"))
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(google_credentials_file))
     monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
 
     settings.GOOGLE_OAUTH_REDIRECT_URI = (
@@ -114,16 +114,12 @@ def test_build_gmail_authorization_url_stores_state_and_pkce(
 def test_complete_gmail_oauth_callback_saves_mailbox_token(
     monkeypatch,
     settings,
-    tmp_path,
+    google_credentials_file,
     rf,
     admin_user,
     mailbox,
 ):
-    credentials_file = tmp_path / "credentials.json"
-    credentials_file.write_text("{}", encoding="utf-8")
-
-    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(credentials_file))
-    monkeypatch.setenv("GOOGLE_TOKEN_FILE", str(tmp_path / "token.json"))
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(google_credentials_file))
     monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
     monkeypatch.setattr("alerts.gmail.gmail_oauth.fetch_google_email", lambda credentials: mailbox.email)
 
@@ -190,16 +186,12 @@ def test_complete_gmail_oauth_callback_rejects_invalid_state(
 def test_complete_gmail_oauth_callback_rejects_missing_code_verifier(
     monkeypatch,
     settings,
-    tmp_path,
+    google_credentials_file,
     rf,
     admin_user,
     mailbox,
 ):
-    credentials_file = tmp_path / "credentials.json"
-    credentials_file.write_text("{}", encoding="utf-8")
-
-    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(credentials_file))
-    monkeypatch.setenv("GOOGLE_TOKEN_FILE", str(tmp_path / "token.json"))
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(google_credentials_file))
     monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
 
     settings.GOOGLE_OAUTH_REDIRECT_URI = (
@@ -231,16 +223,12 @@ def test_complete_gmail_oauth_callback_rejects_missing_code_verifier(
 def test_complete_gmail_oauth_callback_rejects_wrong_google_account(
     monkeypatch,
     settings,
-    tmp_path,
+    google_credentials_file,
     rf,
     admin_user,
     mailbox,
 ):
-    credentials_file = tmp_path / "credentials.json"
-    credentials_file.write_text("{}", encoding="utf-8")
-
-    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(credentials_file))
-    monkeypatch.setenv("GOOGLE_TOKEN_FILE", str(tmp_path / "token.json"))
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(google_credentials_file))
     monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
     monkeypatch.setattr("alerts.gmail.gmail_oauth.fetch_google_email", lambda credentials: "other@example.com")
 
