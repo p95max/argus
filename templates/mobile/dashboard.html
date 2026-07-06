@@ -9,7 +9,16 @@
 <body>
 <header>
     <h1>Argus</h1>
-    <a class="link-button" href="{{ admin_alert_changelist_url }}">Admin</a>
+    <a
+        class="icon-button"
+        href="{{ admin_alert_changelist_url }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Admin"
+        title="Admin"
+    >
+        ⚙️
+    </a>
 </header>
 <main>
     {% if messages %}
@@ -75,14 +84,14 @@
     </section>
     {% else %}
     <section>
-        <h2>
+        <h1>
             {% if view_mode == 'today' %}Сегодня
             {% elif view_mode == 'mine' %}Мои в работе
             {% elif view_mode == 'noise' %}Спам и рассылки
             {% else %}Обращения{% endif %}
-        </h2>
+        </h1>
         {% for alert in alerts %}
-            <article class="card">
+            <article class="card alert-card">
                 <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
                 <div class="meta">{{ alert.mailbox.email }} · {{ alert.created_at|date:"d.m.Y H:i" }}</div>
                 <div class="badges">

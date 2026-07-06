@@ -246,3 +246,23 @@ button { cursor: pointer; }
 .quiet-hours-block .collapsible-content {
     gap: 10px;
 }
+
+.alert-card {
+    background: #1b242d;
+    border-color: #354352;
+}
+
+.icon-button {
+    min-width: 38px;
+    min-height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 6px;
+    background: var(--panel-2);
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    line-height: 1;
+}
