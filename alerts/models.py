@@ -47,8 +47,8 @@ class MailboxAccount(TimestampedModel):
 
     class Meta:
         ordering = ["email"]
-        verbose_name = "почтовый ящик"
-        verbose_name_plural = "почтовые ящики"
+        verbose_name = "Почтовый ящик"
+        verbose_name_plural = "Почтовые ящики"
 
     def __str__(self):
         return f"{self.name} <{self.email}>"
@@ -74,8 +74,8 @@ class LeadFlag(TimestampedModel):
 
     class Meta:
         ordering = ["category", "name"]
-        verbose_name = "флаг обращения"
-        verbose_name_plural = "флаги обращений"
+        verbose_name = "Приоритет обращения"
+        verbose_name_plural = "Приоритеты обращений"
 
     def __str__(self):
         return self.name
@@ -166,12 +166,19 @@ class MarketplaceAlert(TimestampedModel):
             models.Index(fields=["event_type"]),
             models.Index(fields=["listing_id"]),
         ]
-        verbose_name = "обращение"
-        verbose_name_plural = "обращения"
+        verbose_name = "Обращение"
+        verbose_name_plural = "Обращения"
 
     def __str__(self):
         title = self.listing_title or self.subject or self.get_event_type_display()
         return f"{title} ({self.get_alert_status_display()})"
+
+
+class NoiseAlert(MarketplaceAlert):
+    class Meta:
+        proxy = True
+        verbose_name = "Письмо из спама или рассылки"
+        verbose_name_plural = "Спам и рассылки"
 
 
 class ProcessedEmail(TimestampedModel):
@@ -195,8 +202,8 @@ class ProcessedEmail(TimestampedModel):
                 name="unique_processed_email_per_mailbox",
             ),
         ]
-        verbose_name = "обработанное письмо"
-        verbose_name_plural = "обработанные письма"
+        verbose_name = "Проверенное письмо"
+        verbose_name_plural = "Проверенные письма"
 
     def __str__(self):
         return f"{self.mailbox.email}: {self.gmail_message_id}"
@@ -256,8 +263,8 @@ class ServiceEvent(TimestampedModel):
             models.Index(fields=["severity", "status"]),
             models.Index(fields=["fingerprint", "status"]),
         ]
-        verbose_name = "service event"
-        verbose_name_plural = "service events"
+        verbose_name = "Запись журнала системы"
+        verbose_name_plural = "Журнал системы"
 
     def __str__(self):
         return f"{self.get_event_type_display()}: {self.title}"
@@ -273,8 +280,8 @@ class TelegramSettings(TimestampedModel):
     )
 
     class Meta:
-        verbose_name = "настройки Telegram"
-        verbose_name_plural = "настройки Telegram"
+        verbose_name = "Настройки Telegram"
+        verbose_name_plural = "Настройки Telegram"
 
     def __str__(self):
         status = "включены" if self.quiet_hours_enabled else "выключены"

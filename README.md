@@ -167,12 +167,13 @@ Quiet hours are configured in Admin through `TelegramSettings`. Normal alerts an
 
 Main Admin models:
 
-- `MailboxAccount`: mailbox config, Gmail OAuth, health, manual check.
-- `MarketplaceAlert`: parsed lead/event, status, priority, Telegram delivery fields.
-- `ProcessedEmail`: dedupe log; read-only for normal users.
-- `LeadFlag`: classification flags.
-- `ServiceEvent`: operational health events.
-- `TelegramSettings`: quiet hours.
+- `Почтовые ящики`: mailbox config, Gmail OAuth, health, manual check.
+- `Обращения`: parsed lead/event, status, priority, Telegram delivery fields.
+- `Спам и рассылки`: separate Admin view for promotional/system noise that may still be worth reviewing.
+- `Проверенные письма`: dedupe log; read-only for normal users.
+- `Приоритеты обращений`: classification flags.
+- `Журнал системы`: operational health events.
+- `Настройки Telegram`: quiet hours.
 
 Mailbox management requires superuser access or add/change/delete permissions for `MailboxAccount`. Staff users can view mailbox operations.
 

@@ -9,6 +9,7 @@ from .models import (
     LeadFlag,
     MailboxAccount,
     MarketplaceAlert,
+    NoiseAlert,
     ProcessedEmail,
     ServiceEvent,
     TelegramSettings,
@@ -496,6 +497,59 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             request,
             f"Закрыто кейсов: {result.selected_cases}; удалено обращений: {result.deleted_alerts}.",
         )
+
+
+@admin.register(NoiseAlert)
+class NoiseAlertAdmin(MarketplaceAlertAdmin):
+    list_display = (
+        "display_title",
+        "mailbox",
+        "status_badge",
+        "parse_status_badge",
+        "received_at",
+        "created_at",
+    )
+    list_filter = ("mailbox", "alert_status", "parse_status", "received_at")
+    actions = (
+        "mark_as_buyer_message",
+        "mark_as_system_notice",
+        "mark_as_listing_expiring",
+        "mark_as_ignored",
+        "mark_as_unread",
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(event_type=MarketplaceAlert.EventType.NOISE)
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.action(description="Это полезное обращение: перенести в обращения")
+    def mark_as_buyer_message(self, request, queryset):
+        updated = queryset.update(
+            event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+            parse_status=MarketplaceAlert.ParseStatus.PARTIAL,
+            alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+        )
+        self.message_user(request, f"Писем перенесено в обращения: {updated}.")
+
+    @admin.action(description="Это служебное письмо")
+    def mark_as_system_notice(self, request, queryset):
+        updated = queryset.update(
+            event_type=MarketplaceAlert.EventType.SYSTEM_NOTICE,
+            parse_status=MarketplaceAlert.ParseStatus.SUCCESS,
+            alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+        )
+        self.message_user(request, f"Писем перенесено в служебные: {updated}.")
+
+    @admin.action(description="Это событие по объявлению")
+    def mark_as_listing_expiring(self, request, queryset):
+        updated = queryset.update(
+            event_type=MarketplaceAlert.EventType.LISTING_EXPIRING,
+            parse_status=MarketplaceAlert.ParseStatus.SUCCESS,
+            alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+        )
+        self.message_user(request, f"Писем перенесено в события по объявлениям: {updated}.")
 
 
 @admin.register(ProcessedEmail)
