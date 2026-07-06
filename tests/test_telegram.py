@@ -79,6 +79,21 @@ def test_build_alert_message_contains_main_details(alert):
     assert "Ich kann heute" in message
 
 
+@pytest.mark.django_db
+def test_build_alert_message_keeps_operational_event_separate_from_buyer_lead(alert):
+    alert.event_type = MarketplaceAlert.EventType.LISTING_EXPIRING
+    alert.buyer_name = "Max"
+    alert.message_text = "Deine Anzeige läuft bald ab."
+    alert.save(update_fields=["event_type", "buyer_name", "message_text", "updated_at"])
+
+    message = build_alert_message(alert)
+
+    assert "Kleinanzeigen" in message
+    assert "BMW 320d Touring" in message
+    assert "Deine Anzeige" in message
+    assert "Max" not in message
+
+
 def test_build_system_message_escapes_html():
     message = build_system_message("Gmail error", "<bad>")
 

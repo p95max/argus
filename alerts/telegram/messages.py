@@ -24,15 +24,18 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
     event_time = alert.received_at or alert.created_at
     mailbox_label = _alert_mailbox_label(alert)
 
-    return "\n".join(
+    lines = [
+        _build_alert_header(alert),
+        f"📬 <b>Ящик:</b> {html.escape(mailbox_label)}",
+        f"📅 <b>Дата:</b> {_format_date_from_datetime(event_time)}",
+        f"🕒 <b>Время:</b> {_format_time(event_time)}",
+        f"🆔 <b>ID:</b> {alert.id}",
+        f"📌 <b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
+    ]
+    if alert.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
+        lines.append(f"👤 <b>Покупатель:</b> {html.escape(buyer)}")
+    lines.extend(
         [
-            _build_alert_header(alert),
-            f"📬 <b>Ящик:</b> {html.escape(mailbox_label)}",
-            f"📅 <b>Дата:</b> {_format_date_from_datetime(event_time)}",
-            f"🕒 <b>Время:</b> {_format_time(event_time)}",
-            f"🆔 <b>ID:</b> {alert.id}",
-            f"📌 <b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
-            f"👤 <b>Покупатель:</b> {html.escape(buyer)}",
             f"🚗 <b>Объявление:</b> {html.escape(title)}",
             f"{_priority_emoji(alert)} <b>Приоритет:</b> {html.escape(alert.get_priority_display())}",
             f"🏷️ <b>Тип:</b> {html.escape(alert.get_event_type_display())}",
@@ -41,6 +44,7 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
             f"💬 {html.escape(_truncate(message, 1200))}",
         ]
     )
+    return "\n".join(lines)
 
 
 def build_alert_reminder_message(alert: MarketplaceAlert) -> str:

@@ -133,6 +133,56 @@ def test_check_mailbox_sends_telegram_when_enabled(monkeypatch, mailbox):
 
 
 @pytest.mark.django_db
+def test_check_mailbox_does_not_send_noise_to_telegram(monkeypatch, mailbox):
+    sent = []
+    monkeypatch.setenv("TELEGRAM_SEND_ON_GMAIL_CHECK", "True")
+    monkeypatch.setattr("alerts.telegram.sender.send_telegram_alert", lambda alert: sent.append(alert.id))
+
+    result = check_mailbox(
+        mailbox,
+        messages=[
+            GmailMessage(
+                message_id="gmail-noise",
+                thread_id="thread-noise",
+                subject="Kleinanzeigen Newsletter",
+                body="Newsletter: neue Angebote, Rabatt und Tipps von Kleinanzeigen.",
+            )
+        ],
+    )
+
+    alert = MarketplaceAlert.objects.get()
+    assert result.created == 1
+    assert sent == []
+    assert alert.event_type == MarketplaceAlert.EventType.NOISE
+    assert alert.priority == MarketplaceAlert.Priority.LOW
+
+
+@pytest.mark.django_db
+def test_check_mailbox_sends_listing_expiration_as_operational_event(monkeypatch, mailbox):
+    sent = []
+    monkeypatch.setenv("TELEGRAM_SEND_ON_GMAIL_CHECK", "True")
+    monkeypatch.setattr("alerts.telegram.sender.send_telegram_alert", lambda alert: sent.append(alert.id))
+
+    result = check_mailbox(
+        mailbox,
+        messages=[
+            GmailMessage(
+                message_id="gmail-expiring",
+                thread_id="thread-expiring",
+                subject='Deine Anzeige "VW Golf GTI" läuft bald ab',
+                body="Deine Anzeige läuft bald ab.\nAnzeigen-ID: 987654321",
+            )
+        ],
+    )
+
+    alert = MarketplaceAlert.objects.get()
+    assert result.created == 1
+    assert sent == [alert.id]
+    assert alert.event_type == MarketplaceAlert.EventType.LISTING_EXPIRING
+    assert alert.buyer_name == ""
+
+
+@pytest.mark.django_db
 def test_check_mailbox_updates_error_health(monkeypatch, mailbox):
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
     monkeypatch.delenv("TELEGRAM_DEFAULT_CHAT_ID", raising=False)

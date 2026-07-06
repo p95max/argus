@@ -47,20 +47,40 @@ class ParsedMarketplaceEmail:
     classification_reason: str = ""
 
 
-SYSTEM_PATTERNS = (
-    "läuft bald ab",
-    "anzeige läuft ab",
-    "listing expiring",
-    "deine anzeige endet",
-    "deine anzeige läuft",
+BUYER_MESSAGE_PATTERNS = (
+    r"\bneue nachricht von\b",
+    r"\bhat dir eine nachricht geschrieben\b",
+    r"\bvon\s*:\s*.+\bnachricht\s*:",
 )
-NOISE_PATTERNS = (
-    "newsletter",
-    "angebot der woche",
-    "aktion",
-    "werbung",
-    "rabatt",
-    "tipps von kleinanzeigen",
+LISTING_OPERATION_PATTERNS = (
+    "\\bl(?:\u00e4|ae)uft bald ab\\b",
+    "\\banzeige l(?:\u00e4|ae)uft ab\\b",
+    r"\blisting expiring\b",
+    r"\bdeine anzeige endet\b",
+    "\\bdeine anzeige l(?:\u00e4|ae)uft\\b",
+    "\\bdeine anzeige wurde ver(?:\u00f6|oe)ffentlicht\\b",
+    r"\bdeine anzeige ist online\b",
+)
+PROMOTIONAL_NOISE_PATTERNS = (
+    r"\bnewsletter\b",
+    r"\bangebot(?:e)? der woche\b",
+    r"\baktion\b",
+    r"\bwerbung\b",
+    r"\brabatt\b",
+    r"\bgutschein\b",
+    r"\bpartnerangebot(?:e)?\b",
+    r"\btipps von kleinanzeigen\b",
+    r"\bkleinanzeigen magazin\b",
+    "\\bempfehlungen f(?:\u00fcr|uer) dich\\b",
+    r"\bneue angebote\b",
+)
+GENERIC_SYSTEM_PATTERNS = (
+    r"\bsicher bezahlen\b",
+    r"\bkleinanzeigen-konto\b",
+    r"\bpasswort\b",
+    r"\bsicherheitshinweis\b",
+    r"\bdein konto\b",
+    r"\bkleinanzeigen\b",
 )
 
 
@@ -86,20 +106,28 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
     raw_body = body or ""
     normalized_body = normalize_body(raw_body)
     combined = f"{raw_subject}\n{normalized_body}".strip()
-    combined_lower = combined.lower()
+    combined_lower = _normalize_matching_text(combined).lower()
 
-    event_type = MarketplaceAlert.EventType.BUYER_MESSAGE
-    if _contains_any(combined_lower, SYSTEM_PATTERNS):
-        event_type = MarketplaceAlert.EventType.LISTING_EXPIRING
-    elif _contains_any(combined_lower, NOISE_PATTERNS):
+    if _matches_any(combined_lower, PROMOTIONAL_NOISE_PATTERNS):
         event_type = MarketplaceAlert.EventType.NOISE
-    elif "kleinanzeigen" in combined_lower and "nachricht" not in combined_lower:
+    elif _matches_any(combined_lower, LISTING_OPERATION_PATTERNS):
+        event_type = MarketplaceAlert.EventType.LISTING_EXPIRING
+    elif _matches_any(combined_lower, BUYER_MESSAGE_PATTERNS):
+        event_type = MarketplaceAlert.EventType.BUYER_MESSAGE
+    elif _matches_any(combined_lower, GENERIC_SYSTEM_PATTERNS):
+        event_type = MarketplaceAlert.EventType.SYSTEM_NOTICE
+    else:
         event_type = MarketplaceAlert.EventType.SYSTEM_NOTICE
 
     listing_title = _parse_listing_title(raw_subject, normalized_body)
     listing_id = _parse_listing_id(combined)
-    buyer_name = _parse_buyer_name(raw_subject, normalized_body)
-    message_text = _parse_message_text(normalized_body)
+    buyer_name = ""
+    message_text = ""
+    if event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
+        buyer_name = _parse_buyer_name(raw_subject, normalized_body)
+        message_text = _parse_message_text(normalized_body)
+    elif event_type != MarketplaceAlert.EventType.NOISE:
+        message_text = _parse_operational_message(normalized_body)
 
     missing = []
     if event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
@@ -120,10 +148,17 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
         parse_status = MarketplaceAlert.ParseStatus.PARTIAL
         parse_error = "Missing fields: " + ", ".join(missing)
 
-    classification = classify_marketplace_message(f"{raw_subject}\n{normalized_body}")
-    priority = classification.priority
+    priority = MarketplaceAlert.Priority.NORMAL
+    flag_codes = ()
+    classification_reason = "Operational/system event; buyer lead classifier was not applied."
+    if event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
+        classification = classify_marketplace_message(f"{raw_subject}\n{normalized_body}")
+        priority = classification.priority
+        flag_codes = classification.flag_codes
+        classification_reason = classification.reason
     if event_type == MarketplaceAlert.EventType.NOISE:
         priority = MarketplaceAlert.Priority.LOW
+        classification_reason = "Promotional/system noise; skipped as buyer lead."
 
     return ParsedMarketplaceEmail(
         event_type=event_type,
@@ -138,8 +173,8 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
         normalized_body=normalized_body,
         subject=raw_subject.strip(),
         priority=priority,
-        flag_codes=classification.flag_codes,
-        classification_reason=classification.reason,
+        flag_codes=flag_codes,
+        classification_reason=classification_reason,
     )
 
 
@@ -157,8 +192,27 @@ def _strip_signature(text: str) -> str:
     return stripped
 
 
-def _contains_any(text: str, patterns: tuple[str, ...]) -> bool:
-    return any(pattern in text for pattern in patterns)
+def _normalize_matching_text(text: str) -> str:
+    replacements = {
+        "Ã¤": "ä",
+        "Ã¶": "ö",
+        "Ã¼": "ü",
+        "Ã„": "Ä",
+        "Ã–": "Ö",
+        "Ãœ": "Ü",
+        "ÃŸ": "ß",
+        "ÃƒÂ¤": "ä",
+        "ÃƒÂ¶": "ö",
+        "ÃƒÂ¼": "ü",
+    }
+    normalized = text or ""
+    for broken, fixed in replacements.items():
+        normalized = normalized.replace(broken, fixed)
+    return normalized
+
+
+def _matches_any(text: str, patterns: tuple[str, ...]) -> bool:
+    return any(re.search(pattern, text, flags=re.IGNORECASE | re.S) for pattern in patterns)
 
 
 def _parse_listing_title(subject: str, body: str) -> str:
@@ -223,6 +277,20 @@ def _parse_message_text(body: str) -> str:
         "anzeige:",
         "von:",
         "antworten",
+        "hallo",
+    )
+    message_lines = [
+        line for line in lines if not line.lower().startswith(ignored_prefixes)
+    ]
+    return _clean_value("\n".join(message_lines[:4]))
+
+
+def _parse_operational_message(body: str) -> str:
+    lines = [line.strip() for line in body.splitlines() if line.strip()]
+    ignored_prefixes = (
+        "anzeigen-id",
+        "anzeige-id",
+        "id:",
         "hallo",
     )
     message_lines = [
