@@ -471,3 +471,28 @@ summary:focus-visible {
     font-weight: 600;
     line-height: 1.1;
 }
+
+.buyer-message {
+    border: 1px solid rgba(54, 194, 163, .35);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(54, 194, 163, .06);
+}
+
+.buyer-message-header {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(54, 194, 163, .22);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.buyer-message-body {
+    padding: 11px 12px;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

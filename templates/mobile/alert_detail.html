@@ -8,102 +8,219 @@
 </head>
 <body>
 <header>
-    <h1>Обращение #{{ alert.id }}</h1>
-    <a class="link-button" href="{% url 'mobile_dashboard' %}">Назад</a>
+    <h1>📋 Обращение #{{ alert.id }}</h1>
+    <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← Назад</a>
 </header>
+
 <main>
     <section>
-        <article class="card">
-            <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
-            <div class="meta">{{ alert.mailbox.email }} · {{ alert.created_at|date:"d.m.Y H:i" }}</div>
+        <article class="card alert-card">
+            <div class="title">
+                {{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}
+            </div>
+
+            <div class="alert-meta-grid">
+                <div class="alert-mailbox">
+                    <span class="meta-label">📬 Ящик</span>
+                    <strong>{{ alert.mailbox.name|default:alert.mailbox.email }}</strong>
+                    <span>{{ alert.mailbox.email }}</span>
+                </div>
+
+                <div class="alert-date">
+                    <span class="meta-label">📅 Дата</span>
+                    <strong>{{ alert.created_at|date:"d.m.Y" }}</strong>
+                    <span>{{ alert.created_at|date:"H:i" }}</span>
+                </div>
+            </div>
+
             <div class="badges">
-                <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">{{ alert.get_alert_status_display }}</span>
-                <span class="badge {% if alert.priority == 'urgent' or alert.priority == 'high' %}danger{% endif %}">{{ alert.get_priority_display }}</span>
-                <span class="badge">{{ alert.get_event_type_display }}</span>
-                <span class="badge {% if alert.parse_status == 'error' %}danger{% elif alert.parse_status == 'partial' %}warn{% else %}ok{% endif %}">{{ alert.get_parse_status_display }}</span>
+                <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">
+                    {{ alert.get_alert_status_display }}
+                </span>
+
+                <span class="badge {% if alert.priority == 'urgent' or alert.priority == 'high' %}danger{% endif %}">
+                    {{ alert.get_priority_display }}
+                </span>
+
+                <span class="badge">
+                    {{ alert.get_event_type_display }}
+                </span>
+
+                <span class="badge {% if alert.parse_status == 'error' %}danger{% elif alert.parse_status == 'partial' %}warn{% else %}ok{% endif %}">
+                    {{ alert.get_parse_status_display }}
+                </span>
+
                 {% for flag in alert.flags.all %}
-                    <span class="badge {% if flag.category == 'risk' %}danger{% endif %}">{{ flag.name }}</span>
+                    <span class="badge {% if flag.category == 'risk' %}danger{% endif %}">
+                        {{ flag.name }}
+                    </span>
                 {% endfor %}
             </div>
+
             {% if alert.buyer_name %}
-                <div class="small">Покупатель: {{ alert.buyer_name }}</div>
+                <div class="info-row">
+                    <span class="info-icon">👤</span>
+                    <span class="info-content">
+                        <span class="info-label">Покупатель</span>
+                        <strong>{{ alert.buyer_name }}</strong>
+                    </span>
+                </div>
             {% endif %}
+
             {% if alert.taken_by or alert.taken_by_label %}
-                <div class="small">В работе у: {% if alert.taken_by %}{{ alert.taken_by.get_full_name|default:alert.taken_by.username }}{% else %}{{ alert.taken_by_label }}{% endif %}</div>
+                <div class="info-row work-owner">
+                    <span class="info-icon">👷</span>
+                    <span class="info-content">
+                        <span class="info-label">В работе у</span>
+                        <strong>
+                            {% if alert.taken_by %}
+                                {{ alert.taken_by.get_full_name|default:alert.taken_by.username }}
+                            {% else %}
+                                {{ alert.taken_by_label }}
+                            {% endif %}
+                        </strong>
+                    </span>
+                </div>
             {% endif %}
+
             {% if alert.classification_reason %}
-                <div class="small">Почему: {{ alert.classification_reason }}</div>
+                <div class="info-row classification-note">
+                    <span class="info-icon">🧠</span>
+                    <span class="info-content">
+                        <span class="info-label">Классификация</span>
+                        <span>{{ alert.classification_reason }}</span>
+                    </span>
+                </div>
             {% endif %}
-            {% if alert.message_text %}
-                <div class="body-text">{{ alert.message_text }}</div>
-            {% elif alert.normalized_body %}
-                <div class="body-text">{{ alert.normalized_body }}</div>
-            {% else %}
-                <div class="empty">Текст письма не найден.</div>
-            {% endif %}
 
-        <div class="actions">
-            <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <input type="hidden" name="status" value="in_work">
-                <button
-                    type="submit"
-                    {% if alert.alert_status == 'in_work' %}disabled{% endif %}
-                >
-                    ✅В работу
-                </button>
-            </form>
-
-            <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <input type="hidden" name="status" value="unread">
-                <button
-                    type="submit"
-                    {% if alert.alert_status == 'unread' %}disabled{% endif %}
-                >
-                    Снять
-                </button>
-            </form>
-
-            <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <input type="hidden" name="status" value="ignored">
-                <button
-                    type="submit"
-                    {% if alert.alert_status == 'ignored' %}disabled{% endif %}
-                >
-                    🚫Игнор
-                </button>
-            </form>
+{% if alert.message_text %}
+    <div class="buyer-message">
+        <div class="buyer-message-header">
+            <span>💬 Сообщение покупателя</span>
         </div>
+        <div class="buyer-message-body">
+            {{ alert.message_text }}
+        </div>
+    </div>
+{% elif alert.normalized_body %}
+    <div class="buyer-message">
+        <div class="buyer-message-header">
+            <span>💬 Текст письма</span>
+        </div>
+        <div class="buyer-message-body">
+            {{ alert.normalized_body }}
+        </div>
+    </div>
+{% else %}
+    <div class="empty">Текст письма не найден.</div>
+{% endif %}
 
-        </article>
-    </section>
+            <div class="actions compact-actions">
+                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input type="hidden" name="status" value="in_work">
+                    <button
+                        class="small-action"
+                        type="submit"
+                        {% if alert.alert_status == 'in_work' %}disabled{% endif %}
+                    >
+                        🛠️ В работу
+                    </button>
+                </form>
 
-    <section>
-        <h2>Ящик</h2>
-        <article class="card">
-            <div class="title">{{ alert.mailbox.name }}</div>
-            <div class="meta">{{ alert.mailbox.email }}</div>
-            <div class="badges">
-                <span class="badge {% if alert.mailbox.is_active %}ok{% else %}warn{% endif %}">{% if alert.mailbox.is_active %}активен{% else %}выключен{% endif %}</span>
-                <span class="badge {% if alert.mailbox.connection_status == 'error' %}danger{% elif alert.mailbox.connection_status == 'connected' %}ok{% else %}warn{% endif %}">{{ alert.mailbox.get_connection_status_display }}</span>
+                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input type="hidden" name="status" value="unread">
+                    <button
+                        class="small-action"
+                        type="submit"
+                        {% if alert.alert_status == 'unread' %}disabled{% endif %}
+                    >
+                        ↩️ Снять
+                    </button>
+                </form>
+
+                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input type="hidden" name="status" value="ignored">
+                    <button
+                        class="small-action"
+                        type="submit"
+                        {% if alert.alert_status == 'ignored' %}disabled{% endif %}
+                    >
+                        🚫 Игнор
+                    </button>
+                </form>
             </div>
-            <div class="small">Последняя проверка: {{ alert.mailbox.last_checked_at|date:"d.m.Y H:i"|default:"ещё не было" }}</div>
-            {% if alert.mailbox.last_error %}
-                <div class="small">Ошибка: {{ alert.mailbox.last_error }}</div>
-            {% endif %}
         </article>
     </section>
 
     <section>
-        <div class="actions">
-            <a class="link-button" href="{{ admin_alert_url }}">ℹ️Полная информация</a>
+        <details class="card collapsible-card">
+            <summary class="collapsible-summary">
+                <span class="summary-title">📬 Ящик
+
+                     {% if alert.mailbox.connection_status == 'error' %}
+                    <span class="status-pill danger">
+                        <span class="status-dot"></span>
+                        Ошибка
+                    </span>
+                {% elif alert.mailbox.connection_status == 'connected' %}
+                    <span class="status-pill ok">
+                        <span class="status-dot"></span>
+                        OK
+                    </span>
+                {% else %}
+                    <span class="status-pill muted">
+                        <span class="status-dot"></span>
+                        {{ alert.mailbox.get_connection_status_display }}
+                    </span>
+                {% endif %}
+
+                </span>
+            </summary>
+
+            <div class="collapsible-content">
+                <article class="card nested-card">
+                    <div class="title">{{ alert.mailbox.name }}</div>
+                    <div class="meta">{{ alert.mailbox.email }}</div>
+
+                    <div class="badges">
+                        <span class="badge {% if alert.mailbox.is_active %}ok{% else %}warn{% endif %}">
+                            {% if alert.mailbox.is_active %}активен{% else %}выключен{% endif %}
+                        </span>
+
+                        <span class="badge {% if alert.mailbox.connection_status == 'error' %}danger{% elif alert.mailbox.connection_status == 'connected' %}ok{% else %}warn{% endif %}">
+                            {{ alert.mailbox.get_connection_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="small">
+                        Последняя проверка:
+                        {{ alert.mailbox.last_checked_at|date:"d.m.Y H:i"|default:"ещё не было" }}
+                    </div>
+
+                    {% if alert.mailbox.last_error %}
+                        <div class="small">Ошибка: {{ alert.mailbox.last_error }}</div>
+                    {% endif %}
+                </article>
+            </div>
+        </details>
+    </section>
+
+    <section>
+        <div class="actions compact-actions">
+            <a class="link-button small-action" href="{{ admin_alert_url }}">
+                ℹ️ Полная информация
+            </a>
+
             {% if can_manage_mailboxes %}
-                <a class="link-button" href="{{ admin_mailbox_url }}">⚙️Настройки</a>
+                <a class="link-button small-action" href="{{ admin_mailbox_url }}">
+                    ⚙️ Настройки
+                </a>
             {% endif %}
         </div>
     </section>
