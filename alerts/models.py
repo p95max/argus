@@ -1,5 +1,6 @@
 from datetime import time
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -125,6 +126,16 @@ class MarketplaceAlert(TimestampedModel):
         choices=AlertStatus.choices,
         default=AlertStatus.UNREAD,
     )
+    taken_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="кто взял в работу",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="marketplace_alerts_in_work",
+    )
+    taken_by_label = models.CharField("исполнитель", max_length=160, blank=True)
+    taken_at = models.DateTimeField("взято в работу", null=True, blank=True)
     priority = models.CharField(
         "приоритет",
         max_length=32,

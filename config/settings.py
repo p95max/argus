@@ -20,6 +20,7 @@ env = environ.Env(
     DJANGO_ALLOWED_HOSTS=(list, ["127.0.0.1", "localhost"]),
     DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
     DJANGO_ADMIN_URL=(str, "control"),
+    ARGUS_PUBLIC_BASE_URL=(str, "http://127.0.0.1:8000"),
     DJANGO_TIME_ZONE=(str, "Europe/Berlin"),
     DJANGO_SECURE_SSL_REDIRECT=(bool, False),
     DJANGO_SESSION_COOKIE_SECURE=(bool, False),
@@ -95,6 +96,7 @@ DJANGO_ADMIN_URL = normalize_url_path(
     env.str("DJANGO_ADMIN_URL"),
     default="control",
 )
+ARGUS_PUBLIC_BASE_URL = env.str("ARGUS_PUBLIC_BASE_URL").strip().rstrip("/")
 
 GMAIL_CHECK_MAX_RESULTS = env.int("GMAIL_CHECK_MAX_RESULTS")
 GMAIL_CHECK_FAIL_ON_ERROR = env.bool("GMAIL_CHECK_FAIL_ON_ERROR")

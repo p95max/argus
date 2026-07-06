@@ -1,0 +1,73 @@
+import pytest
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+
+from alerts.models import MailboxAccount, MarketplaceAlert
+
+
+@pytest.fixture
+def staff_user(db):
+    return get_user_model().objects.create_user(
+        username="staff",
+        password="pass",
+        is_staff=True,
+    )
+
+
+@pytest.fixture
+def regular_user(db):
+    return get_user_model().objects.create_user(
+        username="regular",
+        password="pass",
+    )
+
+
+@pytest.fixture
+def alert(db):
+    mailbox = MailboxAccount.objects.create(name="Mobile inbox", email="mobile@example.local")
+    return MarketplaceAlert.objects.create(
+        mailbox=mailbox,
+        listing_title="Audi A4",
+        message_text="Noch da?",
+        alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+        priority=MarketplaceAlert.Priority.HIGH,
+    )
+
+
+@pytest.mark.django_db
+def test_mobile_panel_requires_staff(client, regular_user):
+    client.force_login(regular_user)
+
+    response = client.get(reverse("mobile_dashboard"))
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_mobile_panel_shows_needs_attention_and_empty_state(client, staff_user, alert):
+    client.force_login(staff_user)
+
+    response = client.get(reverse("mobile_dashboard"))
+
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert "Audi A4" in body
+    assert "Требует внимания" in body
+    assert "Mobile inbox" in body
+
+
+@pytest.mark.django_db
+def test_mobile_panel_can_take_alert_in_work(client, staff_user, alert):
+    client.force_login(staff_user)
+
+    response = client.post(
+        reverse("mobile_update_alert_status", args=[alert.id]),
+        {"status": MarketplaceAlert.AlertStatus.IN_WORK},
+    )
+
+    assert response.status_code == 302
+    alert.refresh_from_db()
+    assert alert.alert_status == MarketplaceAlert.AlertStatus.IN_WORK
+    assert alert.taken_by == staff_user
+    assert alert.taken_by_label == "staff"
+    assert alert.taken_at is not None

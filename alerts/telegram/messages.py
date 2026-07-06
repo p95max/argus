@@ -23,6 +23,7 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
     flags = _alert_flag_names(alert)
     event_time = alert.received_at or alert.created_at
     mailbox_label = _alert_mailbox_label(alert)
+    taken_by = _alert_taken_by_label(alert)
 
     lines = [
         _build_alert_header(alert),
@@ -32,6 +33,8 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
         f"🆔 <b>ID:</b> {alert.id}",
         f"📌 <b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
     ]
+    if taken_by:
+        lines.append(f"👷 <b>В работе у:</b> {html.escape(taken_by)}")
     if alert.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
         lines.append(f"👤 <b>Покупатель:</b> {html.escape(buyer)}")
     lines.extend(
@@ -40,6 +43,12 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
             f"{_priority_emoji(alert)} <b>Приоритет:</b> {html.escape(alert.get_priority_display())}",
             f"🏷️ <b>Тип:</b> {html.escape(alert.get_event_type_display())}",
             f"🚩 <b>Флаги:</b> {html.escape(flags)}",
+        ]
+    )
+    if alert.classification_reason:
+        lines.append(f"🧾 <b>Почему:</b> {html.escape(_truncate(alert.classification_reason, 260))}")
+    lines.extend(
+        [
             "",
             f"💬 {html.escape(_truncate(message, 1200))}",
         ]
@@ -102,6 +111,12 @@ def _alert_mailbox_label(alert: MarketplaceAlert) -> str:
     if mailbox.name and mailbox.email:
         return f"{mailbox.name} ({mailbox.email})"
     return mailbox.name or mailbox.email or "Неизвестно"
+
+
+def _alert_taken_by_label(alert: MarketplaceAlert) -> str:
+    if alert.taken_by:
+        return alert.taken_by.get_full_name() or alert.taken_by.get_username()
+    return alert.taken_by_label
 
 
 def build_system_message(title: str, details: str = "") -> str:

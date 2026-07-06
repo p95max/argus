@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from asgiref.sync import sync_to_async
 from telegram.error import BadRequest
+from django.utils import timezone
 
 from ..models import MarketplaceAlert
 from .keyboards import (
@@ -210,12 +211,19 @@ def handle_alert_callback_action(
         )
 
     alert.alert_status = CALLBACK_STATUS_UPDATES[action]
-    alert.save(
-        update_fields=[
-            "alert_status",
-            "updated_at",
-        ]
-    )
+    update_fields = ["alert_status", "updated_at"]
+    if alert.alert_status == MarketplaceAlert.AlertStatus.IN_WORK:
+        alert.taken_by = None
+        alert.taken_by_label = f"Telegram user {user_id}" if user_id else f"Telegram chat {chat_id}"
+        alert.taken_at = timezone.now()
+        update_fields.extend(["taken_by", "taken_by_label", "taken_at"])
+    elif alert.alert_status == MarketplaceAlert.AlertStatus.UNREAD:
+        alert.taken_by = None
+        alert.taken_by_label = ""
+        alert.taken_at = None
+        update_fields.extend(["taken_by", "taken_by_label", "taken_at"])
+
+    alert.save(update_fields=update_fields)
 
     return AlertCallbackResult(
         alert=alert,

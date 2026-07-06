@@ -129,9 +129,11 @@ def test_async_send_telegram_alert_saves_error(alert):
 def test_update_alert_status_from_allowed_callback(monkeypatch, alert):
     monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
 
-    updated = update_alert_status_from_callback(f"alert:{alert.id}:in_work", chat_id="42")
+    updated = update_alert_status_from_callback(f"alert:{alert.id}:in_work", chat_id="42", user_id="100")
 
     assert updated.alert_status == MarketplaceAlert.AlertStatus.IN_WORK
+    assert updated.taken_by_label == "Telegram user 100"
+    assert updated.taken_at is not None
 
 
 @pytest.mark.django_db
@@ -190,10 +192,26 @@ def test_status_callback_does_not_change_alert_status(monkeypatch, alert):
 
 @pytest.mark.django_db
 def test_build_alert_message_contains_status(alert):
+    alert.taken_by_label = "Telegram user 100"
+    alert.classification_reason = "Есть признаки срочного покупателя."
+    alert.save(update_fields=["taken_by_label", "classification_reason", "updated_at"])
+
     message = build_alert_message(alert)
 
     assert "Статус" in message
     assert alert.get_alert_status_display() in message
+    assert "Telegram user 100" in message
+    assert "Есть признаки" in message
+
+
+@pytest.mark.django_db
+def test_alert_keyboard_contains_open_in_admin_link(settings, alert):
+    settings.ARGUS_PUBLIC_BASE_URL = "http://localhost:8000"
+
+    keyboard = build_alert_keyboard(alert)
+
+    url = keyboard.inline_keyboard[-1][0].url
+    assert url == f"http://localhost:8000/control/alerts/marketplacealert/{alert.id}/change/"
 
 
 @pytest.mark.django_db(transaction=True)

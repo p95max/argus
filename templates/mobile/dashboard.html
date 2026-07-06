@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Argus mobile</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #101418;
+            --panel: #171d23;
+            --panel-2: #1f2730;
+            --text: #edf2f7;
+            --muted: #9aa8b7;
+            --line: #2b3540;
+            --accent: #36c2a3;
+            --danger: #ff6b6b;
+            --warn: #f6c85f;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            background: rgba(16, 20, 24, .96);
+            border-bottom: 1px solid var(--line);
+        }
+        h1 { margin: 0; font-size: 20px; }
+        main { padding: 14px; display: grid; gap: 16px; }
+        section { display: grid; gap: 10px; }
+        h2 { margin: 0; font-size: 16px; color: var(--muted); font-weight: 600; }
+        a { color: var(--accent); text-decoration: none; }
+        .tabs, .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tab, button, .link-button {
+            min-height: 38px;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            padding: 8px 11px;
+            background: var(--panel-2);
+            color: var(--text);
+            font: inherit;
+        }
+        .active { border-color: var(--accent); color: var(--accent); }
+        .card {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel);
+            padding: 12px;
+            display: grid;
+            gap: 8px;
+        }
+        .title { font-weight: 700; line-height: 1.25; }
+        .meta, .small { color: var(--muted); font-size: 13px; line-height: 1.35; }
+        .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+        .badge {
+            border-radius: 999px;
+            padding: 3px 8px;
+            background: var(--panel-2);
+            color: var(--text);
+            font-size: 12px;
+            border: 1px solid var(--line);
+        }
+        .danger { color: var(--danger); border-color: rgba(255, 107, 107, .5); }
+        .warn { color: var(--warn); border-color: rgba(246, 200, 95, .5); }
+        .ok { color: var(--accent); border-color: rgba(54, 194, 163, .5); }
+        .empty {
+            border: 1px dashed var(--line);
+            border-radius: 8px;
+            padding: 18px;
+            color: var(--muted);
+            text-align: center;
+        }
+        form { margin: 0; }
+        button { cursor: pointer; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Argus</h1>
+    <a class="link-button" href="{{ admin_alert_changelist_url }}">Admin</a>
+</header>
+<main>
+    <section>
+        <div class="tabs">
+            <a class="tab {% if view_mode == 'attention' %}active{% endif %}" href="?view=attention">Требует внимания</a>
+            <a class="tab {% if view_mode == 'all' %}active{% endif %}" href="?view=all">Все обращения</a>
+        </div>
+    </section>
+
+    <section>
+        <h2>Обращения</h2>
+        {% for alert in alerts %}
+            <article class="card">
+                <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
+                <div class="meta">{{ alert.mailbox.email }} · {{ alert.created_at|date:"d.m.Y H:i" }}</div>
+                <div class="badges">
+                    <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">{{ alert.get_alert_status_display }}</span>
+                    <span class="badge {% if alert.priority == 'urgent' or alert.priority == 'high' %}danger{% endif %}">{{ alert.get_priority_display }}</span>
+                    <span class="badge">{{ alert.get_event_type_display }}</span>
+                    {% for flag in alert.flags.all %}
+                        <span class="badge {% if flag.category == 'risk' %}danger{% endif %}">{{ flag.name }}</span>
+                    {% endfor %}
+                </div>
+                {% if alert.taken_by or alert.taken_by_label %}
+                    <div class="small">В работе у: {% if alert.taken_by %}{{ alert.taken_by.get_full_name|default:alert.taken_by.username }}{% else %}{{ alert.taken_by_label }}{% endif %}</div>
+                {% endif %}
+                {% if alert.classification_reason %}
+                    <div class="small">{{ alert.classification_reason }}</div>
+                {% endif %}
+                <div class="actions">
+                    <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="status" value="in_work">
+                        <button type="submit">В работу</button>
+                    </form>
+                    <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="status" value="ignored">
+                        <button type="submit">Игнор</button>
+                    </form>
+                    <a class="link-button" href="{% url 'admin:alerts_marketplacealert_change' alert.id %}">Open in Admin</a>
+                </div>
+            </article>
+        {% empty %}
+            <div class="empty">Сейчас нет обращений для этого фильтра.</div>
+        {% endfor %}
+    </section>
+
+    <section>
+        <h2>Статус ящиков</h2>
+        {% for mailbox in mailboxes %}
+            <article class="card">
+                <div class="title">{{ mailbox.name }}</div>
+                <div class="meta">{{ mailbox.email }}</div>
+                <div class="badges">
+                    <span class="badge {% if mailbox.is_active %}ok{% else %}warn{% endif %}">{% if mailbox.is_active %}активен{% else %}выключен{% endif %}</span>
+                    <span class="badge {% if mailbox.connection_status == 'error' %}danger{% elif mailbox.connection_status == 'connected' %}ok{% else %}warn{% endif %}">{{ mailbox.get_connection_status_display }}</span>
+                </div>
+                <div class="small">Последняя проверка: {{ mailbox.last_checked_at|date:"d.m.Y H:i"|default:"ещё не было" }}</div>
+                {% if mailbox.last_error %}
+                    <div class="small">Ошибка: {{ mailbox.last_error }}</div>
+                {% endif %}
+                {% if can_manage_mailboxes %}
+                    <a href="{% url 'admin:alerts_mailboxaccount_change' mailbox.id %}">Настроить в Admin</a>
+                {% endif %}
+            </article>
+        {% empty %}
+            <div class="empty">Почтовые ящики пока не добавлены.</div>
+        {% endfor %}
+    </section>
+</main>
+</body>
+</html>

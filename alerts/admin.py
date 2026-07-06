@@ -1,9 +1,12 @@
 from django.contrib import admin, messages
+from django.db.models import Count, Q
+from django.utils import timezone
 from django.utils.html import format_html
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.urls import path, reverse
 
+from .attention import filter_needs_attention, needs_attention_alert_q
 from .cleanup import close_cases_for_alerts
 from .models import (
     LeadFlag,
@@ -17,10 +20,29 @@ from .models import (
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
 from .gmail.gmail import check_mailbox
 from .gmail.gmail_oauth import build_gmail_authorization_url, complete_gmail_oauth_callback
+from .telegram.sender import send_telegram_alert
 
 
 def status_badge(text, css_class):
     return format_html('<span class="badge {}">{}</span>', css_class, text)
+
+
+class NeedsAttentionFilter(admin.SimpleListFilter):
+    title = "Требует внимания"
+    parameter_name = "needs_attention"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Да"),
+            ("no", "Нет"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return filter_needs_attention(queryset)
+        if self.value() == "no":
+            return queryset.exclude(needs_attention_alert_q()).distinct()
+        return queryset
 
 
 @admin.register(TelegramSettings)
@@ -346,12 +368,15 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
         "mailbox",
         "event_type_badge",
         "status_badge",
+        "taken_by_display",
         "priority_badge",
+        "risk_badge",
+        "needs_attention_badge",
         "parse_status_badge",
         "last_reminded_at",
         "received_at",
     )
-    list_filter = ("mailbox", "alert_status", "priority", "event_type", "parse_status", "flags")
+    list_filter = (NeedsAttentionFilter, "mailbox", "alert_status", "priority", "event_type", "parse_status", "flags")
     search_fields = ("listing_title", "buyer_name", "subject", "message_text", "listing_id")
     filter_horizontal = ("flags",)
     readonly_fields = (
@@ -362,11 +387,20 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
         "telegram_sent_at",
         "last_reminded_at",
         "telegram_error",
+        "taken_by",
+        "taken_by_label",
+        "taken_at",
         "created_at",
         "updated_at",
         "processed_at",
     )
-    actions = ("mark_as_in_work", "mark_as_ignored", "mark_as_unread", "close_case_by_listing")
+    actions = (
+        "mark_as_in_work",
+        "mark_as_ignored",
+        "mark_as_unread",
+        "send_test_telegram_alert",
+        "close_case_by_listing",
+    )
     fieldsets = (
         (
             "Обращение",
@@ -385,7 +419,16 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
                     "Рабочая классификация обращения: тип события, текущий статус обработки, "
                     "важность и флаги риска/качества."
                 ),
-                "fields": ("event_type", "alert_status", "priority", "flags", "classification_reason"),
+                "fields": (
+                    "event_type",
+                    "alert_status",
+                    "taken_by",
+                    "taken_by_label",
+                    "taken_at",
+                    "priority",
+                    "flags",
+                    "classification_reason",
+                ),
             },
         ),
         (
@@ -432,6 +475,15 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
     def display_title(self, obj):
         return obj.listing_title or obj.subject or obj.get_event_type_display()
 
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("mailbox", "taken_by")
+            .prefetch_related("flags")
+            .annotate(risk_flags_count=Count("flags", filter=Q(flags__category=LeadFlag.Category.RISK)))
+        )
+
     @admin.display(description="Тип", ordering="event_type")
     def event_type_badge(self, obj):
         css_by_type = {
@@ -451,6 +503,12 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
         }
         return status_badge(obj.get_alert_status_display(), css_by_status.get(obj.alert_status, "text-bg-secondary"))
 
+    @admin.display(description="Исполнитель", ordering="taken_by_label")
+    def taken_by_display(self, obj):
+        if obj.taken_by:
+            return obj.taken_by.get_full_name() or obj.taken_by.get_username()
+        return obj.taken_by_label or "—"
+
     @admin.display(description="Приоритет", ordering="priority")
     def priority_badge(self, obj):
         css_by_priority = {
@@ -460,6 +518,25 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             MarketplaceAlert.Priority.URGENT: "text-bg-danger",
         }
         return status_badge(obj.get_priority_display(), css_by_priority.get(obj.priority, "text-bg-secondary"))
+
+    @admin.display(description="Риск")
+    def risk_badge(self, obj):
+        risk_count = getattr(obj, "risk_flags_count", 0)
+        if risk_count:
+            return status_badge(f"риск: {risk_count}", "text-bg-danger")
+        return status_badge("нет", "text-bg-success")
+
+    @admin.display(description="Внимание")
+    def needs_attention_badge(self, obj):
+        if (
+            obj.alert_status == MarketplaceAlert.AlertStatus.UNREAD
+            or obj.priority in [MarketplaceAlert.Priority.HIGH, MarketplaceAlert.Priority.URGENT]
+            or obj.parse_status in [MarketplaceAlert.ParseStatus.ERROR, MarketplaceAlert.ParseStatus.PARTIAL]
+            or obj.telegram_error
+            or obj.mailbox.connection_status == MailboxAccount.ConnectionStatus.ERROR
+        ):
+            return status_badge("нужно", "text-bg-danger")
+        return status_badge("ок", "text-bg-success")
 
     @admin.display(description="Парсинг", ordering="parse_status")
     def parse_status_badge(self, obj):
@@ -473,7 +550,13 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
 
     @admin.action(description="Пометить как в работе")
     def mark_as_in_work(self, request, queryset):
-        updated = queryset.update(alert_status=MarketplaceAlert.AlertStatus.IN_WORK)
+        label = request.user.get_full_name() or request.user.get_username()
+        updated = queryset.update(
+            alert_status=MarketplaceAlert.AlertStatus.IN_WORK,
+            taken_by=request.user,
+            taken_by_label=label,
+            taken_at=timezone.now(),
+        )
         self.message_user(request, f"Обращений переведено в работу: {updated}.")
 
     @admin.action(description="Пометить как игнор")
@@ -483,8 +566,35 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
 
     @admin.action(description="Вернуть в новые")
     def mark_as_unread(self, request, queryset):
-        updated = queryset.update(alert_status=MarketplaceAlert.AlertStatus.UNREAD)
+        updated = queryset.update(
+            alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+            taken_by=None,
+            taken_by_label="",
+            taken_at=None,
+        )
         self.message_user(request, f"Обращений возвращено в новые: {updated}.")
+
+    @admin.action(description="Отправить тестовый Telegram alert")
+    def send_test_telegram_alert(self, request, queryset):
+        sent = 0
+        failed = 0
+        for alert in queryset[:10]:
+            try:
+                send_telegram_alert(alert)
+            except Exception as exc:
+                failed += 1
+                self.message_user(
+                    request,
+                    f"Не удалось отправить Telegram alert #{alert.id}: {exc}",
+                    level=messages.ERROR,
+                )
+                continue
+            sent += 1
+
+        if sent:
+            self.message_user(request, f"Тестовых Telegram alert отправлено: {sent}.")
+        if failed:
+            self.message_user(request, f"Ошибок отправки Telegram: {failed}.", level=messages.WARNING)
 
     @admin.action(description="Кейс закрыт: удалить обращения по listing_id")
     def close_case_by_listing(self, request, queryset):
