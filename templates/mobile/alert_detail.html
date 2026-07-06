@@ -41,26 +41,45 @@
             {% else %}
                 <div class="empty">Текст письма не найден.</div>
             {% endif %}
-            <div class="actions">
-                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <input type="hidden" name="status" value="in_work">
-                    <button type="submit">В работу</button>
-                </form>
-                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <input type="hidden" name="status" value="unread">
-                    <button type="submit">Снять</button>
-                </form>
-                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <input type="hidden" name="status" value="ignored">
-                    <button type="submit">Игнор</button>
-                </form>
-            </div>
+
+        <div class="actions">
+            <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="status" value="in_work">
+                <button
+                    type="submit"
+                    {% if alert.alert_status == 'in_work' %}disabled{% endif %}
+                >
+                    В работу
+                </button>
+            </form>
+
+            <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="status" value="unread">
+                <button
+                    type="submit"
+                    {% if alert.alert_status == 'unread' %}disabled{% endif %}
+                >
+                    Снять
+                </button>
+            </form>
+
+            <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="status" value="ignored">
+                <button
+                    type="submit"
+                    {% if alert.alert_status == 'ignored' %}disabled{% endif %}
+                >
+                    Игнор
+                </button>
+            </form>
+        </div>
+
         </article>
     </section>
 
@@ -82,9 +101,9 @@
 
     <section>
         <div class="actions">
-            <a class="link-button" href="{{ admin_alert_url }}">Полная админка</a>
+            <a class="link-button" href="{{ admin_alert_url }}">ℹ️Полная информация</a>
             {% if can_manage_mailboxes %}
-                <a class="link-button" href="{{ admin_mailbox_url }}">Настроить ящик</a>
+                <a class="link-button" href="{{ admin_mailbox_url }}">⚙️Настройки</a>
             {% endif %}
         </div>
     </section>

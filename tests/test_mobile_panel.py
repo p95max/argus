@@ -88,7 +88,7 @@ def test_mobile_alert_detail_links_to_full_admin(client, staff_user, alert):
     assert "Обращение" in body
     assert "Audi A4" in body
     assert f"/control/alerts/marketplacealert/{alert.id}/change/" in body
-    assert "Полная админка" in body
+    assert "ℹ️Полная информация" in body
 
 
 @pytest.mark.django_db
