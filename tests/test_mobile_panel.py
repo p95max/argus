@@ -54,9 +54,9 @@ def test_mobile_panel_shows_needs_attention_and_empty_state(client, staff_user, 
     assert "Audi A4" in body
     assert "Сегодня" in body
     assert "Мои в работе" in body
-    assert "Спам и рассылки" in body
+    assert "🧹Спам и рассылки" in body
     assert "Рабочие часы" in body
-    assert "Требует внимания" in body
+    assert "🚨Требует внимания" in body
     assert "Mobile inbox" in body
 
 
@@ -110,7 +110,7 @@ def test_mobile_panel_shows_system_events_tab(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "Системный журнал" in body
+    assert "🛠️Системный журнал" in body
     assert "Системные сообщения и ошибки" in body
     assert "Telegram send failed" in body
     assert "Bot token is not configured." in body

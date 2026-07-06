@@ -42,12 +42,12 @@
 
     <section>
         <div class="tabs">
-            <a class="tab {% if view_mode == 'today' %}active{% endif %}" href="?view=today">Сегодня</a>
-            <a class="tab {% if view_mode == 'attention' %}active{% endif %}" href="?view=attention">Требует внимания</a>
-            <a class="tab {% if view_mode == 'mine' %}active{% endif %}" href="?view=mine">Мои в работе</a>
-            <a class="tab {% if view_mode == 'noise' %}active{% endif %}" href="?view=noise">Спам и рассылки</a>
             <a class="tab {% if view_mode == 'all' %}active{% endif %}" href="?view=all">Все обращения</a>
-            <a class="tab {% if view_mode == 'system' %}active{% endif %}" href="?view=system">Системный журнал</a>
+            <a class="tab {% if view_mode == 'today' %}active{% endif %}" href="?view=today">Сегодня</a>
+            <a class="tab {% if view_mode == 'attention' %}active{% endif %}" href="?view=attention">🚨Требует внимания</a>
+            <a class="tab {% if view_mode == 'mine' %}active{% endif %}" href="?view=mine">✅Мои в работе</a>
+            <a class="tab {% if view_mode == 'noise' %}active{% endif %}" href="?view=noise">🧹Спам и рассылки</a>
+            <a class="tab {% if view_mode == 'system' %}active{% endif %}" href="?view=system">🛠️Системный журнал</a>
         </div>
     </section>
 
@@ -86,7 +86,7 @@
     <section>
         <h1>
             {% if view_mode == 'today' %}Сегодня
-            {% elif view_mode == 'mine' %}Мои в работе
+            {% elif view_mode == 'mine' %}✅Мои в работе
             {% elif view_mode == 'noise' %}Спам и рассылки
             {% else %}Обращения{% endif %}
         </h1>
@@ -118,7 +118,7 @@
                         type="submit"
                         {% if alert.alert_status == 'in_work' %}disabled{% endif %}
                     >
-                        В работу
+                        ✅В работу
                     </button>
                 </form>
 
@@ -130,13 +130,13 @@
                         type="submit"
                         {% if alert.alert_status == 'ignored' %}disabled{% endif %}
                     >
-                        Игнор
+                        🚫Игнор
                     </button>
                 </form>
 
-                <a class="link-button" href="{% url 'mobile_alert_detail' alert.id %}">Открыть</a>
+                <a class="link-button" href="{% url 'mobile_alert_detail' alert.id %}">📋Открыть</a>
             </div>
-            
+
             </article>
         {% empty %}
             <div class="empty">
