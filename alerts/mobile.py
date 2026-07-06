@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .attention import filter_needs_attention
+from .attention import filter_needs_attention, needs_attention_alert_q
 from .gmail.gmail import check_mailbox
 from .models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
@@ -61,7 +61,9 @@ def mobile_dashboard(request):
     settings = TelegramSettings.load()
 
     alert_counts = base_alerts.aggregate(
+        total=Count("id"),
         today=Count("id", filter=Q(created_at__date=today)),
+        attention=Count("id", filter=needs_attention_alert_q()),
         unread=Count("id", filter=Q(alert_status=MarketplaceAlert.AlertStatus.UNREAD)),
         mine=Count(
             "id",
@@ -81,7 +83,6 @@ def mobile_dashboard(request):
             ),
         ),
     )
-
     service_open_errors = ServiceEvent.objects.filter(
         status=ServiceEvent.Status.OPEN,
         severity__in=[

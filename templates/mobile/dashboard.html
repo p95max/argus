@@ -32,23 +32,37 @@
     {% endif %}
 
     <section>
-        <div class="metric-grid">
-            <a class="metric" href="?view=today"><strong>{{ alert_counts.today }}</strong><span>сегодня</span></a>
-            <a class="metric" href="?view=attention"><strong>{{ alert_counts.unread }}</strong><span>новые</span></a>
-            <a class="metric" href="?view=mine"><strong>{{ alert_counts.mine }}</strong><span>мои</span></a>
-            <a class="metric" href="?view=system"><strong>{{ service_open_errors }}</strong><span>ошибки</span></a>
-        </div>
-    </section>
+        <nav class="mobile-panel-nav" aria-label="Фильтры обращений">
+            <a class="panel-nav-item {% if view_mode == 'all' %}active{% endif %}" href="?view=all">
+                <span class="panel-nav-label">📋 Все</span>
+                <strong>{{ alert_counts.total }}</strong>
+            </a>
 
-    <section>
-        <div class="tabs">
-            <a class="tab {% if view_mode == 'all' %}active{% endif %}" href="?view=all">Все обращения</a>
-            <a class="tab {% if view_mode == 'today' %}active{% endif %}" href="?view=today">Сегодня</a>
-            <a class="tab {% if view_mode == 'attention' %}active{% endif %}" href="?view=attention">🚨Требует внимания</a>
-            <a class="tab {% if view_mode == 'mine' %}active{% endif %}" href="?view=mine">✅Мои в работе</a>
-            <a class="tab {% if view_mode == 'noise' %}active{% endif %}" href="?view=noise">🧹Спам и рассылки</a>
-            <a class="tab {% if view_mode == 'system' %}active{% endif %}" href="?view=system">🛠️Системный журнал</a>
-        </div>
+            <a class="panel-nav-item {% if view_mode == 'today' %}active{% endif %}" href="?view=today">
+                <span class="panel-nav-label">📅 Сегодня</span>
+                <strong>{{ alert_counts.today }}</strong>
+            </a>
+
+            <a class="panel-nav-item {% if view_mode == 'attention' %}active{% endif %}" href="?view=attention">
+                <span class="panel-nav-label">⚠️ Внимание</span>
+                <strong>{{ alert_counts.attention }}</strong>
+            </a>
+
+            <a class="panel-nav-item {% if view_mode == 'mine' %}active{% endif %}" href="?view=mine">
+                <span class="panel-nav-label">🛠️ Мои</span>
+                <strong>{{ alert_counts.mine }}</strong>
+            </a>
+
+            <a class="panel-nav-item {% if view_mode == 'noise' %}active{% endif %}" href="?view=noise">
+                <span class="panel-nav-label">🧹 Спам</span>
+                <strong>{{ alert_counts.noise }}</strong>
+            </a>
+
+            <a class="panel-nav-item {% if view_mode == 'system' %}active{% endif %}" href="?view=system">
+                <span class="panel-nav-label">🧾 Журнал</span>
+                <strong>{{ service_open_errors }}</strong>
+            </a>
+        </nav>
     </section>
 
     {% if view_mode == 'system' %}
@@ -85,10 +99,21 @@
     {% else %}
     <section>
         <h1>
-            {% if view_mode == 'today' %}Сегодня
-            {% elif view_mode == 'mine' %}✅Мои в работе
-            {% elif view_mode == 'noise' %}Спам и рассылки
-            {% else %}Обращения{% endif %}
+            {% if view_mode == 'today' %}
+                📅 Сегодня
+            {% elif view_mode == 'attention' %}
+                ⚠️ Требует внимания
+            {% elif view_mode == 'mine' %}
+                🛠️ Мои в работе
+            {% elif view_mode == 'noise' %}
+                🧹 Спам и рассылки
+            {% elif view_mode == 'system' %}
+                🧾 Системный журнал
+            {% elif view_mode == 'all' %}
+                📋 Все обращения
+            {% else %}
+                📋 Обращения
+            {% endif %}
         </h1>
         {% for alert in alerts %}
             <article class="card alert-card">
@@ -153,7 +178,7 @@
     <section>
         <details class="card collapsible-card quiet-hours-block">
             <summary class="collapsible-summary">
-                <span class="summary-title">Рабочие часы
+                <span class="summary-title">🔕Рабочие часы
 
                                     {% if telegram_settings.quiet_hours_enabled %}
                     <span class="status-pill ok">
