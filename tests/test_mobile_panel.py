@@ -71,3 +71,17 @@ def test_mobile_panel_can_take_alert_in_work(client, staff_user, alert):
     assert alert.taken_by == staff_user
     assert alert.taken_by_label == "staff"
     assert alert.taken_at is not None
+
+
+@pytest.mark.django_db
+def test_mobile_alert_detail_links_to_full_admin(client, staff_user, alert):
+    client.force_login(staff_user)
+
+    response = client.get(reverse("mobile_alert_detail", args=[alert.id]))
+
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert "Обращение" in body
+    assert "Audi A4" in body
+    assert f"/control/alerts/marketplacealert/{alert.id}/change/" in body
+    assert "Полная админка" in body

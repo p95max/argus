@@ -205,13 +205,14 @@ def test_build_alert_message_contains_status(alert):
 
 
 @pytest.mark.django_db
-def test_alert_keyboard_contains_open_in_admin_link(settings, alert):
+def test_alert_keyboard_contains_open_mobile_link(settings, alert):
     settings.ARGUS_PUBLIC_BASE_URL = "http://localhost:8000"
 
     keyboard = build_alert_keyboard(alert)
 
+    assert keyboard.inline_keyboard[-1][0].text == "Open Mobile"
     url = keyboard.inline_keyboard[-1][0].url
-    assert url == f"http://localhost:8000/control/alerts/marketplacealert/{alert.id}/change/"
+    assert url == f"http://localhost:8000/m/alerts/{alert.id}/"
 
 
 @pytest.mark.django_db(transaction=True)

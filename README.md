@@ -8,7 +8,7 @@ Argus is a Django monitoring tool for Gmail alerts from Kleinanzeigen. It parses
 - Kleinanzeigen email parsing into `MarketplaceAlert` records.
 - Dedupe by `ProcessedEmail(mailbox, gmail_message_id)`.
 - Alert statuses: `unread`, `in_work`, `ignored`, including who took an alert into work.
-- Telegram delivery for alerts, reminders, service events, inline status buttons, "Open in Admin", `/status`, `/mailboxes`, and `/summary`.
+- Telegram delivery for alerts, reminders, service events, inline status buttons, "Open Mobile", `/status`, `/mailboxes`, and `/summary`.
 - Mobile control panel at `/m/` for staff users.
 - Quiet hours for Telegram notifications through `TelegramSettings` in Admin.
 - Service health events for Gmail, parser, Telegram send failures, and recovery.
@@ -123,19 +123,22 @@ Set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_DEFAULT_CHAT_ID`, and `TELEGRAM_ALLOWED_CHAT
 Send one existing alert manually:
 
 ```bash
-poetry run python manage.py send_telegram_alert 1
+# Windows
+python -m poetry run python manage.py send_telegram_alert 1
 ```
 
 Send an operational message:
 
 ```bash
-poetry run python manage.py send_telegram_system "Argus is running"
+# Windows
+python -m poetry run python manage.py send_telegram_system "Argus is running"
 ```
 
 Run the Telegram bot for inline buttons and commands:
 
 ```bash
-poetry run python manage.py run_telegram_bot
+# Windows
+python -m poetry run python manage.py run_telegram_bot
 ```
 
 Supported bot commands:
@@ -151,7 +154,7 @@ Inline alert actions:
 - `ignored`
 - `status`
 
-The "Open in Admin" inline button uses `ARGUS_PUBLIC_BASE_URL` plus the configured `DJANGO_ADMIN_URL`.
+The "Open Mobile" inline button uses `ARGUS_PUBLIC_BASE_URL` and opens `/m/alerts/<id>/`.
 
 Automatic Telegram sending from Gmail checks is off by default. Enable it with:
 
@@ -191,11 +194,12 @@ Mailbox management requires superuser access or add/change/delete permissions fo
 It shows:
 
 - alerts that need attention by default, with a switch to all alerts;
+- a mobile detail page for each alert;
 - quick status actions;
 - who took an alert into work;
 - classification explanation and flags;
 - mailbox health;
-- links back to Admin for full detail.
+- links back to full Admin for deeper editing.
 
 ## Tests
 

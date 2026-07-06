@@ -42,8 +42,8 @@ def build_alert_keyboard(alert: MarketplaceAlert) -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    "Open in Admin",
-                    url=_admin_alert_url(alert),
+                    "Open Mobile",
+                    url=_mobile_alert_url(alert),
                 ),
             ],
         ]
@@ -54,8 +54,8 @@ def _callback_data(alert_id: int, action: str) -> str:
     return f"{CALLBACK_PREFIX}:{alert_id}:{action}"
 
 
-def _admin_alert_url(alert: MarketplaceAlert) -> str:
-    path = reverse("admin:alerts_marketplacealert_change", args=[alert.id])
+def _mobile_alert_url(alert: MarketplaceAlert) -> str:
+    path = reverse("mobile_alert_detail", args=[alert.id])
     base_url = getattr(settings, "ARGUS_PUBLIC_BASE_URL", "").strip().rstrip("/")
     if base_url:
         return f"{base_url}{path}"

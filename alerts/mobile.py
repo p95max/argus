@@ -44,6 +44,23 @@ def mobile_dashboard(request):
 
 
 @login_required
+def mobile_alert_detail(request, alert_id):
+    _require_staff(request.user)
+
+    alert = get_object_or_404(
+        MarketplaceAlert.objects.select_related("mailbox", "taken_by").prefetch_related("flags"),
+        id=alert_id,
+    )
+    context = {
+        "alert": alert,
+        "can_manage_mailboxes": can_manage_mailboxes(request.user),
+        "admin_alert_url": reverse("admin:alerts_marketplacealert_change", args=[alert.id]),
+        "admin_mailbox_url": reverse("admin:alerts_mailboxaccount_change", args=[alert.mailbox_id]),
+    }
+    return render(request, "mobile/alert_detail.html", context)
+
+
+@login_required
 @require_POST
 def mobile_update_alert_status(request, alert_id):
     _require_staff(request.user)
