@@ -263,8 +263,8 @@ class ServiceEvent(TimestampedModel):
             models.Index(fields=["severity", "status"]),
             models.Index(fields=["fingerprint", "status"]),
         ]
-        verbose_name = "Запись журнала системы"
-        verbose_name_plural = "Журнал системы"
+        verbose_name = "Запись системного журнала"
+        verbose_name_plural = "Системный журнал"
 
     def __str__(self):
         return f"{self.get_event_type_display()}: {self.title}"

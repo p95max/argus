@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelOptions(
             name='serviceevent',
-            options={'ordering': ['-last_seen_at', '-created_at'], 'verbose_name': 'Запись журнала системы', 'verbose_name_plural': 'Журнал системы'},
+            options={'ordering': ['-last_seen_at', '-created_at'], 'verbose_name': 'Запись системного журнала', 'verbose_name_plural': 'Системный журнал'},
         ),
         migrations.AlterModelOptions(
             name='telegramsettings',

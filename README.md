@@ -172,7 +172,7 @@ Main Admin models:
 - `Спам и рассылки`: separate Admin view for promotional/system noise that may still be worth reviewing.
 - `Проверенные письма`: dedupe log; read-only for normal users.
 - `Приоритеты обращений`: classification flags.
-- `Журнал системы`: operational health events.
+- `Системный журнал`: operational health events.
 - `Настройки Telegram`: quiet hours.
 
 Mailbox management requires superuser access or add/change/delete permissions for `MailboxAccount`. Staff users can view mailbox operations.

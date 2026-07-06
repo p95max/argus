@@ -26,7 +26,7 @@ def test_admin_section_names_are_human_friendly():
     assert NoiseAlert._meta.verbose_name_plural == "Спам и рассылки"
     assert ProcessedEmail._meta.verbose_name_plural == "Проверенные письма"
     assert LeadFlag._meta.verbose_name_plural == "Приоритеты обращений"
-    assert ServiceEvent._meta.verbose_name_plural == "Журнал системы"
+    assert ServiceEvent._meta.verbose_name_plural == "Системный журнал"
     assert TelegramSettings._meta.verbose_name_plural == "Настройки Telegram"
 
 
