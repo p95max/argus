@@ -194,7 +194,10 @@ Mailbox management requires superuser access or add/change/delete permissions fo
 It shows:
 
 - alerts that need attention by default, with a switch to all alerts;
+- tabs for today's alerts, personal in-work alerts, and spam/newsletters;
+- quick quiet-hours toggle with a link to full Telegram settings;
 - a mobile detail page for each alert;
+- a "Системный журнал" tab with service messages and errors;
 - quick status actions;
 - who took an alert into work;
 - classification explanation and flags;

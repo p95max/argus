@@ -13,14 +13,85 @@
 </header>
 <main>
     <section>
-        <div class="tabs">
-            <a class="tab {% if view_mode == 'attention' %}active{% endif %}" href="?view=attention">Требует внимания</a>
-            <a class="tab {% if view_mode == 'all' %}active{% endif %}" href="?view=all">Все обращения</a>
+        <article class="card compact-card">
+            <div class="title">Рабочие часы</div>
+            <div class="small">
+                {% if telegram_settings.quiet_hours_enabled %}
+                    Ограничение включено: обычные уведомления приглушаются с {{ telegram_settings.quiet_hours_start|time:"H:i" }} до {{ telegram_settings.quiet_hours_end|time:"H:i" }}.
+                {% else %}
+                    Ограничение выключено: обычные уведомления приходят без паузы по времени.
+                {% endif %}
+            </div>
+            <div class="actions">
+                <form method="post" action="{% url 'mobile_toggle_quiet_hours' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit">{% if telegram_settings.quiet_hours_enabled %}Выключить{% else %}Включить{% endif %}</button>
+                </form>
+                <a class="link-button" href="{{ admin_telegram_settings_url }}">Настроить время</a>
+            </div>
+        </article>
+    </section>
+
+    <section>
+        <div class="metric-grid">
+            <a class="metric" href="?view=today"><strong>{{ alert_counts.today }}</strong><span>сегодня</span></a>
+            <a class="metric" href="?view=attention"><strong>{{ alert_counts.unread }}</strong><span>новые</span></a>
+            <a class="metric" href="?view=mine"><strong>{{ alert_counts.mine }}</strong><span>мои</span></a>
+            <a class="metric" href="?view=system"><strong>{{ service_open_errors }}</strong><span>ошибки</span></a>
         </div>
     </section>
 
     <section>
-        <h2>Обращения</h2>
+        <div class="tabs">
+            <a class="tab {% if view_mode == 'today' %}active{% endif %}" href="?view=today">Сегодня</a>
+            <a class="tab {% if view_mode == 'attention' %}active{% endif %}" href="?view=attention">Требует внимания</a>
+            <a class="tab {% if view_mode == 'mine' %}active{% endif %}" href="?view=mine">Мои в работе</a>
+            <a class="tab {% if view_mode == 'noise' %}active{% endif %}" href="?view=noise">Спам и рассылки</a>
+            <a class="tab {% if view_mode == 'all' %}active{% endif %}" href="?view=all">Все обращения</a>
+            <a class="tab {% if view_mode == 'system' %}active{% endif %}" href="?view=system">Системный журнал</a>
+        </div>
+    </section>
+
+    {% if view_mode == 'system' %}
+    <section>
+        <h2>Системные сообщения и ошибки</h2>
+        {% for event in service_events %}
+            <article class="card">
+                <div class="title">{{ event.title }}</div>
+                <div class="meta">
+                    {{ event.get_event_type_display }} · {{ event.last_seen_at|date:"d.m.Y H:i" }}
+                    {% if event.occurrences > 1 %} · повторов: {{ event.occurrences }}{% endif %}
+                </div>
+                <div class="badges">
+                    <span class="badge {% if event.severity == 'critical' or event.severity == 'error' %}danger{% elif event.severity == 'warning' %}warn{% else %}ok{% endif %}">{{ event.get_severity_display }}</span>
+                    <span class="badge {% if event.status == 'open' %}danger{% else %}ok{% endif %}">{{ event.get_status_display }}</span>
+                    {% if event.source %}
+                        <span class="badge">{{ event.source }}</span>
+                    {% endif %}
+                </div>
+                {% if event.mailbox %}
+                    <div class="small">Ящик: {{ event.mailbox.email }}</div>
+                {% endif %}
+                {% if event.alert %}
+                    <div class="small"><a href="{% url 'mobile_alert_detail' event.alert.id %}">Связанное обращение #{{ event.alert.id }}</a></div>
+                {% endif %}
+                {% if event.details %}
+                    <div class="small">{{ event.details|truncatechars:260 }}</div>
+                {% endif %}
+            </article>
+        {% empty %}
+            <div class="empty">Системных сообщений и ошибок пока нет.</div>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section>
+        <h2>
+            {% if view_mode == 'today' %}Сегодня
+            {% elif view_mode == 'mine' %}Мои в работе
+            {% elif view_mode == 'noise' %}Спам и рассылки
+            {% else %}Обращения{% endif %}
+        </h2>
         {% for alert in alerts %}
             <article class="card">
                 <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
@@ -56,9 +127,15 @@
                 </div>
             </article>
         {% empty %}
-            <div class="empty">Сейчас нет обращений для этого фильтра.</div>
+            <div class="empty">
+                {% if view_mode == 'today' %}Сегодня обращений пока нет.
+                {% elif view_mode == 'mine' %}У вас нет обращений в работе.
+                {% elif view_mode == 'noise' %}Спама и рассылок пока нет.
+                {% else %}Сейчас нет обращений для этого фильтра.{% endif %}
+            </div>
         {% endfor %}
     </section>
+    {% endif %}
 
     <section>
         <h2>Статус ящиков</h2>

@@ -53,6 +53,28 @@ a { color: var(--accent); text-decoration: none; }
     display: grid;
     gap: 8px;
 }
+.compact-card { gap: 10px; }
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+.metric {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    padding: 10px 8px;
+    display: grid;
+    gap: 3px;
+    color: var(--text);
+    text-align: center;
+}
+.metric strong { font-size: 20px; line-height: 1; }
+.metric span {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.2;
+}
 .title { font-weight: 700; line-height: 1.25; }
 .meta, .small { color: var(--muted); font-size: 13px; line-height: 1.35; }
 .body-text { white-space: pre-wrap; line-height: 1.45; }

@@ -1,12 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .attention import filter_needs_attention
-from .models import MailboxAccount, MarketplaceAlert
+from .models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
 
 
@@ -19,14 +20,50 @@ def _require_staff(user):
 def mobile_dashboard(request):
     _require_staff(request.user)
 
+    today = timezone.localdate()
     alerts = (
         MarketplaceAlert.objects.select_related("mailbox", "taken_by")
         .prefetch_related("flags")
         .order_by("-received_at", "-created_at")
     )
     view_mode = request.GET.get("view", "attention")
-    if view_mode == "attention":
+    base_alerts = alerts
+    if view_mode == "today":
+        alerts = alerts.filter(created_at__date=today)
+    elif view_mode == "mine":
+        alerts = alerts.filter(
+            alert_status=MarketplaceAlert.AlertStatus.IN_WORK,
+            taken_by=request.user,
+        )
+    elif view_mode == "noise":
+        alerts = alerts.filter(event_type=MarketplaceAlert.EventType.NOISE)
+    elif view_mode == "attention":
         alerts = filter_needs_attention(alerts)
+    elif view_mode == "system":
+        alerts = MarketplaceAlert.objects.none()
+
+    service_events = ServiceEvent.objects.none()
+    if view_mode == "system":
+        service_events = ServiceEvent.objects.select_related("mailbox", "alert").order_by("-last_seen_at", "-created_at")
+
+    settings = TelegramSettings.load()
+    alert_counts = base_alerts.aggregate(
+        today=Count("id", filter=Q(created_at__date=today)),
+        unread=Count("id", filter=Q(alert_status=MarketplaceAlert.AlertStatus.UNREAD)),
+        mine=Count(
+            "id",
+            filter=Q(alert_status=MarketplaceAlert.AlertStatus.IN_WORK, taken_by=request.user),
+        ),
+        noise=Count("id", filter=Q(event_type=MarketplaceAlert.EventType.NOISE)),
+        urgent=Count(
+            "id",
+            filter=Q(priority__in=[MarketplaceAlert.Priority.HIGH, MarketplaceAlert.Priority.URGENT]),
+        ),
+    )
+    service_open_errors = ServiceEvent.objects.filter(
+        status=ServiceEvent.Status.OPEN,
+        severity__in=[ServiceEvent.Severity.ERROR, ServiceEvent.Severity.CRITICAL],
+    ).count()
 
     mailboxes = MailboxAccount.objects.order_by("email")
     if not can_view_mailbox_operations(request.user):
@@ -34,11 +71,16 @@ def mobile_dashboard(request):
 
     context = {
         "alerts": alerts[:30],
+        "service_events": service_events[:30],
         "mailboxes": mailboxes,
         "view_mode": view_mode,
+        "alert_counts": alert_counts,
+        "service_open_errors": service_open_errors,
+        "telegram_settings": settings,
         "can_manage_mailboxes": can_manage_mailboxes(request.user),
         "admin_alert_changelist_url": reverse("admin:alerts_marketplacealert_changelist"),
         "admin_mailbox_changelist_url": reverse("admin:alerts_mailboxaccount_changelist"),
+        "admin_telegram_settings_url": reverse("admin:alerts_telegramsettings_change", args=[settings.id]),
     }
     return render(request, "mobile/dashboard.html", context)
 
@@ -84,4 +126,15 @@ def mobile_update_alert_status(request, alert_id):
         update_fields.extend(["taken_by", "taken_by_label", "taken_at"])
 
     alert.save(update_fields=update_fields)
+    return redirect(request.POST.get("next") or reverse("mobile_dashboard"))
+
+
+@login_required
+@require_POST
+def mobile_toggle_quiet_hours(request):
+    _require_staff(request.user)
+
+    settings = TelegramSettings.load()
+    settings.quiet_hours_enabled = not settings.quiet_hours_enabled
+    settings.save(update_fields=["quiet_hours_enabled", "updated_at"])
     return redirect(request.POST.get("next") or reverse("mobile_dashboard"))
