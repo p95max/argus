@@ -1,10 +1,10 @@
 from django.contrib import admin, messages
-from django.db.models import Q
 from django.utils.html import format_html
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.urls import path, reverse
 
+from .cleanup import close_cases_for_alerts
 from .models import (
     LeadFlag,
     MailboxAccount,
@@ -487,18 +487,15 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
 
     @admin.action(description="Кейс закрыт: удалить обращения по listing_id")
     def close_case_by_listing(self, request, queryset):
-        case_filters = Q()
-        selected_cases = 0
-        for mailbox_id, listing_id in queryset.exclude(listing_id="").values_list("mailbox_id", "listing_id").distinct():
-            case_filters |= Q(mailbox_id=mailbox_id, listing_id=listing_id)
-            selected_cases += 1
-
-        if not case_filters:
+        result = close_cases_for_alerts(queryset)
+        if result.selected_cases == 0:
             self.message_user(request, "Не найдено обращений с listing_id для закрытия.", level="warning")
             return
 
-        deleted_count, _ = MarketplaceAlert.objects.filter(case_filters).delete()
-        self.message_user(request, f"Закрыто кейсов: {selected_cases}; удалено обращений: {deleted_count}.")
+        self.message_user(
+            request,
+            f"Закрыто кейсов: {result.selected_cases}; удалено обращений: {result.deleted_alerts}.",
+        )
 
 
 @admin.register(ProcessedEmail)
