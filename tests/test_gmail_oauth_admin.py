@@ -166,6 +166,52 @@ def test_complete_gmail_oauth_callback_saves_mailbox_token(
 
 
 @pytest.mark.django_db
+def test_complete_gmail_oauth_callback_sets_email_for_new_mailbox(
+    monkeypatch,
+    settings,
+    google_credentials_file,
+    rf,
+    admin_user,
+):
+    mailbox = MailboxAccount.objects.create(
+        name="New Gmail",
+        is_active=True,
+    )
+    google_email = "new-mailbox@gmail.com"
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(google_credentials_file))
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.Flow", FakeFlow)
+    monkeypatch.setattr("alerts.gmail.gmail_oauth.fetch_google_email", lambda credentials: google_email)
+
+    settings.GOOGLE_OAUTH_REDIRECT_URI = (
+        "http://127.0.0.1:8000/control/alerts/mailboxaccount/oauth/callback/"
+    )
+
+    start_request = rf.get(f"/control/alerts/mailboxaccount/{mailbox.id}/gmail/connect/")
+    start_request.user = admin_user
+    attach_session(start_request)
+
+    build_gmail_authorization_url(start_request, mailbox)
+
+    callback_request = rf.get(
+        "/control/alerts/mailboxaccount/oauth/callback/",
+        {
+            "state": start_request.session[OAUTH_STATE_SESSION_KEY],
+            "code": "google-auth-code",
+        },
+    )
+    callback_request.user = admin_user
+    callback_request.session = start_request.session
+
+    result = complete_gmail_oauth_callback(callback_request)
+
+    mailbox.refresh_from_db()
+    assert result.google_email == google_email
+    assert mailbox.email == google_email
+    assert mailbox.gmail_connected_email == google_email
+    assert mailbox.connection_status == MailboxAccount.ConnectionStatus.CONNECTED
+
+
+@pytest.mark.django_db
 def test_complete_gmail_oauth_callback_uses_cached_pkce_after_login_redirect(
     monkeypatch,
     settings,

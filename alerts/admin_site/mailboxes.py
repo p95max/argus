@@ -27,6 +27,7 @@ class MailboxAccountAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "connection_status")
     search_fields = ("email", "name", "gmail_connected_email")
     readonly_fields = (
+        "email_display",
         "gmail_oauth_actions",
         "gmail_connected_email",
         "gmail_oauth_connected_at",
@@ -36,13 +37,25 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         "updated_at",
     )
     actions = ("enable_mailboxes", "disable_mailboxes")
+    add_fieldsets = (
+        (
+            "Основное",
+            {
+                "description": (
+                    "Создайте почтовый ящик, затем подключите Gmail через OAuth. "
+                    "Email будет заполнен автоматически после авторизации."
+                ),
+                "fields": ("name", "is_active"),
+            },
+        ),
+    )
 
     fieldsets = (
         (
             "Основное",
             {
                 "description": "Почтовый ящик, который Argus будет проверять через Gmail.",
-                "fields": ("name", "email", "is_active"),
+                "fields": ("name", "email_display", "is_active"),
             },
         ),
         (
@@ -107,6 +120,11 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
+    def get_fieldsets(self, request, obj=None):
+        if obj is None:
+            return self.add_fieldsets
+        return super().get_fieldsets(request, obj)
+
     @admin.display(description="Активен", ordering="is_active")
     def active_badge(self, obj):
         if obj.is_active:
@@ -131,6 +149,12 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         if obj.gmail_oauth_token:
             return status_badge("OAuth OK", "text-bg-success")
         return status_badge("нет токена", "text-bg-warning")
+
+    @admin.display(description="Email")
+    def email_display(self, obj):
+        if obj.email:
+            return obj.email
+        return "Email ещё не подключен. Подключите Gmail через OAuth."
 
     @admin.display(description="Gmail действия")
     def gmail_oauth_actions(self, obj):

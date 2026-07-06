@@ -131,12 +131,25 @@ def complete_gmail_oauth_callback(request) -> GmailOAuthResult:
 
     credentials = flow.credentials
     google_email = fetch_google_email(credentials)
+    if not google_email:
+        raise ValueError("Connected Gmail account did not return an email address.")
 
-    if google_email.lower() != mailbox.email.lower():
+    if mailbox.email and google_email.lower() != mailbox.email.lower():
         raise ValueError(
             f"Connected Gmail account mismatch. Expected {mailbox.email}, got {google_email}."
         )
 
+    existing_mailbox = (
+        MailboxAccount.objects.filter(email__iexact=google_email)
+        .exclude(id=mailbox.id)
+        .first()
+    )
+    if existing_mailbox:
+        raise ValueError(
+            f"Connected Gmail account {google_email} is already used by another mailbox."
+        )
+
+    mailbox.email = google_email
     mailbox.gmail_connected_email = google_email
     mailbox.gmail_oauth_token = encrypt_text(credentials.to_json())
     mailbox.gmail_oauth_connected_at = timezone.now()
@@ -145,6 +158,7 @@ def complete_gmail_oauth_callback(request) -> GmailOAuthResult:
     mailbox.last_error = ""
     mailbox.save(
         update_fields=[
+            "email",
             "gmail_connected_email",
             "gmail_oauth_token",
             "gmail_oauth_connected_at",

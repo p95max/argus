@@ -2,7 +2,12 @@ import pytest
 from django.contrib.admin.sites import AdminSite
 from django.test import RequestFactory
 
-from alerts.admin import MarketplaceAlertAdmin, NeedsAttentionFilter, NoiseAlertAdmin
+from alerts.admin import (
+    MailboxAccountAdmin,
+    MarketplaceAlertAdmin,
+    NeedsAttentionFilter,
+    NoiseAlertAdmin,
+)
 from alerts.apps import AlertsConfig
 from alerts.models import (
     LeadFlag,
@@ -28,6 +33,27 @@ def test_admin_section_names_are_human_friendly():
     assert LeadFlag._meta.verbose_name_plural == "Приоритеты обращений"
     assert ServiceEvent._meta.verbose_name_plural == "Системный журнал"
     assert TelegramSettings._meta.verbose_name_plural == "Настройки Telegram"
+
+
+def test_mailbox_admin_add_form_hides_email_until_oauth():
+    model_admin = MailboxAccountAdmin(MailboxAccount, AdminSite())
+    request = RequestFactory().get("/control/alerts/mailboxaccount/add/")
+
+    add_fields = {
+        field
+        for _, fieldset_options in model_admin.get_fieldsets(request, obj=None)
+        for field in fieldset_options["fields"]
+    }
+
+    assert "email" not in add_fields
+    assert "email_display" in model_admin.get_readonly_fields(request)
+
+
+def test_mailbox_admin_email_display_explains_missing_oauth():
+    model_admin = MailboxAccountAdmin(MailboxAccount, AdminSite())
+    mailbox = MailboxAccount(name="Test")
+
+    assert model_admin.email_display(mailbox) == "Email ещё не подключен. Подключите Gmail через OAuth."
 
 
 @pytest.fixture

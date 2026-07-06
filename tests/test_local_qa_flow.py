@@ -85,16 +85,25 @@ def test_local_mvp_flow_end_to_end(monkeypatch):
         reverse("admin:alerts_mailboxaccount_add"),
         {
             "name": "QA inbox",
-            "email": "qa-inbox@example.local",
             "is_active": "on",
-            "gmail_search_query": "from:(kleinanzeigen.de)",
-            "connection_status": MailboxAccount.ConnectionStatus.NOT_CONNECTED,
             "_save": "Save",
         },
         follow=True,
     )
     assert mailbox_add_response.status_code == 200
-    mailbox = MailboxAccount.objects.get(email="qa-inbox@example.local")
+    mailbox = MailboxAccount.objects.get(name="QA inbox")
+    assert mailbox.email is None
+    mailbox.email = "qa-inbox@example.local"
+    mailbox.gmail_connected_email = mailbox.email
+    mailbox.connection_status = MailboxAccount.ConnectionStatus.CONNECTED
+    mailbox.save(
+        update_fields=[
+            "email",
+            "gmail_connected_email",
+            "connection_status",
+            "updated_at",
+        ]
+    )
 
     parsed_buyer = parse_kleinanzeigen_email(SAMPLE_BUYER_MESSAGE.subject, SAMPLE_BUYER_MESSAGE.body)
     parsed_newsletter = parse_kleinanzeigen_email(SAMPLE_NEWSLETTER.subject, SAMPLE_NEWSLETTER.body)

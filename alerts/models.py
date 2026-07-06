@@ -21,7 +21,7 @@ class MailboxAccount(TimestampedModel):
         DISABLED = "disabled", "Отключен"
 
     name = models.CharField("название", max_length=120)
-    email = models.EmailField("email", unique=True)
+    email = models.EmailField("email", unique=True, blank=True, null=True)
     is_active = models.BooleanField("активен", default=True)
     gmail_search_query = models.CharField(
         "Gmail search query",
@@ -52,7 +52,9 @@ class MailboxAccount(TimestampedModel):
         verbose_name_plural = "Почтовые ящики"
 
     def __str__(self):
-        return f"{self.name} <{self.email}>"
+        if self.email:
+            return f"{self.name} <{self.email}>"
+        return f"{self.name} <Gmail не подключен>"
 
 
 class LeadFlag(TimestampedModel):
