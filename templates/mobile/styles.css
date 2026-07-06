@@ -375,3 +375,99 @@ summary:focus-visible {
         min-height: 54px;
     }
 }
+
+.info-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    background: rgba(31, 39, 48, .55);
+}
+
+.info-icon {
+    flex: 0 0 auto;
+    line-height: 1.25;
+}
+
+.info-content {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.info-label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.work-owner {
+    border-color: rgba(246, 200, 95, .45);
+}
+
+.work-owner strong {
+    color: var(--warn);
+}
+
+.classification-note {
+    border-color: rgba(54, 194, 163, .35);
+}
+
+.classification-note .info-label {
+    color: var(--accent);
+}
+
+.alert-meta-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.alert-mailbox,
+.alert-date {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 8px;
+    background: rgba(31, 39, 48, .45);
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.alert-mailbox strong,
+.alert-date strong {
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.alert-mailbox span:not(.meta-label),
+.alert-date span:not(.meta-label) {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.alert-date {
+    min-width: 82px;
+    text-align: right;
+    border-color: rgba(54, 194, 163, .35);
+}
+
+.alert-date strong {
+    color: var(--accent);
+}
+
+.meta-label {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.1;
+}

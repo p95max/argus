@@ -118,7 +118,19 @@
         {% for alert in alerts %}
             <article class="card alert-card">
                 <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
-                <div class="meta">{{ alert.mailbox.email }} · {{ alert.created_at|date:"d.m.Y H:i" }}</div>
+                <div class="alert-meta-grid">
+                    <div class="alert-mailbox">
+                        <span class="meta-label">📬 Ящик</span>
+                        <strong>{{ alert.mailbox.name|default:alert.mailbox.email }}</strong>
+                        <span>{{ alert.mailbox.email }}</span>
+                    </div>
+
+                    <div class="alert-date">
+                        <span class="meta-label">📅 Дата</span>
+                        <strong>{{ alert.created_at|date:"d.m.Y" }}</strong>
+                        <span>{{ alert.created_at|date:"H:i" }}</span>
+                    </div>
+                </div>
                 <div class="badges">
                     <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">{{ alert.get_alert_status_display }}</span>
                     <span class="badge {% if alert.priority == 'urgent' or alert.priority == 'high' %}danger{% endif %}">{{ alert.get_priority_display }}</span>
@@ -128,10 +140,29 @@
                     {% endfor %}
                 </div>
                 {% if alert.taken_by or alert.taken_by_label %}
-                    <div class="small">В работе у: {% if alert.taken_by %}{{ alert.taken_by.get_full_name|default:alert.taken_by.username }}{% else %}{{ alert.taken_by_label }}{% endif %}</div>
+                    <div class="info-row work-owner">
+                        <span class="info-icon">👷</span>
+                        <span class="info-content">
+                            <span class="info-label">В работе у</span>
+                            <strong>
+                                {% if alert.taken_by %}
+                                    {{ alert.taken_by.get_full_name|default:alert.taken_by.username }}
+                                {% else %}
+                                    {{ alert.taken_by_label }}
+                                {% endif %}
+                            </strong>
+                        </span>
+                    </div>
                 {% endif %}
+
                 {% if alert.classification_reason %}
-                    <div class="small">{{ alert.classification_reason }}</div>
+                    <div class="info-row classification-note">
+                        <span class="info-icon">🧠</span>
+                        <span class="info-content">
+                            <span class="info-label">Классификация</span>
+                            <span>{{ alert.classification_reason }}</span>
+                        </span>
+                    </div>
                 {% endif %}
 
             <div class="actions">
