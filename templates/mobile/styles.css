@@ -143,3 +143,106 @@ button { cursor: pointer; }
     align-items: center;
     justify-content: center;
 }
+
+.collapsible-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.collapsible-summary {
+    min-height: 44px;
+    padding: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    list-style: none;
+}
+
+.collapsible-summary::-webkit-details-marker {
+    display: none;
+}
+
+.collapsible-summary::after {
+    content: "▾";
+    color: var(--muted);
+    transition: transform .15s ease;
+}
+
+.collapsible-card[open] .collapsible-summary::after {
+    transform: rotate(180deg);
+}
+
+.summary-title {
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.summary-meta {
+    color: var(--muted);
+    font-size: 13px;
+    margin-left: auto;
+}
+
+.collapsible-content {
+    border-top: 1px solid var(--line);
+    padding: 10px;
+    display: grid;
+    gap: 10px;
+}
+
+.nested-card {
+    background: var(--panel-2);
+}
+
+.compact-actions {
+    gap: 6px;
+}
+
+.compact-actions form {
+    display: inline-flex;
+}
+
+.small-action {
+    min-height: 30px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-pill.ok {
+    color: var(--accent);
+    border-color: rgba(54, 194, 163, .5);
+}
+
+.status-pill.muted {
+    color: var(--muted);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: currentColor;
+}
+
+.quiet-hours-block .collapsible-content {
+    gap: 10px;
+}

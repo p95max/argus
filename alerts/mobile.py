@@ -94,10 +94,19 @@ def mobile_dashboard(request):
     if not can_view_mailbox_operations(request.user):
         mailboxes = MailboxAccount.objects.none()
 
+    mailbox_status = mailboxes.aggregate(
+    total=Count("id"),
+    errors=Count(
+        "id",
+        filter=Q(connection_status=MailboxAccount.ConnectionStatus.ERROR),
+            ),
+        )
+
     context = {
         "alerts": alerts[:30],
         "service_events": service_events[:30],
         "mailboxes": mailboxes,
+        "mailbox_status": mailbox_status,
         "view_mode": view_mode,
         "alert_counts": alert_counts,
         "service_open_errors": service_open_errors,

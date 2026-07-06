@@ -23,27 +23,6 @@
     {% endif %}
 
     <section>
-        <article class="card compact-card">
-            <div class="title">Рабочие часы</div>
-            <div class="small">
-                {% if telegram_settings.quiet_hours_enabled %}
-                    Ограничение включено: обычные уведомления приглушаются с {{ telegram_settings.quiet_hours_start|time:"H:i" }} до {{ telegram_settings.quiet_hours_end|time:"H:i" }}.
-                {% else %}
-                    Ограничение выключено: обычные уведомления приходят без паузы по времени.
-                {% endif %}
-            </div>
-            <div class="actions">
-                <form method="post" action="{% url 'mobile_toggle_quiet_hours' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button type="submit">{% if telegram_settings.quiet_hours_enabled %}Выключить{% else %}Включить{% endif %}</button>
-                </form>
-                <a class="link-button" href="{{ admin_telegram_settings_url }}">Настроить время</a>
-            </div>
-        </article>
-    </section>
-
-    <section>
         <div class="metric-grid">
             <a class="metric" href="?view=today"><strong>{{ alert_counts.today }}</strong><span>сегодня</span></a>
             <a class="metric" href="?view=attention"><strong>{{ alert_counts.unread }}</strong><span>новые</span></a>
@@ -147,39 +126,53 @@
     </section>
     {% endif %}
 
+    {% include "mobile/_mailbox_status.html" %}
     <section>
-        <h2>Статус ящиков</h2>
-        {% for mailbox in mailboxes %}
-            <article class="card">
-                <div class="title">{{ mailbox.name }}</div>
-                <div class="meta">{{ mailbox.email }}</div>
-                <div class="badges">
-                    <span class="badge {% if mailbox.is_active %}ok{% else %}warn{% endif %}">{% if mailbox.is_active %}активен{% else %}выключен{% endif %}</span>
-                    <span class="badge {% if mailbox.connection_status == 'error' %}danger{% elif mailbox.connection_status == 'connected' %}ok{% else %}warn{% endif %}">{{ mailbox.get_connection_status_display }}</span>
-                </div>
-                <div class="small">Последняя проверка: {{ mailbox.last_checked_at|date:"d.m.Y H:i"|default:"ещё не было" }}</div>
-                {% if mailbox.last_error %}
-                    <div class="small">Ошибка: {{ mailbox.last_error }}</div>
+        <details class="card collapsible-card quiet-hours-block">
+            <summary class="collapsible-summary">
+                <span class="summary-title">Рабочие часы
+
+                                    {% if telegram_settings.quiet_hours_enabled %}
+                    <span class="status-pill ok">
+                        <span class="status-dot"></span>
+                        Вкл.
+                    </span>
+                {% else %}
+                    <span class="status-pill muted">
+                        <span class="status-dot"></span>
+                        Выкл.
+                    </span>
                 {% endif %}
 
-            <div class="actions compact-actions">
-                {% if can_manage_mailboxes %}
-                    <form method="post" action="{% url 'mobile_check_mailbox_now' mailbox.id %}">
+                </span>
+            </summary>
+
+            <div class="collapsible-content">
+                <div class="small">
+                    {% if telegram_settings.quiet_hours_enabled %}
+                        Обычные уведомления приглушаются с {{ telegram_settings.quiet_hours_start|time:"H:i" }} до {{ telegram_settings.quiet_hours_end|time:"H:i" }}.
+                    {% else %}
+                        Обычные уведомления приходят без паузы по времени.
+                    {% endif %}
+                </div>
+
+                <div class="actions compact-actions">
+                    <form method="post" action="{% url 'mobile_toggle_quiet_hours' %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button class="small-action" type="submit">Проверить почту</button>
+                        <button class="small-action" type="submit">
+                            {% if telegram_settings.quiet_hours_enabled %}Выключить{% else %}Включить{% endif %}
+                        </button>
                     </form>
-                    <a class="link-button small-action" href="{% url 'admin:alerts_mailboxaccount_change' mailbox.id %}">
-                        Настроить в Admin
+
+                    <a class="link-button small-action" href="{{ admin_telegram_settings_url }}">
+                        Настроить время
                     </a>
-                {% endif %}
+                </div>
             </div>
-            
-            </article>
-        {% empty %}
-            <div class="empty">Почтовые ящики пока не добавлены.</div>
-        {% endfor %}
+        </details>
     </section>
+
 </main>
 </body>
 </html>

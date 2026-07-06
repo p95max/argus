@@ -1,0 +1,74 @@
+<section>
+    <details class="card collapsible-card mailbox-status-block">
+
+        <summary class="collapsible-summary">
+            <span class="summary-title">Статус ящиков(
+                
+            <span class="summary-meta">{{ mailbox_status.total }} шт.</span>
+            )
+            
+            {% if mailbox_status.total == 0 %}
+                <span class="status-pill muted">
+                    <span class="status-dot"></span>
+                    Нет ящиков
+                </span>
+            {% elif mailbox_status.errors %}
+                <span class="status-pill danger">
+                    <span class="status-dot"></span>
+                    Ошибки: {{ mailbox_status.errors }}
+                </span>
+            {% else %}
+                <span class="status-pill ok">
+                    <span class="status-dot"></span>
+                    OK
+                </span>
+            {% endif %}
+
+            </span>
+
+        </summary>
+
+        <div class="collapsible-content">
+            {% for mailbox in mailboxes %}
+                <article class="card nested-card">
+                    <div class="title">{{ mailbox.name }}</div>
+                    <div class="meta">{{ mailbox.email }}</div>
+
+                    <div class="badges">
+                        <span class="badge {% if mailbox.is_active %}ok{% else %}warn{% endif %}">
+                            {% if mailbox.is_active %}активен{% else %}выключен{% endif %}
+                        </span>
+                        <span class="badge {% if mailbox.connection_status == 'error' %}danger{% elif mailbox.connection_status == 'connected' %}ok{% else %}warn{% endif %}">
+                            {{ mailbox.get_connection_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="small">
+                        Последняя проверка:
+                        {{ mailbox.last_checked_at|date:"d.m.Y H:i"|default:"ещё не было" }}
+                    </div>
+
+                    {% if mailbox.last_error %}
+                        <div class="small">Ошибка: {{ mailbox.last_error }}</div>
+                    {% endif %}
+
+                    {% if can_manage_mailboxes %}
+                        <div class="actions compact-actions">
+                            <form method="post" action="{% url 'mobile_check_mailbox_now' mailbox.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button class="small-action" type="submit">Проверить почту</button>
+                            </form>
+
+                            <a class="link-button small-action" href="{% url 'admin:alerts_mailboxaccount_change' mailbox.id %}">
+                                Настроить в Admin
+                            </a>
+                        </div>
+                    {% endif %}
+                </article>
+            {% empty %}
+                <div class="empty">Почтовые ящики пока не добавлены.</div>
+            {% endfor %}
+        </div>
+    </details>
+</section>
