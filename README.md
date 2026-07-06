@@ -117,9 +117,10 @@ There is no SQLite-to-Postgres migration script in the current project state. Ne
 ## Gmail Flow
 
 1. Put Google OAuth client secrets at `GOOGLE_CLIENT_SECRETS_FILE`.
-2. Create a `MailboxAccount` in Admin.
+2. Create a `MailboxAccount` in Admin with only a human-readable name.
 3. Open the mailbox in Admin and use the Gmail connect action.
-4. Run a manual check from Admin, Mobile, or the command line.
+4. Argus reads the Gmail address from Google OAuth and fills the mailbox email automatically.
+5. Run a manual check from Admin, Mobile, or the command line.
 
 Recommended local OAuth callback:
 
@@ -128,6 +129,8 @@ GOOGLE_OAUTH_REDIRECT_URI=http://127.0.0.1:8000/control/alerts/mailboxaccount/oa
 ```
 
 Add the same URL in Google Cloud Console under "Authorized redirect URIs". Keep the browser host identical: `localhost` and `127.0.0.1` are different OAuth redirect URIs.
+
+If a mailbox is not connected yet, Admin shows `Email ещё не подключен. Подключите Gmail через OAuth.` instead of an empty email. When reconnecting an existing mailbox, Argus rejects a different Google account and also rejects a Gmail address already used by another mailbox.
 
 Manual checks:
 
@@ -321,5 +324,5 @@ python -m poetry run ruff check alerts
 Latest full local result:
 
 ```text
-95 passed
+97 passed
 ```
