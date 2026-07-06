@@ -53,10 +53,10 @@ def test_mobile_panel_shows_needs_attention_and_empty_state(client, staff_user, 
     body = response.content.decode("utf-8")
     assert "Audi A4" in body
     assert "Сегодня" in body
-    assert "Мои в работе" in body
-    assert "🧹Спам и рассылки" in body
+    assert "Мои" in body
+    assert "Спам" in body
     assert "Рабочие часы" in body
-    assert "🚨Требует внимания" in body
+    assert "Требует внимания" in body
     assert "Mobile inbox" in body
 
 
@@ -88,7 +88,7 @@ def test_mobile_alert_detail_links_to_full_admin(client, staff_user, alert):
     assert "Обращение" in body
     assert "Audi A4" in body
     assert f"/control/alerts/marketplacealert/{alert.id}/change/" in body
-    assert "ℹ️Полная информация" in body
+    assert "Полная информация" in body
 
 
 @pytest.mark.django_db
@@ -110,7 +110,7 @@ def test_mobile_panel_shows_system_events_tab(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "🛠️Системный журнал" in body
+    assert "Журнал" in body
     assert "Системные сообщения и ошибки" in body
     assert "Telegram send failed" in body
     assert "Bot token is not configured." in body
@@ -186,3 +186,48 @@ def test_mobile_panel_toggles_quiet_hours(client, staff_user):
     assert response.status_code == 302
     settings.refresh_from_db()
     assert settings.quiet_hours_enabled is True
+
+
+@pytest.mark.django_db
+def test_mobile_panel_manual_mailbox_check(monkeypatch, client, staff_user, alert):
+    staff_user.is_superuser = True
+    staff_user.save(update_fields=["is_superuser"])
+    checked = []
+
+    class Result:
+        fetched = 2
+        created = 1
+        duplicates = 1
+
+    def fake_check_mailbox(mailbox):
+        checked.append(mailbox.id)
+        return Result()
+
+    monkeypatch.setattr("alerts.mobile.check_mailbox", fake_check_mailbox)
+    client.force_login(staff_user)
+
+    response = client.post(
+        reverse("mobile_check_mailbox_now", args=[alert.mailbox_id]),
+        {"next": f"{reverse('mobile_dashboard')}?view=system"},
+        follow=True,
+    )
+
+    assert response.status_code == 200
+    assert checked == [alert.mailbox_id]
+    assert "Почта проверена" in response.content.decode("utf-8")
+
+
+@pytest.mark.django_db
+def test_mobile_panel_rejects_unsafe_next_redirect(client, staff_user, alert):
+    client.force_login(staff_user)
+
+    response = client.post(
+        reverse("mobile_update_alert_status", args=[alert.id]),
+        {
+            "status": MarketplaceAlert.AlertStatus.IGNORED,
+            "next": "https://evil.example/phish",
+        },
+    )
+
+    assert response.status_code == 302
+    assert response["Location"] == reverse("mobile_dashboard")

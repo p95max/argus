@@ -14,6 +14,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
 from .gmail import GMAIL_SCOPES, gmail_credentials_paths
+from ..crypto import encrypt_text
 from ..models import MailboxAccount
 
 
@@ -121,7 +122,7 @@ def complete_gmail_oauth_callback(request) -> GmailOAuthResult:
         )
 
     mailbox.gmail_connected_email = google_email
-    mailbox.gmail_oauth_token = credentials.to_json()
+    mailbox.gmail_oauth_token = encrypt_text(credentials.to_json())
     mailbox.gmail_oauth_connected_at = timezone.now()
     mailbox.gmail_oauth_error = ""
     mailbox.connection_status = MailboxAccount.ConnectionStatus.CONNECTED

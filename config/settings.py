@@ -29,6 +29,9 @@ env = environ.Env(
     DJANGO_SECURE_HSTS_SECONDS=(int, 0),
     GMAIL_CHECK_MAX_RESULTS=(int, 25),
     GMAIL_CHECK_FAIL_ON_ERROR=(bool, False),
+    GMAIL_OAUTH_TOKEN_FERNET_KEY=(str, ""),
+    ADMIN_LOGIN_FAILURE_LIMIT=(int, 5),
+    ADMIN_LOGIN_LOCKOUT_SECONDS=(int, 15 * 60),
     TELEGRAM_SEND_ON_GMAIL_CHECK=(bool, False),
     DATABASE_CONN_MAX_AGE=(int, 60),
     DATABASE_CONN_HEALTH_CHECKS=(bool, True),
@@ -100,6 +103,9 @@ ARGUS_PUBLIC_BASE_URL = env.str("ARGUS_PUBLIC_BASE_URL").strip().rstrip("/")
 
 GMAIL_CHECK_MAX_RESULTS = env.int("GMAIL_CHECK_MAX_RESULTS")
 GMAIL_CHECK_FAIL_ON_ERROR = env.bool("GMAIL_CHECK_FAIL_ON_ERROR")
+GMAIL_OAUTH_TOKEN_FERNET_KEY = env.str("GMAIL_OAUTH_TOKEN_FERNET_KEY").strip()
+ADMIN_LOGIN_FAILURE_LIMIT = env.int("ADMIN_LOGIN_FAILURE_LIMIT")
+ADMIN_LOGIN_LOCKOUT_SECONDS = env.int("ADMIN_LOGIN_LOCKOUT_SECONDS")
 
 GOOGLE_OAUTH_REDIRECT_URI = env.str("GOOGLE_OAUTH_REDIRECT_URI", default="")
 
@@ -150,6 +156,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "alerts.security.AdminLoginRateLimitMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

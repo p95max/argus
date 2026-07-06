@@ -1,8 +1,7 @@
 import asyncio
-from contextlib import contextmanager
 import logging
-import os
 
+from asgiref.sync import sync_to_async
 from django.utils import timezone
 from telegram import Bot
 
@@ -56,8 +55,7 @@ async def async_send_telegram_alert(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
-    with _allow_async_unsafe_orm():
-        should_send = should_send_telegram_for_alert(alert)
+    should_send = await sync_to_async(should_send_telegram_for_alert, thread_sensitive=True)(alert)
     if not should_send:
         logger.info("Telegram alert send skipped by filters. alert_id=%s", alert.id)
         return None
@@ -110,17 +108,15 @@ async def async_send_telegram_alert(
     except Exception as exc:
         error = str(exc)
         alert.telegram_error = error
-        with _allow_async_unsafe_orm():
-            alert.save(
-                update_fields=[
-                    "telegram_error",
-                    "updated_at",
-                ]
-            )
+        await alert.asave(
+            update_fields=[
+                "telegram_error",
+                "updated_at",
+            ]
+        )
         from ..service_health import record_telegram_send_error
 
-        with _allow_async_unsafe_orm():
-            record_telegram_send_error(alert, exc)
+        await sync_to_async(record_telegram_send_error, thread_sensitive=True)(alert, exc)
 
         logger.exception(
             "Telegram alert send failed. alert_id=%s target_chat_id=%s",
@@ -134,16 +130,15 @@ async def async_send_telegram_alert(
     alert.telegram_sent_at = timezone.now()
     alert.telegram_error = ""
 
-    with _allow_async_unsafe_orm():
-        alert.save(
-            update_fields=[
-                "telegram_chat_id",
-                "telegram_message_id",
-                "telegram_sent_at",
-                "telegram_error",
-                "updated_at",
-            ]
-        )
+    await alert.asave(
+        update_fields=[
+            "telegram_chat_id",
+            "telegram_message_id",
+            "telegram_sent_at",
+            "telegram_error",
+            "updated_at",
+        ]
+    )
 
     logger.info(
         "Telegram alert sent. alert_id=%s target_chat_id=%s telegram_message_id=%s",
@@ -160,8 +155,7 @@ async def async_send_telegram_reminder(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
-    with _allow_async_unsafe_orm():
-        should_send = should_send_telegram_for_alert(alert)
+    should_send = await sync_to_async(should_send_telegram_for_alert, thread_sensitive=True)(alert)
     if not should_send:
         logger.info("Telegram reminder send skipped by filters. alert_id=%s", alert.id)
         return None
@@ -309,12 +303,10 @@ async def _async_send_alert_message(
     except Exception as exc:
         error = str(exc)
         alert.telegram_error = error
-        with _allow_async_unsafe_orm():
-            alert.save(update_fields=["telegram_error", "updated_at"])
+        await alert.asave(update_fields=["telegram_error", "updated_at"])
         from ..service_health import record_telegram_send_error
 
-        with _allow_async_unsafe_orm():
-            record_telegram_send_error(alert, exc)
+        await sync_to_async(record_telegram_send_error, thread_sensitive=True)(alert, exc)
 
         logger.exception(
             "Telegram alert message send failed. alert_id=%s target_chat_id=%s",
@@ -334,8 +326,7 @@ async def _async_send_alert_message(
     if "last_reminded_at" in save_fields:
         alert.last_reminded_at = now
 
-    with _allow_async_unsafe_orm():
-        alert.save(update_fields=[*save_fields, "updated_at"])
+    await alert.asave(update_fields=[*save_fields, "updated_at"])
 
     logger.info(
         "Telegram alert message sent. alert_id=%s target_chat_id=%s telegram_message_id=%s",
@@ -355,15 +346,3 @@ def _preload_alert_message_fields(alert: MarketplaceAlert) -> None:
     else:
         alert._telegram_mailbox_label = mailbox.name or mailbox.email or "Неизвестно"
 
-
-@contextmanager
-def _allow_async_unsafe_orm():
-    previous = os.environ.get("DJANGO_ALLOW_ASYNC_UNSAFE")
-    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
-    try:
-        yield
-    finally:
-        if previous is None:
-            os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
-        else:
-            os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = previous

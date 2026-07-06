@@ -2,8 +2,16 @@ import base64
 
 import pytest
 
-from alerts.gmail.gmail import GmailMessage, check_mailbox, parse_gmail_api_message, process_gmail_message
-from alerts.models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail, ServiceEvent
+from alerts.crypto import encrypt_text
+from alerts.gmail.gmail import (
+    fetch_gmail_messages,
+    GmailMessage,
+    check_mailbox,
+    load_or_refresh_mailbox_credentials,
+    parse_gmail_api_message,
+    process_gmail_message,
+)
+from alerts.models import MailboxAccount, MarketplaceAlert, ProcessedEmail, ServiceEvent
 from alerts.seed_data import seed_lead_flags
 
 
@@ -43,6 +51,73 @@ def test_parse_gmail_api_message_prefers_plain_text():
     assert message.subject == 'Neue Nachricht von Max zu "BMW 320d"'
     assert message.body == "Plain body"
     assert message.received_at is not None
+
+
+def test_fetch_gmail_messages_uses_batch_api_when_available():
+    class FakeRequest:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def execute(self):
+            return self.payload
+
+    class FakeMessagesApi:
+        def __init__(self, service):
+            self.service = service
+
+        def list(self, **kwargs):
+            return FakeRequest({"messages": [{"id": "msg-1"}, {"id": "msg-2"}]})
+
+        def get(self, **kwargs):
+            message_id = kwargs["id"]
+            self.service.single_get_execute_count += 1
+            return FakeRequest(
+                {
+                    "id": message_id,
+                    "threadId": f"thread-{message_id}",
+                    "payload": {"headers": [], "body": {"data": encode_body("Body")}},
+                }
+            )
+
+    class FakeUsersApi:
+        def __init__(self, service):
+            self.service = service
+
+        def messages(self):
+            return FakeMessagesApi(self.service)
+
+    class FakeBatch:
+        def __init__(self, callback):
+            self.callback = callback
+            self.requests = []
+
+        def add(self, request, request_id):
+            self.requests.append((request_id, request))
+
+        def execute(self):
+            for request_id, request in self.requests:
+                self.callback(request_id, request.payload, None)
+
+    class FakeService:
+        def __init__(self):
+            self.batch_requests = []
+            self.single_get_execute_count = 0
+
+        def users(self):
+            return FakeUsersApi(self)
+
+        def new_batch_http_request(self, callback):
+            batch = FakeBatch(callback)
+            self.batch_requests.append(batch)
+            return batch
+
+    service = FakeService()
+
+    messages = fetch_gmail_messages(service, "from:(kleinanzeigen.de)", max_results=2)
+
+    assert [message.message_id for message in messages] == ["msg-1", "msg-2"]
+    assert len(service.batch_requests) == 1
+    assert len(service.batch_requests[0].requests) == 2
 
 
 @pytest.mark.django_db
@@ -201,3 +276,47 @@ def test_check_mailbox_updates_error_health(monkeypatch, mailbox):
         event_type=ServiceEvent.EventType.MAILBOX_ERROR,
         mailbox=mailbox,
     ).exists()
+
+
+@pytest.mark.django_db
+def test_load_mailbox_credentials_accepts_plaintext_legacy_token(monkeypatch, mailbox):
+    calls = []
+
+    class FakeCredentials:
+        valid = True
+
+        @classmethod
+        def from_authorized_user_info(cls, token_info, scopes):
+            calls.append(token_info)
+            return cls()
+
+    monkeypatch.setattr("alerts.gmail.gmail.Credentials", FakeCredentials)
+    mailbox.gmail_oauth_token = '{"token": "legacy-access-token"}'
+    mailbox.save(update_fields=["gmail_oauth_token", "updated_at"])
+
+    credentials = load_or_refresh_mailbox_credentials(mailbox)
+
+    assert credentials.valid is True
+    assert calls == [{"token": "legacy-access-token"}]
+
+
+@pytest.mark.django_db
+def test_load_mailbox_credentials_decrypts_encrypted_token(monkeypatch, mailbox):
+    calls = []
+
+    class FakeCredentials:
+        valid = True
+
+        @classmethod
+        def from_authorized_user_info(cls, token_info, scopes):
+            calls.append(token_info)
+            return cls()
+
+    monkeypatch.setattr("alerts.gmail.gmail.Credentials", FakeCredentials)
+    mailbox.gmail_oauth_token = encrypt_text('{"token": "encrypted-access-token"}')
+    mailbox.save(update_fields=["gmail_oauth_token", "updated_at"])
+
+    credentials = load_or_refresh_mailbox_credentials(mailbox)
+
+    assert credentials.valid is True
+    assert calls == [{"token": "encrypted-access-token"}]

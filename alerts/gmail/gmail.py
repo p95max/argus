@@ -14,6 +14,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+from ..crypto import decrypt_text, encrypt_text
 from ..models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
 from ..parser import parse_kleinanzeigen_email
 
@@ -75,9 +76,6 @@ def build_gmail_service(
     credentials_file, token_file = _resolve_paths(credentials_file, token_file)
     credentials = load_or_refresh_credentials(credentials_file, token_file)
     return build("gmail", "v1", credentials=credentials)
-    credentials_file, token_file = _resolve_paths(credentials_file, token_file)
-    credentials = load_or_refresh_credentials(credentials_file, token_file)
-    return build("gmail", "v1", credentials=credentials)
 
 
 def connect_gmail(credentials_file: Path | None = None, token_file: Path | None = None, port: int = 0) -> Path:
@@ -119,10 +117,10 @@ def load_or_refresh_mailbox_credentials(mailbox: MailboxAccount) -> Credentials:
         )
 
     try:
-        token_info = json.loads(mailbox.gmail_oauth_token)
-    except json.JSONDecodeError as exc:
+        token_info = json.loads(decrypt_text(mailbox.gmail_oauth_token))
+    except (ValueError, json.JSONDecodeError) as exc:
         mailbox.connection_status = MailboxAccount.ConnectionStatus.ERROR
-        mailbox.gmail_oauth_error = "Stored Gmail OAuth token is not valid JSON."
+        mailbox.gmail_oauth_error = "Stored Gmail OAuth token cannot be decrypted or is not valid JSON."
         mailbox.last_error = mailbox.gmail_oauth_error
         mailbox.save(
             update_fields=[
@@ -140,7 +138,7 @@ def load_or_refresh_mailbox_credentials(mailbox: MailboxAccount) -> Credentials:
 
     if credentials.expired and credentials.refresh_token:
         credentials.refresh(Request())
-        mailbox.gmail_oauth_token = credentials.to_json()
+        mailbox.gmail_oauth_token = encrypt_text(credentials.to_json())
         mailbox.gmail_oauth_last_refresh_at = timezone.now()
         mailbox.gmail_oauth_error = ""
         mailbox.last_error = ""
@@ -177,16 +175,42 @@ def fetch_gmail_messages(service, query: str, max_results: int = 25) -> list[Gma
         .execute()
     )
     messages = response.get("messages", [])
-    result = []
+    payloads = _fetch_gmail_message_payloads(service, messages)
+    return [parse_gmail_api_message(payload) for payload in payloads]
+
+
+def _fetch_gmail_message_payloads(service, messages: list[dict]) -> list[dict]:
+    if not messages:
+        return []
+
+    if not hasattr(service, "new_batch_http_request"):
+        return [_fetch_single_gmail_message_payload(service, item["id"]) for item in messages]
+
+    payloads_by_id = {}
+
+    def callback(request_id, response, exception):
+        if exception is not None:
+            raise exception
+        payloads_by_id[request_id] = response
+
+    batch = service.new_batch_http_request(callback=callback)
     for item in messages:
-        payload = (
-            service.users()
-            .messages()
-            .get(userId="me", id=item["id"], format="full")
-            .execute()
+        message_id = item["id"]
+        batch.add(
+            service.users().messages().get(userId="me", id=message_id, format="full"),
+            request_id=message_id,
         )
-        result.append(parse_gmail_api_message(payload))
-    return result
+    batch.execute()
+    return [payloads_by_id[item["id"]] for item in messages if item["id"] in payloads_by_id]
+
+
+def _fetch_single_gmail_message_payload(service, message_id: str) -> dict:
+    return (
+        service.users()
+        .messages()
+        .get(userId="me", id=message_id, format="full")
+        .execute()
+    )
 
 
 def parse_gmail_api_message(payload: dict) -> GmailMessage:

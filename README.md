@@ -47,9 +47,12 @@ DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 DJANGO_ADMIN_URL=control
 ARGUS_PUBLIC_BASE_URL=http://127.0.0.1:8000
+ADMIN_LOGIN_FAILURE_LIMIT=5
+ADMIN_LOGIN_LOCKOUT_SECONDS=900
 
 GOOGLE_CLIENT_SECRETS_FILE=secrets/google/credentials.json
 GOOGLE_OAUTH_REDIRECT_URI=
+GMAIL_OAUTH_TOKEN_FERNET_KEY=
 
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_DEFAULT_CHAT_ID=
@@ -61,6 +64,8 @@ TELEGRAM_SEND_ON_GMAIL_CHECK=False
 Local development uses SQLite when `DJANGO_DEBUG=True`. Production requires `DATABASE_URL` with PostgreSQL when `DJANGO_DEBUG=False`.
 
 For local non-HTTPS OAuth testing, set `OAUTHLIB_INSECURE_TRANSPORT=True`.
+
+Admin login is protected by a small cache-backed lockout middleware. `ADMIN_LOGIN_FAILURE_LIMIT` controls failed attempts per IP/username and `ADMIN_LOGIN_LOCKOUT_SECONDS` controls the lockout window.
 
 ## Gmail Flow
 
@@ -86,6 +91,8 @@ poetry run python manage.py check_gmail --mailbox email@example.com --max-result
 For production, run `check_gmail` from an external scheduler, for example every 5 minutes.
 
 Legacy local OAuth through `connect_gmail` and `GOOGLE_TOKEN_FILE` is still available for debugging, but the main flow is per-mailbox OAuth from Admin.
+
+Per-mailbox Gmail OAuth tokens are stored encrypted with Fernet. Set `GMAIL_OAUTH_TOKEN_FERNET_KEY` in production and keep it stable across deploys; if it is not set, Argus derives a local key from `DJANGO_SECRET_KEY`.
 
 ## Alerts And Cases
 
@@ -196,6 +203,7 @@ It shows:
 - alerts that need attention by default, with a switch to all alerts;
 - tabs for today's alerts, personal in-work alerts, and spam/newsletters;
 - quick quiet-hours toggle with a link to full Telegram settings;
+- manual mailbox check for users allowed to manage mailboxes;
 - a mobile detail page for each alert;
 - a "Системный журнал" tab with service messages and errors;
 - quick status actions;

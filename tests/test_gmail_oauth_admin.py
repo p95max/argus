@@ -11,6 +11,7 @@ from alerts.gmail.gmail_oauth import (
     build_gmail_authorization_url,
     complete_gmail_oauth_callback,
 )
+from alerts.crypto import decrypt_text, is_encrypted
 from alerts.models import MailboxAccount
 
 
@@ -150,7 +151,9 @@ def test_complete_gmail_oauth_callback_saves_mailbox_token(
     assert result.mailbox == mailbox
     assert result.google_email == mailbox.email
     assert mailbox.gmail_connected_email == mailbox.email
-    assert mailbox.gmail_oauth_token == '{"token": "access-token", "refresh_token": "refresh-token"}'
+    assert mailbox.gmail_oauth_token != '{"token": "access-token", "refresh_token": "refresh-token"}'
+    assert is_encrypted(mailbox.gmail_oauth_token)
+    assert decrypt_text(mailbox.gmail_oauth_token) == '{"token": "access-token", "refresh_token": "refresh-token"}'
     assert mailbox.gmail_oauth_connected_at is not None
     assert mailbox.gmail_oauth_error == ""
     assert mailbox.connection_status == MailboxAccount.ConnectionStatus.CONNECTED

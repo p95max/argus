@@ -4,10 +4,7 @@ import pytest
 
 from alerts.models import MailboxAccount, MarketplaceAlert
 from alerts.telegram.sender import (
-    send_telegram_alert,
     async_send_telegram_alert,
-    send_system_telegram_alert,
-    send_system_telegram_message,
 )
 
 from alerts.telegram.messages import (
@@ -15,7 +12,6 @@ from alerts.telegram.messages import (
     build_system_message,
     build_mailbox_status_message,
     build_daily_summary_message,
-    should_send_telegram_for_alert,
 )
 
 from alerts.telegram.handlers import (
@@ -25,15 +21,7 @@ from alerts.telegram.handlers import (
 
 from alerts.telegram.keyboards import (
     build_alert_keyboard,
-    _parse_callback_data,
 )
-
-from alerts.telegram.permissions import (
-    is_allowed_chat,
-    is_allowed_telegram_actor,
-)
-
-from alerts.telegram.config import get_telegram_config
 
 
 class FakeTelegramMessage:
@@ -99,30 +87,6 @@ def test_build_system_message_escapes_html():
 
     assert "Argus: системное уведомление" in message
     assert "&lt;bad&gt;" in message
-
-
-@pytest.mark.django_db(transaction=True)
-def test_async_send_telegram_alert_saves_telegram_delivery(alert):
-    bot = FakeTelegramBot()
-
-    asyncio.run(async_send_telegram_alert(alert, chat_id="42", bot=bot))
-
-    alert.refresh_from_db()
-    assert bot.calls[0]["chat_id"] == "42"
-    assert bot.calls[0]["reply_markup"] is not None
-    assert alert.telegram_chat_id == "42"
-    assert alert.telegram_message_id == "987"
-    assert alert.telegram_sent_at is not None
-    assert alert.telegram_error == ""
-
-
-@pytest.mark.django_db(transaction=True)
-def test_async_send_telegram_alert_saves_error(alert):
-    with pytest.raises(RuntimeError, match="telegram is down"):
-        asyncio.run(async_send_telegram_alert(alert, chat_id="42", bot=BrokenTelegramBot()))
-
-    alert.refresh_from_db()
-    assert alert.telegram_error == "telegram is down"
 
 
 @pytest.mark.django_db

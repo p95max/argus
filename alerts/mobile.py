@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -21,6 +22,18 @@ def _require_staff(user):
 def _require_mailbox_manage_permission(user):
     if not can_manage_mailboxes(user):
         raise PermissionDenied("You do not have permission to manage mailboxes.")
+
+
+def _safe_next_url(request, fallback_name="mobile_dashboard"):
+    fallback = reverse(fallback_name)
+    next_url = request.POST.get("next", "")
+    if url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return fallback
 
 
 @login_required
@@ -96,12 +109,12 @@ def mobile_dashboard(request):
         mailboxes = MailboxAccount.objects.none()
 
     mailbox_status = mailboxes.aggregate(
-    total=Count("id"),
-    errors=Count(
-        "id",
-        filter=Q(connection_status=MailboxAccount.ConnectionStatus.ERROR),
-            ),
-        )
+        total=Count("id"),
+        errors=Count(
+            "id",
+            filter=Q(connection_status=MailboxAccount.ConnectionStatus.ERROR),
+        ),
+    )
 
     context = {
         "alerts": alerts[:30],
@@ -178,7 +191,7 @@ def mobile_update_alert_status(request, alert_id):
 
     alert.save(update_fields=update_fields)
 
-    return redirect(request.POST.get("next") or reverse("mobile_dashboard"))
+    return redirect(_safe_next_url(request))
 
 
 @login_required
@@ -190,7 +203,7 @@ def mobile_toggle_quiet_hours(request):
     settings.quiet_hours_enabled = not settings.quiet_hours_enabled
     settings.save(update_fields=["quiet_hours_enabled", "updated_at"])
 
-    return redirect(request.POST.get("next") or reverse("mobile_dashboard"))
+    return redirect(_safe_next_url(request))
 
 
 @login_required
@@ -208,7 +221,7 @@ def mobile_check_mailbox_now(request, mailbox_id):
             request,
             f"Проверка почты не удалась для {mailbox.email}: {exc}",
         )
-        return redirect(request.POST.get("next") or reverse("mobile_dashboard"))
+        return redirect(_safe_next_url(request))
 
     messages.success(
         request,
@@ -220,4 +233,4 @@ def mobile_check_mailbox_now(request, mailbox_id):
         ),
     )
 
-    return redirect(request.POST.get("next") or reverse("mobile_dashboard"))
+    return redirect(_safe_next_url(request))
