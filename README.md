@@ -44,7 +44,7 @@ GET /health/full/
 
 It checks database access, active mailboxes, Telegram config, Gmail check freshness, and open service errors.
 
-`init_dev` creates or updates the local admin user from `DEV_ADMIN_USERNAME`, `DEV_ADMIN_EMAIL`, and `DEV_ADMIN_PASSWORD`. It also seeds default lead priority/risk rules. Demo alerts are added when `DEV_SEED_SAMPLE_DATA=True`.
+`init_dev` creates or updates the local admin user from `DEV_ADMIN_USERNAME`, `DEV_ADMIN_EMAIL`, and `DEV_ADMIN_PASSWORD`. It also seeds default lead priority/risk rules. Demo alerts are local-only and are added only with `DJANGO_DEBUG=True` and `DEV_SEED_SAMPLE_DATA=True`.
 
 ## Environment
 
@@ -122,6 +122,8 @@ Run the production readiness check before deploy:
 python -m poetry run python manage.py argus_check_deploy
 python -m poetry run python manage.py argus_check_deploy --json
 ```
+
+The deploy check fails if local demo data leaks into production, including the `local-demo@example.local` mailbox.
 
 The command reuses the full health checks and also verifies deploy-sensitive settings such as `DEBUG`, `DATABASE_URL`, and `GMAIL_OAUTH_TOKEN_FERNET_KEY`.
 

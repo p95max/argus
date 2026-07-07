@@ -1,4 +1,9 @@
+from django.conf import settings
+
 from .models import LeadFlag, MailboxAccount, MarketplaceAlert
+
+
+DEMO_MAILBOX_EMAIL = "local-demo@example.local"
 
 
 STARTER_LEAD_FLAGS = (
@@ -106,9 +111,12 @@ def seed_lead_flags() -> tuple[int, int]:
 
 
 def seed_demo_alerts() -> tuple[int, int]:
+    if not settings.DEBUG:
+        raise RuntimeError("Demo alerts can only be seeded when DEBUG=True.")
+
     flags_by_code = {flag.code: flag for flag in LeadFlag.objects.filter(is_active=True)}
     mailbox, _ = MailboxAccount.objects.update_or_create(
-        email="local-demo@example.local",
+        email=DEMO_MAILBOX_EMAIL,
         defaults={
             "name": "Local demo mailbox",
             "is_active": True,

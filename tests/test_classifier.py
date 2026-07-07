@@ -3,7 +3,7 @@ import pytest
 from alerts.classifier import classify_marketplace_message
 from alerts.models import LeadFlag, MailboxAccount, MarketplaceAlert
 from alerts.parser import parse_kleinanzeigen_email
-from alerts.seed_data import STARTER_LEAD_FLAGS, seed_demo_alerts, seed_lead_flags
+from alerts.seed_data import DEMO_MAILBOX_EMAIL, STARTER_LEAD_FLAGS, seed_demo_alerts, seed_lead_flags
 
 
 def test_inspection_message_gets_high_priority():
@@ -49,7 +49,8 @@ def test_seed_lead_flags_is_idempotent():
 
 
 @pytest.mark.django_db
-def test_seed_demo_alerts_is_idempotent():
+def test_seed_demo_alerts_is_idempotent(settings):
+    settings.DEBUG = True
     seed_lead_flags()
 
     created, updated = seed_demo_alerts()
@@ -59,5 +60,13 @@ def test_seed_demo_alerts_is_idempotent():
     created_again, updated_again = seed_demo_alerts()
     assert created_again == 0
     assert updated_again == 3
-    assert MailboxAccount.objects.filter(email="local-demo@example.local").exists()
-    assert MarketplaceAlert.objects.filter(mailbox__email="local-demo@example.local").count() == 3
+    assert MailboxAccount.objects.filter(email=DEMO_MAILBOX_EMAIL).exists()
+    assert MarketplaceAlert.objects.filter(mailbox__email=DEMO_MAILBOX_EMAIL).count() == 3
+
+
+@pytest.mark.django_db
+def test_seed_demo_alerts_is_local_only(settings):
+    settings.DEBUG = False
+
+    with pytest.raises(RuntimeError, match="DEBUG=True"):
+        seed_demo_alerts()

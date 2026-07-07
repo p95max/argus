@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from alerts.health import build_health_report
 from alerts.models import MailboxAccount
+from alerts.seed_data import DEMO_MAILBOX_EMAIL
 
 
 @pytest.fixture
@@ -80,3 +81,22 @@ def test_argus_check_deploy_command_passes_when_ready(settings, healthy_env):
     call_command("argus_check_deploy", stdout=stdout)
 
     assert "Argus deploy status: ok" in stdout.getvalue()
+
+
+@pytest.mark.django_db
+def test_argus_check_deploy_rejects_demo_mailbox(settings, healthy_env):
+    settings.DEBUG = False
+    settings.DATABASE_URL = "postgres://example"
+    settings.GMAIL_OAUTH_TOKEN_FERNET_KEY = "key"
+    MailboxAccount.objects.create(
+        name="Demo",
+        email=DEMO_MAILBOX_EMAIL,
+        is_active=True,
+        last_checked_at=timezone.now(),
+        last_success_at=timezone.now(),
+    )
+
+    report = build_health_report(include_deploy_checks=True)
+
+    assert report["checks"]["demo_data"]["ok"] is False
+    assert DEMO_MAILBOX_EMAIL in report["checks"]["demo_data"]["detail"]

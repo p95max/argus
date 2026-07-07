@@ -9,6 +9,7 @@ from django.db.models import Count, Max, Q
 from django.utils import timezone
 
 from .models import MailboxAccount, MarketplaceAlert, ServiceEvent
+from .seed_data import DEMO_MAILBOX_EMAIL
 from .telegram.config import get_telegram_config
 
 
@@ -36,6 +37,7 @@ def build_health_report(*, include_deploy_checks: bool = False) -> dict:
             status="ok" if not settings.DEBUG else "warning",
             detail="DJANGO_DEBUG should be False on production deploys.",
         )
+        checks["demo_data"] = _check_no_demo_mailbox()
 
     overall_ok = all(check.ok for check in checks.values())
     return {
@@ -117,6 +119,16 @@ def _check_deploy_secrets() -> HealthCheck:
     if missing:
         return HealthCheck(False, "error", f"Missing deploy settings: {', '.join(missing)}.")
     return HealthCheck(True, "ok")
+
+
+def _check_no_demo_mailbox() -> HealthCheck:
+    if MailboxAccount.objects.filter(email__iexact=DEMO_MAILBOX_EMAIL).exists():
+        return HealthCheck(
+            False,
+            "error",
+            f"Demo mailbox {DEMO_MAILBOX_EMAIL} must not exist on production deploys.",
+        )
+    return HealthCheck(True, "ok", "No demo mailbox found.")
 
 
 def _build_health_summary() -> dict:
