@@ -254,7 +254,7 @@ def mobile_service_event_action(request, event_id):
 
 @login_required
 @require_POST
-def mobile_check_mailbox_now(request):
+def mobile_check_mailbox_now(request, mailbox_id=None):
     _require_staff(request.user)
     _require_mailbox_manage_permission(request.user)
 
