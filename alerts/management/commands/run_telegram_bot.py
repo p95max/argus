@@ -50,7 +50,7 @@ class Command(BaseCommand):
         logger.info(message)
 
         application = ApplicationBuilder().token(config.bot_token).build()
-        application.argus_started_at = timezone.now()
+        application.bot_data["argus_started_at"] = timezone.now()
 
         application.add_error_handler(log_telegram_error)
 

@@ -206,7 +206,7 @@ async def handle_health_command(update, context):
         )
         return
 
-    bot_started_at = getattr(context.application, "argus_started_at", None)
+    bot_started_at = context.application.bot_data.get("argus_started_at")
     text = await sync_to_async(build_health_message)(bot_started_at=bot_started_at)
 
     await update.effective_message.reply_text(
