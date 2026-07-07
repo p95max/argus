@@ -1,5 +1,6 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
 PROJECT_DIR="/opt/argus"
 ENV_FILE="$PROJECT_DIR/.env.local"
