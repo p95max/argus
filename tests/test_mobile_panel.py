@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 
 from alerts.models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 
@@ -215,6 +216,72 @@ def test_mobile_panel_manual_mailbox_check(monkeypatch, client, staff_user, aler
     assert response.status_code == 200
     assert checked == [alert.mailbox_id]
     assert "Почта проверена" in response.content.decode("utf-8")
+
+
+@pytest.mark.django_db
+def test_mobile_panel_shows_gmail_operational_card(client, staff_user, alert):
+    alert.mailbox.last_checked_at = timezone.now()
+    alert.mailbox.last_success_at = timezone.now()
+    alert.mailbox.save(update_fields=["last_checked_at", "last_success_at", "updated_at"])
+    client.force_login(staff_user)
+
+    response = client.get(reverse("mobile_dashboard"))
+    body = response.content.decode("utf-8")
+
+    assert "Gmail" in body
+    assert "Последняя проверка" in body
+    assert "Новых сегодня" in body
+
+
+@pytest.mark.django_db
+def test_mobile_panel_cases_tab_shows_listing_analytics(client, staff_user, alert):
+    alert.listing_id = "case-1"
+    alert.listing_title = "BMW 320d"
+    alert.buyer_name = "Max"
+    alert.priority = MarketplaceAlert.Priority.HIGH
+    alert.save(
+        update_fields=[
+            "listing_id",
+            "listing_title",
+            "buyer_name",
+            "priority",
+            "updated_at",
+        ]
+    )
+    client.force_login(staff_user)
+
+    response = client.get(f"{reverse('mobile_dashboard')}?view=cases")
+    body = response.content.decode("utf-8")
+
+    assert "Кейсы по объявлениям" in body
+    assert "BMW 320d" in body
+    assert "Всего: 1" in body
+    assert "High: 1" in body
+
+
+@pytest.mark.django_db
+def test_mobile_panel_can_mark_service_event_recovered(client, staff_user, alert):
+    event = ServiceEvent.objects.create(
+        mailbox=alert.mailbox,
+        event_type=ServiceEvent.EventType.MAILBOX_ERROR,
+        severity=ServiceEvent.Severity.ERROR,
+        status=ServiceEvent.Status.OPEN,
+        source="test",
+        title="Mailbox error",
+        details="boom",
+        fingerprint="mobile-recover-test",
+    )
+    client.force_login(staff_user)
+
+    response = client.post(
+        reverse("mobile_service_event_action", args=[event.id]),
+        {"action": "mark_recovered", "next": f"{reverse('mobile_dashboard')}?view=system"},
+    )
+
+    assert response.status_code == 302
+    event.refresh_from_db()
+    assert event.status == ServiceEvent.Status.RECOVERED
+    assert event.resolved_at is not None
 
 
 @pytest.mark.django_db

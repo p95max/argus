@@ -3,9 +3,11 @@ from datetime import timedelta
 import asyncio
 import html
 
+from django.conf import settings
 from django.db.models import Count, Q
 from django.utils import timezone
 
+from ..health import build_health_report
 from ..models import MailboxAccount, MarketplaceAlert
 from .quiet_hours import quiet_hours_allows_alert
 
@@ -303,6 +305,56 @@ def build_daily_summary_message() -> str:
     )
 
 
+def build_health_message(bot_started_at=None) -> str:
+    report = build_health_report()
+    summary = report["summary"]
+    checks = report["checks"]
+    last_check = summary["mailboxes"]["last_checked_at"]
+    last_success = summary["mailboxes"]["last_success_at"]
+    unread = summary["alerts"]["unread"]
+    today = summary["alerts"]["today"]
+    open_errors = summary["open_service_errors"]
+    uptime = "unknown"
+    if bot_started_at:
+        delta = timezone.now() - bot_started_at
+        hours, remainder = divmod(int(delta.total_seconds()), 3600)
+        minutes = remainder // 60
+        uptime = f"{hours}h {minutes}m"
+    mobile_url = _build_mobile_url()
+
+    def label(name):
+        return "OK" if checks[name]["ok"] else checks[name]["status"].upper()
+
+    def icon(name):
+        return "🟢" if checks[name]["ok"] else "🔴" if checks[name]["status"] == "error" else "🟠"
+
+    lines = [
+            "🩺 <b>Argus: health</b>",
+            f"📅 <b>Дата:</b> {_format_date(timezone.localdate())}",
+            f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
+            "",
+            f"{icon('database')} <b>DB:</b> {html.escape(label('database'))}",
+            f"{icon('active_mailbox')} <b>Ящики:</b> активных {summary['mailboxes']['active']} / ошибок {summary['mailboxes']['errors']}",
+            f"{icon('telegram')} <b>Telegram:</b> {html.escape(label('telegram'))}",
+            f"{icon('gmail_recent_check')} <b>Gmail:</b> {html.escape(label('gmail_recent_check'))}",
+            f"🕒 <b>Последний check:</b> {_format_dt(last_check)}",
+            f"✅ <b>Последний успех:</b> {_format_dt(last_success)}",
+            "",
+            f"🔴 <b>Открытые ошибки:</b> {open_errors}",
+            f"🆕 <b>Новые обращения:</b> {unread}",
+            f"📨 <b>Сегодня:</b> {today}",
+            f"🤖 <b>Бот работает:</b> {html.escape(uptime)}",
+        ]
+    if mobile_url:
+        lines.extend(
+            [
+                "",
+                f'📱 <a href="{html.escape(mobile_url)}">Перейти в мобильную админку</a>',
+            ]
+        )
+    return "\n".join(lines)
+
+
 def _build_status_answer(alert: MarketplaceAlert) -> str:
     title = alert.listing_title or alert.subject or alert.get_event_type_display()
 
@@ -312,6 +364,13 @@ def _build_status_answer(alert: MarketplaceAlert) -> str:
         f"{alert.get_priority_display()} · "
         f"{_truncate(title, 70)}"
     )
+
+
+def _build_mobile_url() -> str:
+    base_url = getattr(settings, "ARGUS_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    return f"{base_url}/m/"
 
 
 def _format_date(value) -> str:

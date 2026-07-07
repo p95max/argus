@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
+from alerts.command_locks import CommandAlreadyRunning, command_lock
 from alerts.cleanup import DEFAULT_CLEANUP_OLD_LEADS_DAYS, cleanup_old_leads
 
 
@@ -26,6 +27,13 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        try:
+            with command_lock("cleanup_old_leads"):
+                return self._handle_locked(*args, **options)
+        except CommandAlreadyRunning as exc:
+            self.stdout.write(self.style.WARNING(str(exc)))
+
+    def _handle_locked(self, *args, **options):
         days = options["days"]
         limit = options["limit"]
         dry_run = options["dry_run"]

@@ -36,6 +36,14 @@ Health check:
 curl http://127.0.0.1:8000/health/
 ```
 
+Full operational health is available for staff users or with `Authorization: Bearer $ARGUS_HEALTH_TOKEN`:
+
+```text
+GET /health/full/
+```
+
+It checks database access, active mailboxes, Telegram config, Gmail check freshness, and open service errors.
+
 `init_dev` creates or updates the local admin user from `DEV_ADMIN_USERNAME`, `DEV_ADMIN_EMAIL`, and `DEV_ADMIN_PASSWORD`. It also seeds default lead priority/risk rules. Demo alerts are added when `DEV_SEED_SAMPLE_DATA=True`.
 
 ## Environment
@@ -50,6 +58,9 @@ DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 DJANGO_ADMIN_URL=control
 ARGUS_PUBLIC_BASE_URL=http://127.0.0.1:8000
+ARGUS_HEALTH_TOKEN=
+ARGUS_GMAIL_CHECK_STALE_MINUTES=15
+ARGUS_COMMAND_LOCK_TIMEOUT_SECONDS=600
 
 DATABASE_URL=
 DATABASE_CONN_MAX_AGE=60
@@ -103,6 +114,17 @@ alerts_count = 3 if DEV_SEED_SAMPLE_DATA=True
 
 There is no SQLite-to-Postgres migration script in the current project state. New cloud databases are initialized from Django migrations plus `init_dev`.
 
+## Deploy Checks
+
+Run the production readiness check before deploy:
+
+```powershell
+python -m poetry run python manage.py argus_check_deploy
+python -m poetry run python manage.py argus_check_deploy --json
+```
+
+The command reuses the full health checks and also verifies deploy-sensitive settings such as `DEBUG`, `DATABASE_URL`, and `GMAIL_OAUTH_TOKEN_FERNET_KEY`.
+
 ## Security
 
 - Gmail OAuth refresh tokens are encrypted before being stored.
@@ -140,6 +162,8 @@ python -m poetry run python manage.py check_gmail --mailbox email@example.com --
 ```
 
 `check_gmail` checks active mailboxes, skips already processed Gmail message IDs, creates alerts, updates mailbox health, records service events on failures, and continues if one mailbox fails.
+
+`check_gmail` is protected by an atomic file lock in `tmp/command_locks` (`ARGUS_COMMAND_LOCK_TIMEOUT_SECONDS`) so overlapping timers do not run the same command concurrently. `cleanup_old_leads` uses the same lock pattern.
 
 ## Alerts And Cases
 
@@ -213,6 +237,7 @@ Bot commands:
 - `/status`
 - `/mailboxes`
 - `/summary`
+- `/health`
 
 Inline alert actions:
 
@@ -242,6 +267,8 @@ python -m poetry run python manage.py send_unread_reminders --min-age-minutes 30
 
 Quiet hours are configured in Admin through "Настройки Telegram". Normal alerts and reminders are skipped during quiet hours unless urgent alerts are explicitly allowed. Noise alerts are never sent.
 
+`/health` shows DB/Gmail status, last check time, open errors, unread alerts, and bot uptime.
+
 ## Admin
 
 Main sections:
@@ -267,10 +294,12 @@ Admin code is split under `alerts/admin_site/`; `alerts/admin.py` only re-export
 
 It includes:
 
+- operational Gmail card with status, last check, last success, today's new alerts, and "Проверить сейчас";
 - "Требует внимания" default view;
 - "Сегодня";
 - "Мои в работе";
 - "Спам и рассылки";
+- "Кейсы" grouped by `mailbox + listing_id` with basic listing analytics;
 - "Системный журнал";
 - quiet-hours toggle with a link to full Admin settings;
 - manual mailbox check button for users with mailbox management permissions;
@@ -280,6 +309,12 @@ It includes:
 - priority/flag explanation;
 - mailbox health;
 - links back to full Admin.
+
+The mobile system journal supports operational actions on open service events:
+
+- `Mark recovered`;
+- `Ignore this error`;
+- `Open related mailbox`.
 
 ## Templates And Static
 
@@ -324,5 +359,5 @@ python -m poetry run ruff check alerts
 Latest full local result:
 
 ```text
-99 passed
+109 passed
 ```

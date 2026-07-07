@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -9,7 +9,9 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .attention import filter_needs_attention, needs_attention_alert_q
+from .cases import build_case_summaries
 from .gmail.gmail import check_mailbox
+from .health import build_health_report
 from .models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
 
@@ -63,6 +65,8 @@ def mobile_dashboard(request):
         alerts = filter_needs_attention(alerts)
     elif view_mode == "system":
         alerts = MarketplaceAlert.objects.none()
+    elif view_mode == "cases":
+        alerts = MarketplaceAlert.objects.none()
 
     service_events = ServiceEvent.objects.none()
     if view_mode == "system":
@@ -71,6 +75,7 @@ def mobile_dashboard(request):
             "alert",
         ).order_by("-last_seen_at", "-created_at")
 
+    case_summaries = build_case_summaries() if view_mode == "cases" else []
     settings = TelegramSettings.load()
 
     alert_counts = base_alerts.aggregate(
@@ -114,13 +119,29 @@ def mobile_dashboard(request):
             "id",
             filter=Q(connection_status=MailboxAccount.ConnectionStatus.ERROR),
         ),
+        last_checked_at=Max("last_checked_at"),
+        last_success_at=Max("last_success_at"),
     )
+    gmail_summary = {
+        "status": "OK"
+        if mailbox_status["total"] and not mailbox_status["errors"]
+        else "ERROR"
+        if mailbox_status["errors"]
+        else "NOT READY",
+        "last_checked_at": mailbox_status["last_checked_at"],
+        "last_success_at": mailbox_status["last_success_at"],
+        "today_alerts": alert_counts["today"],
+    }
+    health_report = build_health_report()
 
     context = {
         "alerts": alerts[:30],
         "service_events": service_events[:30],
+        "case_summaries": case_summaries,
         "mailboxes": mailboxes,
         "mailbox_status": mailbox_status,
+        "gmail_summary": gmail_summary,
+        "health_report": health_report,
         "view_mode": view_mode,
         "alert_counts": alert_counts,
         "service_open_errors": service_open_errors,
@@ -202,6 +223,30 @@ def mobile_toggle_quiet_hours(request):
     settings = TelegramSettings.load()
     settings.quiet_hours_enabled = not settings.quiet_hours_enabled
     settings.save(update_fields=["quiet_hours_enabled", "updated_at"])
+
+    return redirect(_safe_next_url(request))
+
+
+@login_required
+@require_POST
+def mobile_service_event_action(request, event_id):
+    _require_staff(request.user)
+
+    event = get_object_or_404(ServiceEvent, id=event_id)
+    action = request.POST.get("action", "")
+
+    if action == "mark_recovered":
+        event.status = ServiceEvent.Status.RECOVERED
+        event.resolved_at = timezone.now()
+        event.save(update_fields=["status", "resolved_at", "updated_at"])
+        messages.success(request, "Service event marked recovered.")
+    elif action == "ignore":
+        event.status = ServiceEvent.Status.IGNORED
+        event.resolved_at = timezone.now()
+        event.save(update_fields=["status", "resolved_at", "updated_at"])
+        messages.success(request, "Service event ignored.")
+    else:
+        raise PermissionDenied("Unknown service event action.")
 
     return redirect(_safe_next_url(request))
 

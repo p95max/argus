@@ -1,12 +1,14 @@
 import logging
 
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler
 
 from alerts.telegram.config import get_telegram_config
 from alerts.telegram.handlers import (
     handle_alert_callback,
     handle_daily_summary_command,
+    handle_health_command,
     handle_mailbox_status_command,
 )
 
@@ -48,6 +50,7 @@ class Command(BaseCommand):
         logger.info(message)
 
         application = ApplicationBuilder().token(config.bot_token).build()
+        application.argus_started_at = timezone.now()
 
         application.add_error_handler(log_telegram_error)
 
@@ -67,6 +70,12 @@ class Command(BaseCommand):
             CommandHandler(
                 "summary",
                 handle_daily_summary_command,
+            )
+        )
+        application.add_handler(
+            CommandHandler(
+                "health",
+                handle_health_command,
             )
         )
 

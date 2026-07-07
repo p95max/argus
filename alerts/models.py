@@ -238,6 +238,7 @@ class ServiceEvent(TimestampedModel):
     class Status(models.TextChoices):
         OPEN = "open", "Открыто"
         RECOVERED = "recovered", "Восстановлено"
+        IGNORED = "ignored", "Игнор"
 
     mailbox = models.ForeignKey(
         MailboxAccount,

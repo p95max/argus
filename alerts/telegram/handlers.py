@@ -15,6 +15,7 @@ from .keyboards import (
 from .messages import (
     build_alert_message,
     build_daily_summary_message,
+    build_health_message,
     build_mailbox_status_message,
     _build_status_answer,
     _truncate,
@@ -186,6 +187,35 @@ async def handle_daily_summary_command(update, context):
         chat_id,
         user_id,
     )
+
+
+async def handle_health_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    logger.info("Telegram health command received. chat_id=%s user_id=%s", chat_id, user_id)
+
+    if not is_allowed_update(update):
+        logger.warning(
+            "Telegram health command rejected by permission. chat_id=%s user_id=%s",
+            chat_id,
+            user_id,
+        )
+        await update.effective_message.reply_text(
+            "Этот пользователь или чат не имеет доступа к Argus.",
+        )
+        return
+
+    bot_started_at = getattr(context.application, "argus_started_at", None)
+    text = await sync_to_async(build_health_message)(bot_started_at=bot_started_at)
+
+    await update.effective_message.reply_text(
+        text,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+    logger.info("Telegram health command handled. chat_id=%s user_id=%s", chat_id, user_id)
 
 
 def handle_alert_callback_action(

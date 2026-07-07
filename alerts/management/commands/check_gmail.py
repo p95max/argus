@@ -2,6 +2,7 @@ import logging
 
 from django.core.management.base import BaseCommand, CommandError
 
+from alerts.command_locks import CommandAlreadyRunning, command_lock
 from alerts.gmail.gmail import check_mailbox
 from alerts.models import MailboxAccount
 
@@ -24,6 +25,13 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        try:
+            with command_lock("check_gmail"):
+                return self._handle_locked(*args, **options)
+        except CommandAlreadyRunning as exc:
+            self.stdout.write(self.style.WARNING(str(exc)))
+
+    def _handle_locked(self, *args, **options):
         queryset = MailboxAccount.objects.filter(is_active=True)
 
         if options["mailbox"]:
