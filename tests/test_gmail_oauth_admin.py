@@ -376,3 +376,27 @@ def test_admin_gmail_disconnect_clears_oauth_fields(admin_client, admin_user, ma
     assert mailbox.gmail_oauth_error == ""
     assert mailbox.connection_status == MailboxAccount.ConnectionStatus.NOT_CONNECTED
     assert mailbox.last_error == ""
+
+
+@pytest.mark.django_db
+def test_admin_gmail_check_now_runs_selected_mailbox(monkeypatch, admin_client, admin_user, mailbox):
+    admin_client.force_login(admin_user)
+    checked = []
+
+    class Result:
+        fetched = 3
+        created = 2
+        duplicates = 1
+
+    def fake_check_mailbox(selected_mailbox):
+        checked.append(selected_mailbox.id)
+        return Result()
+
+    monkeypatch.setattr("alerts.admin_site.mailboxes.check_mailbox", fake_check_mailbox)
+
+    url = reverse("admin:alerts_mailboxaccount_gmail_check_now", args=[mailbox.id])
+    response = admin_client.get(url)
+
+    assert response.status_code == 302
+    assert response["Location"] == reverse("admin:alerts_mailboxaccount_change", args=[mailbox.id])
+    assert checked == [mailbox.id]

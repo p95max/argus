@@ -324,5 +324,5 @@ python -m poetry run ruff check alerts
 Latest full local result:
 
 ```text
-97 passed
+99 passed
 ```
