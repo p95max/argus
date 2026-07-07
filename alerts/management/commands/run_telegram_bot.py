@@ -10,6 +10,7 @@ from alerts.telegram.handlers import (
     handle_daily_summary_command,
     handle_health_command,
     handle_mailbox_status_command,
+    handle_doctor_command,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,12 @@ class Command(BaseCommand):
             CommandHandler(
                 "health",
                 handle_health_command,
+            )
+        )
+        application.add_handler(
+            CommandHandler(
+                "doctor",
+                handle_doctor_command,
             )
         )
 

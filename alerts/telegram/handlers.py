@@ -1,4 +1,7 @@
 import logging
+import html
+import subprocess
+
 from dataclasses import dataclass
 
 from asgiref.sync import sync_to_async
@@ -275,6 +278,34 @@ def update_alert_status_from_callback(
     return result.alert
 
 
+def build_doctor_script_message() -> str:
+    try:
+        result = subprocess.run(
+            ["/usr/local/bin/argus-doctor.sh"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            timeout=25,
+            check=False,
+        )
+    except FileNotFoundError:
+        return "🚨 <b>[DEV] Argus doctor</b>\n<pre>/usr/local/bin/argus-doctor.sh not found</pre>"
+    except subprocess.TimeoutExpired:
+        return "🚨 <b>[DEV] Argus doctor</b>\n<pre>Doctor check timed out after 25 seconds.</pre>"
+
+    output = result.stdout.strip() or "(no output)"
+
+    if len(output) > 3300:
+        output = "... truncated ...\n" + output[-3300:]
+
+    icon = "✅" if result.returncode == 0 else "🚨"
+
+    return (
+        f"{icon} <b>[DEV] Argus doctor</b>\n"
+        f"<pre>{html.escape(output)}</pre>"
+    )
+
+
 async def _safe_answer_callback(query, text: str, show_alert: bool = False) -> None:
     try:
         await query.answer(
@@ -326,3 +357,30 @@ async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
             alert.id,
         )
         raise
+
+async def handle_doctor_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    logger.info("Telegram doctor command received. chat_id=%s user_id=%s", chat_id, user_id)
+
+    if not is_allowed_update(update):
+        logger.warning(
+            "Telegram doctor command rejected by permission. chat_id=%s user_id=%s",
+            chat_id,
+            user_id,
+        )
+        await update.effective_message.reply_text(
+            "Этот пользователь или чат не имеет доступа к Argus.",
+        )
+        return
+
+    text = await sync_to_async(build_doctor_script_message)()
+
+    await update.effective_message.reply_text(
+        text,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+    logger.info("Telegram doctor command handled. chat_id=%s user_id=%s", chat_id, user_id)
