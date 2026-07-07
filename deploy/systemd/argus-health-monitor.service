@@ -1,0 +1,8 @@
+[Unit]
+Description=Argus health monitor notification
+
+[Service]
+Type=oneshot
+User=argus
+Group=argus
+ExecStart=/usr/bin/flock -n /tmp/argus-health-monitor.lock /usr/local/bin/argus-health-notify.py

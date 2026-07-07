@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Argus health monitor every 5 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Unit=argus-health-monitor.service
+
+[Install]
+WantedBy=timers.target

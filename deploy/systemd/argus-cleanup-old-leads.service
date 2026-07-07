@@ -1,0 +1,10 @@
+[Unit]
+Description=Argus cleanup old leads
+
+[Service]
+Type=oneshot
+User=argus
+Group=argus
+WorkingDirectory=/opt/argus
+Environment="PATH=/opt/argus/.venv/bin"
+ExecStart=/usr/bin/flock -n /tmp/argus-cleanup-old-leads.lock /opt/argus/.venv/bin/python manage.py cleanup_old_leads --days 30 --limit 100

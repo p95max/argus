@@ -127,6 +127,225 @@ The deploy check fails if local demo data leaks into production, including the `
 
 The command reuses the full health checks and also verifies deploy-sensitive settings such as `DEBUG`, `DATABASE_URL`, and `GMAIL_OAUTH_TOKEN_FERNET_KEY`.
 
+## Production Timers
+
+Argus uses systemd timers on the VPS for background jobs.
+
+Timer templates live in `deploy/systemd/`. Install or update them on the server with:
+
+```bash
+cd /opt/argus
+sudo cp deploy/systemd/argus-*.service deploy/systemd/argus-*.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now \
+  argus-check-gmail.timer \
+  argus-unread-reminders.timer \
+  argus-cleanup-old-leads.timer \
+  argus-auto-deploy.timer \
+  argus-health-monitor.timer
+```
+
+### Gmail Check Timer
+
+Purpose: checks Gmail and creates new alerts.
+
+Timer:
+
+```bash
+systemctl status argus-check-gmail.timer --no-pager -l
+```
+
+Service:
+
+```bash
+systemctl status argus-check-gmail.service --no-pager -l
+```
+
+Logs:
+
+```bash
+sudo journalctl -u argus-check-gmail.service -n 80 --no-pager -l
+```
+
+Run manually through systemd:
+
+```bash
+sudo systemctl start argus-check-gmail.service
+```
+
+Run directly through Django:
+
+```bash
+cd /opt/argus
+source .venv/bin/activate
+python manage.py check_gmail --max-results 25
+```
+
+### Unread Reminders Timer
+
+Purpose: sends Telegram reminders for unread alerts.
+
+Timer:
+
+```bash
+systemctl status argus-unread-reminders.timer --no-pager -l
+```
+
+Service:
+
+```bash
+systemctl status argus-unread-reminders.service --no-pager -l
+```
+
+Logs:
+
+```bash
+sudo journalctl -u argus-unread-reminders.service -n 80 --no-pager -l
+```
+
+Run manually through systemd:
+
+```bash
+sudo systemctl start argus-unread-reminders.service
+```
+
+Run directly through Django:
+
+```bash
+cd /opt/argus
+source .venv/bin/activate
+python manage.py send_unread_reminders --min-age-minutes 30 --reminder-interval-minutes 60 --limit 25
+```
+
+### Cleanup Old Leads Timer
+
+Purpose: removes old inactive lead branches.
+
+Timer:
+
+```bash
+systemctl status argus-cleanup-old-leads.timer --no-pager -l
+```
+
+Service:
+
+```bash
+systemctl status argus-cleanup-old-leads.service --no-pager -l
+```
+
+Logs:
+
+```bash
+sudo journalctl -u argus-cleanup-old-leads.service -n 80 --no-pager -l
+```
+
+Run real cleanup through systemd:
+
+```bash
+sudo systemctl start argus-cleanup-old-leads.service
+```
+
+Safe dry run:
+
+```bash
+cd /opt/argus
+source .venv/bin/activate
+python manage.py cleanup_old_leads --days 30 --limit 100 --dry-run
+```
+
+### Auto Deploy Timer
+
+Purpose: checks GitHub once per hour and pulls new commits.
+
+Timer:
+
+```bash
+systemctl status argus-auto-deploy.timer --no-pager -l
+```
+
+Service:
+
+```bash
+systemctl status argus-auto-deploy.service --no-pager -l
+```
+
+Logs:
+
+```bash
+sudo journalctl -u argus-auto-deploy.service -n 100 --no-pager -l
+```
+
+Run auto deploy manually through systemd:
+
+```bash
+sudo systemctl start argus-auto-deploy.service
+```
+
+Run deploy script manually:
+
+```bash
+cd /opt/argus
+./deploy.sh
+```
+
+Check the next run:
+
+```bash
+systemctl list-timers --all | grep argus-auto
+```
+
+### Health Monitor Timer
+
+Purpose: checks Argus health and sends an operational notification when needed.
+
+Timer:
+
+```bash
+systemctl status argus-health-monitor.timer --no-pager -l
+```
+
+Service:
+
+```bash
+systemctl status argus-health-monitor.service --no-pager -l
+```
+
+Logs:
+
+```bash
+sudo journalctl -u argus-health-monitor.service -n 80 --no-pager -l
+```
+
+Run manually through systemd:
+
+```bash
+sudo systemctl start argus-health-monitor.service
+```
+
+The current service expects `/usr/local/bin/argus-health-notify.py` to exist on the server.
+
+### Timer Quick Checks
+
+Check all timers:
+
+```bash
+systemctl status argus-check-gmail.timer --no-pager -l
+systemctl status argus-unread-reminders.timer --no-pager -l
+systemctl status argus-cleanup-old-leads.timer --no-pager -l
+systemctl status argus-auto-deploy.timer --no-pager -l
+systemctl status argus-health-monitor.timer --no-pager -l
+```
+
+Check all timer service logs:
+
+```bash
+sudo journalctl -u argus-check-gmail.service -n 40 --no-pager -l
+sudo journalctl -u argus-unread-reminders.service -n 40 --no-pager -l
+sudo journalctl -u argus-cleanup-old-leads.service -n 40 --no-pager -l
+sudo journalctl -u argus-auto-deploy.service -n 40 --no-pager -l
+sudo journalctl -u argus-health-monitor.service -n 40 --no-pager -l
+```
+
 ## Security
 
 - Gmail OAuth refresh tokens are encrypted before being stored.

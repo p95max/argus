@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Argus cleanup daily
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+Unit=argus-cleanup-old-leads.service
+
+[Install]
+WantedBy=timers.target

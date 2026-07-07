@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Argus auto deploy every hour
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=argus-auto-deploy.service
+
+[Install]
+WantedBy=timers.target

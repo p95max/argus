@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Argus unread reminders every 10 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+Unit=argus-unread-reminders.service
+
+[Install]
+WantedBy=timers.target

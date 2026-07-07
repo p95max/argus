@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Argus Gmail check every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=argus-check-gmail.service
+
+[Install]
+WantedBy=timers.target

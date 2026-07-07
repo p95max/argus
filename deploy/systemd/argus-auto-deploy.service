@@ -1,0 +1,11 @@
+[Unit]
+Description=Argus auto deploy from GitHub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=argus
+Group=argus
+WorkingDirectory=/opt/argus
+ExecStart=/usr/bin/flock -n /tmp/argus-auto-deploy.lock /opt/argus/deploy.sh
