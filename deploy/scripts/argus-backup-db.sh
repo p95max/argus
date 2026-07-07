@@ -8,7 +8,7 @@ ENV_FILE="$PROJECT_DIR/.env.local"
 mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 
-DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | cut -d '=' -f2-)"
+DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | cut -d '=' -f2- || true)"
 
 if [ -z "$DATABASE_URL" ]; then
     echo "ERROR: DATABASE_URL not found"

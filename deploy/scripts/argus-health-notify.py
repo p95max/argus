@@ -6,12 +6,14 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import urljoin
 
 ENV_FILE = Path("/opt/argus/.env.local")
 STATE_FILE = Path("/var/tmp/argus-health-state.json")
-HEALTH_URL = "http://45.9.61.214/health/"
+DEFAULT_BASE_URL = "http://127.0.0.1:8000"
 
 SERVICES = [
     "argus-web.service",
@@ -23,6 +25,8 @@ TIMERS = [
     "argus-unread-reminders.timer",
     "argus-cleanup-old-leads.timer",
     "argus-auto-deploy.timer",
+    "argus-backup-db.timer",
+    "argus-health-monitor.timer",
 ]
 
 
@@ -55,21 +59,53 @@ def is_active(unit):
     return result.stdout.strip() == "active"
 
 
-def check_health_url():
+def build_url(base_url, path):
+    return urljoin(base_url.rstrip("/") + "/", path.lstrip("/"))
+
+
+def request_json(url, *, token=""):
+    headers = {"User-Agent": "argus-health-monitor"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    request = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(request, timeout=8) as response:
+        body = response.read().decode("utf-8", errors="replace")
+        return response.status, json.loads(body)
+
+
+def check_health(env):
+    base_url = env.get("ARGUS_PUBLIC_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    token = env.get("ARGUS_HEALTH_TOKEN", "")
+
+    if token:
+        full_url = build_url(base_url, "/health/full/")
+        try:
+            status, payload = request_json(full_url, token=token)
+        except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
+            return False, f"Full health check failed: {full_url} ({exc})"
+
+        if status != 200 or payload.get("status") != "ok":
+            detail = payload.get("status", "unknown")
+            checks = payload.get("checks", {})
+            failed = [
+                f"{name}: {check.get('detail') or check.get('status')}"
+                for name, check in checks.items()
+                if not check.get("ok")
+            ]
+            if failed:
+                detail = "; ".join(failed)
+            return False, f"Full health degraded: {detail}"
+        return True, f"Full health OK: {full_url}"
+
+    simple_url = build_url(base_url, "/health/")
     try:
-        request = urllib.request.Request(
-            HEALTH_URL,
-            headers={"User-Agent": "argus-health-monitor"},
-        )
-        with urllib.request.urlopen(request, timeout=8) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            return (
-                response.status == 200
-                and '"status": "ok"' in body
-                or '{"status": "ok"}' in body
-            )
-    except Exception:
-        return False
+        status, payload = request_json(simple_url)
+    except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
+        return False, f"Health check failed: {simple_url} ({exc})"
+
+    if status != 200 or payload.get("status") != "ok":
+        return False, f"Health check failed: {simple_url}"
+    return True, f"Health OK: {simple_url}"
 
 
 def get_failed_units():
@@ -80,8 +116,7 @@ def get_failed_units():
 
 def check_disk():
     usage = shutil.disk_usage("/")
-    used_percent = round((usage.used / usage.total) * 100, 1)
-    return used_percent
+    return round((usage.used / usage.total) * 100, 1)
 
 
 def send_telegram(token, chat_id, text):
@@ -118,6 +153,14 @@ def save_state(state):
     STATE_FILE.write_text(json.dumps(state, indent=2, sort_keys=True))
 
 
+def first_chat_id(env):
+    chat_id = env.get("TELEGRAM_DEFAULT_CHAT_ID", "")
+    if chat_id:
+        return chat_id
+    allowed = env.get("TELEGRAM_ALLOWED_CHAT_IDS", "")
+    return allowed.split(",")[0].strip() if allowed else ""
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", action="store_true", help="Send test Telegram notification")
@@ -125,11 +168,8 @@ def main():
 
     env = load_env()
     token = env.get("TELEGRAM_BOT_TOKEN", "")
-    chat_id = env.get("TELEGRAM_DEFAULT_CHAT_ID", "")
-
-    if not chat_id:
-        allowed = env.get("TELEGRAM_ALLOWED_CHAT_IDS", "")
-        chat_id = allowed.split(",")[0].strip() if allowed else ""
+    chat_id = first_chat_id(env)
+    label = env.get("ARGUS_ENV_LABEL", "PROD")
 
     if not token or not chat_id:
         print("ERROR: TELEGRAM_BOT_TOKEN or TELEGRAM_DEFAULT_CHAT_ID is missing.")
@@ -139,7 +179,7 @@ def main():
         send_telegram(
             token,
             chat_id,
-            "✅ [DEV] Argus monitor test\nTelegram notifications are working.",
+            f"[{label}] Argus monitor test\nTelegram notifications are working.",
         )
         print("Test notification sent.")
         return 0
@@ -154,8 +194,9 @@ def main():
         if not is_active(timer):
             problems.append(f"Timer not active: {timer}")
 
-    if not check_health_url():
-        problems.append(f"Health check failed: {HEALTH_URL}")
+    health_ok, health_detail = check_health(env)
+    if not health_ok:
+        problems.append(health_detail)
 
     failed_units = get_failed_units()
     if failed_units:
@@ -176,7 +217,7 @@ def main():
     if current_status == "fail":
         if previous_status != "fail" or previous_hash != problem_hash:
             message = (
-                "🚨 [DEV] Argus problem detected\n\n"
+                f"[{label}] Argus problem detected\n\n"
                 + problem_text
                 + "\n\n"
                 + f"Time: {time.strftime('%Y-%m-%d %H:%M:%S %Z')}"
@@ -190,7 +231,7 @@ def main():
             send_telegram(
                 token,
                 chat_id,
-                "✅ [DEV] Argus recovered\nAll monitored services and checks are OK.",
+                f"[{label}] Argus recovered\nAll monitored services and checks are OK.",
             )
             print("Recovery notification sent.")
         else:

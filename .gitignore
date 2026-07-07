@@ -51,6 +51,7 @@ media/
 .env
 .env.*
 !.env.example
+!.env.deploy.example
 
 # Google / Gmail OAuth secrets and tokens
 credentials.json

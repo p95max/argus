@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Argus PostgreSQL backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+Unit=argus-backup-db.service
+
+[Install]
+WantedBy=timers.target

@@ -58,6 +58,7 @@ DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 DJANGO_ADMIN_URL=control
 ARGUS_PUBLIC_BASE_URL=http://127.0.0.1:8000
+ARGUS_ENV_LABEL=LOCAL
 ARGUS_HEALTH_TOKEN=
 ARGUS_GMAIL_CHECK_STALE_MINUTES=15
 ARGUS_COMMAND_LOCK_TIMEOUT_SECONDS=600
@@ -135,17 +136,10 @@ Timer templates live in `deploy/systemd/`. Install or update them on the server 
 
 ```bash
 cd /opt/argus
-sudo cp deploy/systemd/argus-*.service deploy/systemd/argus-*.timer /etc/systemd/system/
-sudo cp deploy/scripts/argus-* /usr/local/bin/
-sudo chmod +x /usr/local/bin/argus-*
-sudo systemctl daemon-reload
-sudo systemctl enable --now \
-  argus-check-gmail.timer \
-  argus-unread-reminders.timer \
-  argus-cleanup-old-leads.timer \
-  argus-auto-deploy.timer \
-  argus-health-monitor.timer
+./deploy/install-ops.sh
 ```
+
+If `deploy/scripts` is missing on the server, pull or deploy the latest repository version first.
 
 ### Gmail Check Timer
 
@@ -296,6 +290,34 @@ Check the next run:
 systemctl list-timers --all | grep argus-auto
 ```
 
+### Backup Timer
+
+Purpose: creates a daily PostgreSQL dump before cleanup runs.
+
+Timer:
+
+```bash
+systemctl status argus-backup-db.timer --no-pager -l
+```
+
+Service:
+
+```bash
+systemctl status argus-backup-db.service --no-pager -l
+```
+
+Logs:
+
+```bash
+sudo journalctl -u argus-backup-db.service -n 80 --no-pager -l
+```
+
+Run manually through systemd:
+
+```bash
+sudo systemctl start argus-backup-db.service
+```
+
 ### Health Monitor Timer
 
 Purpose: checks Argus health and sends an operational notification when needed.
@@ -335,6 +357,7 @@ systemctl status argus-check-gmail.timer --no-pager -l
 systemctl status argus-unread-reminders.timer --no-pager -l
 systemctl status argus-cleanup-old-leads.timer --no-pager -l
 systemctl status argus-auto-deploy.timer --no-pager -l
+systemctl status argus-backup-db.timer --no-pager -l
 systemctl status argus-health-monitor.timer --no-pager -l
 ```
 
@@ -345,6 +368,7 @@ sudo journalctl -u argus-check-gmail.service -n 40 --no-pager -l
 sudo journalctl -u argus-unread-reminders.service -n 40 --no-pager -l
 sudo journalctl -u argus-cleanup-old-leads.service -n 40 --no-pager -l
 sudo journalctl -u argus-auto-deploy.service -n 40 --no-pager -l
+sudo journalctl -u argus-backup-db.service -n 40 --no-pager -l
 sudo journalctl -u argus-health-monitor.service -n 40 --no-pager -l
 ```
 
@@ -375,11 +399,11 @@ pg_restore --clean --if-exists --no-owner --no-privileges --dbname "$DATABASE_UR
 - `argus-web.service`
 - `argus-telegram-bot.service`
 - Argus timers
-- `/health/`
+- `/health/full/` when `ARGUS_HEALTH_TOKEN` is configured, otherwise `/health/`
 - failed systemd units
 - root disk usage
 
-It sends Telegram only when a new problem appears or when the system recovers. State is stored in `/var/tmp/argus-health-state.json`.
+It sends Telegram only when a new problem appears or when the system recovers. The message prefix comes from `ARGUS_ENV_LABEL`, and state is stored in `/var/tmp/argus-health-state.json`.
 
 Run manually:
 
@@ -409,6 +433,25 @@ Run manually:
 
 ```bash
 sudo /usr/local/bin/argus-status.sh
+```
+
+### Doctor Check
+
+`argus-doctor.sh` is a strict automation check. It prints OK/FAIL lines and exits non-zero if Argus is not healthy.
+
+It checks:
+
+- clean git working tree;
+- web and Telegram bot services;
+- all Argus timers, including backup and health monitor;
+- `/health/full/` with `ARGUS_HEALTH_TOKEN` when available;
+- failed systemd units;
+- disk usage.
+
+Run manually:
+
+```bash
+sudo /usr/local/bin/argus-doctor.sh
 ```
 
 ## Security

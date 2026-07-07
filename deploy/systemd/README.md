@@ -6,16 +6,7 @@ Install or update on the server:
 
 ```bash
 cd /opt/argus
-sudo cp deploy/systemd/argus-*.service deploy/systemd/argus-*.timer /etc/systemd/system/
-sudo cp deploy/scripts/argus-* /usr/local/bin/
-sudo chmod +x /usr/local/bin/argus-*
-sudo systemctl daemon-reload
-sudo systemctl enable --now \
-  argus-check-gmail.timer \
-  argus-unread-reminders.timer \
-  argus-cleanup-old-leads.timer \
-  argus-auto-deploy.timer \
-  argus-health-monitor.timer
+./deploy/install-ops.sh
 ```
 
 Check all Argus timers:
