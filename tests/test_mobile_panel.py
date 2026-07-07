@@ -45,6 +45,18 @@ def test_mobile_panel_requires_staff(client, regular_user):
 
 
 @pytest.mark.django_db
+def test_mobile_panel_redirects_anonymous_user_to_admin_login(client, settings, alert):
+    settings.DJANGO_ADMIN_URL = "control"
+    settings.LOGIN_URL = "/control/login/"
+    mobile_url = reverse("mobile_alert_detail", args=[alert.id])
+
+    response = client.get(mobile_url)
+
+    assert response.status_code == 302
+    assert response["Location"] == f"/control/login/?next={mobile_url}"
+
+
+@pytest.mark.django_db
 def test_mobile_panel_shows_needs_attention_and_empty_state(client, staff_user, alert):
     client.force_login(staff_user)
 

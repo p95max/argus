@@ -102,6 +102,7 @@ DJANGO_ADMIN_URL = normalize_url_path(
     env.str("DJANGO_ADMIN_URL"),
     default="control",
 )
+LOGIN_URL = f"/{DJANGO_ADMIN_URL}/login/"
 ARGUS_PUBLIC_BASE_URL = env.str("ARGUS_PUBLIC_BASE_URL").strip().rstrip("/")
 
 GMAIL_CHECK_MAX_RESULTS = env.int("GMAIL_CHECK_MAX_RESULTS")
