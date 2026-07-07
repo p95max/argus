@@ -136,6 +136,8 @@ Timer templates live in `deploy/systemd/`. Install or update them on the server 
 ```bash
 cd /opt/argus
 sudo cp deploy/systemd/argus-*.service deploy/systemd/argus-*.timer /etc/systemd/system/
+sudo cp deploy/scripts/argus-* /usr/local/bin/
+sudo chmod +x /usr/local/bin/argus-*
 sudo systemctl daemon-reload
 sudo systemctl enable --now \
   argus-check-gmail.timer \
@@ -344,6 +346,69 @@ sudo journalctl -u argus-unread-reminders.service -n 40 --no-pager -l
 sudo journalctl -u argus-cleanup-old-leads.service -n 40 --no-pager -l
 sudo journalctl -u argus-auto-deploy.service -n 40 --no-pager -l
 sudo journalctl -u argus-health-monitor.service -n 40 --no-pager -l
+```
+
+## Production Scripts
+
+Production helper scripts live in `deploy/scripts/` and are installed into `/usr/local/bin/`.
+
+### Database Backup
+
+`argus-backup-db.sh` creates a PostgreSQL custom-format dump from `DATABASE_URL` in `/opt/argus/.env.local`, stores it in `/opt/argus/backups`, restricts file permissions, and deletes dumps older than 14 days.
+
+Run manually:
+
+```bash
+sudo /usr/local/bin/argus-backup-db.sh
+```
+
+Restore example:
+
+```bash
+pg_restore --clean --if-exists --no-owner --no-privileges --dbname "$DATABASE_URL" /opt/argus/backups/argus-db-YYYYMMDD-HHMMSS.dump
+```
+
+### Health Notify
+
+`argus-health-notify.py` checks:
+
+- `argus-web.service`
+- `argus-telegram-bot.service`
+- Argus timers
+- `/health/`
+- failed systemd units
+- root disk usage
+
+It sends Telegram only when a new problem appears or when the system recovers. State is stored in `/var/tmp/argus-health-state.json`.
+
+Run manually:
+
+```bash
+sudo /usr/local/bin/argus-health-notify.py
+```
+
+Send a test Telegram notification:
+
+```bash
+sudo /usr/local/bin/argus-health-notify.py --test
+```
+
+### Status Snapshot
+
+`argus-status.sh` prints a one-shot production snapshot:
+
+- git status and last commits;
+- `/health/`;
+- web and Telegram bot service status;
+- Argus timers;
+- failed systemd units;
+- disk and memory usage;
+- recent web and Telegram logs.
+
+Run manually:
+
+```bash
+sudo /usr/local/bin/argus-status.sh
 ```
 
 ## Security
