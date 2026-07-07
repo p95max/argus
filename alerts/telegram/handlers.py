@@ -281,7 +281,7 @@ def update_alert_status_from_callback(
 def build_doctor_script_message() -> str:
     try:
         result = subprocess.run(
-            ["/usr/local/bin/argus-doctor.sh"],
+            ["/bin/bash", "/usr/local/bin/argus-doctor.sh"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
