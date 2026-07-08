@@ -57,6 +57,11 @@
                 <strong>{{ alert_counts.ignored }}</strong>
             </a>
 
+            <a class="panel-nav-item {% if view_mode == 'archived' %}active{% endif %}" href="?view=archived">
+                <span class="panel-nav-label">📦 Архив</span>
+                <strong>{{ alert_counts.archived }}</strong>
+            </a>
+
             <a class="panel-nav-item {% if view_mode == 'noise' %}active{% endif %}" href="?view=noise">
                 <span class="panel-nav-label">🧹 Спам</span>
                 <strong>{{ alert_counts.noise }}</strong>
@@ -130,6 +135,8 @@
                 🛠️ Мои в работе
             {% elif view_mode == 'ignored' %}
                 🚫 Игнорированные обращения
+            {% elif view_mode == 'archived' %}
+                📦 Архив
             {% elif view_mode == 'noise' %}
                 🧹 Спам и рассылки
             {% elif view_mode == 'all' %}
@@ -194,6 +201,15 @@
                 {% endif %}
 
             <div class="actions">
+                {% if view_mode == 'mine' and alert.alert_status == 'in_work' %}
+                    <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="status" value="archived">
+                        <button type="submit">✅ Кейс решён</button>
+                    </form>
+                {% endif %}
+
                 <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
@@ -227,6 +243,7 @@
                 {% if view_mode == 'today' %}Сегодня обращений пока нет.
                 {% elif view_mode == 'mine' %}У вас нет обращений в работе.
                 {% elif view_mode == 'ignored' %}Игнорированных обращений пока нет.
+                {% elif view_mode == 'archived' %}Архивных обращений пока нет.
                 {% elif view_mode == 'noise' %}Спама и рассылок пока нет.
                 {% else %}Сейчас нет обращений для этого фильтра.{% endif %}
             </div>
