@@ -1,12 +1,21 @@
-#!/bin/bash
-set -euo pipefail
+#!/usr/bin/env bash
+set -Eeuo pipefail
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
-PROJECT_DIR="/opt/argus"
-ENV_FILE="$PROJECT_DIR/.env.local"
+PROJECT_DIR="${PROJECT_DIR:-/opt/argus}"
+ENV_FILE="${ENV_FILE:-$PROJECT_DIR/.env.local}"
 ARGUS_PUBLIC_BASE_URL="http://127.0.0.1:8000"
 ARGUS_HEALTH_TOKEN=""
+GIT_BIN="${GIT_BIN:-/usr/bin/git}"
 EXIT_CODE=0
+HEALTH_BODY=""
+
+cleanup() {
+    if [ -n "${HEALTH_BODY:-}" ] && [ -f "$HEALTH_BODY" ]; then
+        rm -f "$HEALTH_BODY"
+    fi
+}
+trap cleanup EXIT
 
 if [ -f "$ENV_FILE" ]; then
     ENV_BASE_URL="$(grep -E '^ARGUS_PUBLIC_BASE_URL=' "$ENV_FILE" | cut -d '=' -f2- | tr -d "\"'" || true)"
@@ -37,53 +46,107 @@ check_active() {
     fi
 }
 
-check_timer() {
+check_enabled() {
     local unit="$1"
-    if systemctl is-active --quiet "$unit"; then
-        ok "$unit active"
+    if systemctl is-enabled --quiet "$unit"; then
+        ok "$unit enabled"
     else
-        fail "$unit is not active"
+        fail "$unit is not enabled"
+    fi
+}
+
+check_executable() {
+    local path="$1"
+    if [ -x "$path" ]; then
+        ok "$path executable"
+    else
+        fail "$path is missing or not executable"
+    fi
+}
+
+check_deployed_copy() {
+    local relative_path="$1"
+    local deployed_path="/usr/local/bin/$(basename "$relative_path")"
+    local repo_path="$PROJECT_DIR/$relative_path"
+
+    if [ ! -f "$repo_path" ]; then
+        fail "$repo_path missing in repository"
+        return
+    fi
+
+    if [ ! -f "$deployed_path" ]; then
+        fail "$deployed_path missing"
+        return
+    fi
+
+    if cmp -s "$repo_path" "$deployed_path"; then
+        ok "$deployed_path matches repository"
+    else
+        fail "$deployed_path differs from $repo_path; run deploy/install-ops.sh"
     fi
 }
 
 cd "$PROJECT_DIR"
 
+HEALTH_BODY="$(mktemp /tmp/argus-health.XXXXXX.json)"
+
 echo "=== ARGUS DOCTOR ==="
 date
 echo
 
-if git diff --quiet && git diff --cached --quiet; then
+if [ ! -x "$GIT_BIN" ]; then
+    fail "git binary not found: $GIT_BIN"
+elif "$GIT_BIN" diff --quiet && "$GIT_BIN" diff --cached --quiet; then
     ok "git working tree clean"
 else
     fail "git working tree has uncommitted changes"
-    git status --short
+    "$GIT_BIN" status --short
 fi
 
 check_active argus-web.service
 check_active argus-telegram-bot.service
 
-check_timer argus-check-gmail.timer
-check_timer argus-unread-reminders.timer
-check_timer argus-cleanup-old-leads.timer
-check_timer argus-auto-deploy.timer
-check_timer argus-backup-db.timer
-check_timer argus-health-monitor.timer
+check_enabled argus-web.service
+check_enabled argus-telegram-bot.service
+check_enabled argus-check-gmail.timer
+check_enabled argus-unread-reminders.timer
+check_enabled argus-cleanup-old-leads.timer
+check_enabled argus-auto-deploy.timer
+check_enabled argus-backup-db.timer
+check_enabled argus-health-monitor.timer
+
+check_active argus-check-gmail.timer
+check_active argus-unread-reminders.timer
+check_active argus-cleanup-old-leads.timer
+check_active argus-auto-deploy.timer
+check_active argus-backup-db.timer
+check_active argus-health-monitor.timer
+
+check_executable /usr/local/bin/argus-backup-db.sh
+check_executable /usr/local/bin/argus-health-notify.py
+check_executable /usr/local/bin/argus-auto-deploy.sh
+check_executable /usr/local/bin/argus-doctor.sh
+
+check_deployed_copy deploy/scripts/argus-backup-db.sh
+check_deployed_copy deploy/scripts/argus-health-notify.py
+check_deployed_copy deploy/scripts/argus-auto-deploy.sh
+check_deployed_copy deploy/scripts/argus-doctor.sh
 
 if [ -n "$ARGUS_HEALTH_TOKEN" ]; then
-    HEALTH_STATUS="$(curl -sS -o /tmp/argus-health-full.json -w "%{http_code}" -H "Authorization: Bearer $ARGUS_HEALTH_TOKEN" "$ARGUS_PUBLIC_BASE_URL/health/full/" || true)"
-    if [ "$HEALTH_STATUS" = "200" ] && grep -q '"status": "ok"' /tmp/argus-health-full.json; then
+    HEALTH_STATUS="$(curl -sS -o "$HEALTH_BODY" -w "%{http_code}" -H "Authorization: Bearer $ARGUS_HEALTH_TOKEN" "$ARGUS_PUBLIC_BASE_URL/health/full/" || true)"
+    if [ "$HEALTH_STATUS" = "200" ] && grep -q '"status": "ok"' "$HEALTH_BODY"; then
         ok "full health OK"
     else
         fail "full health failed with HTTP $HEALTH_STATUS"
-        cat /tmp/argus-health-full.json || true
+        cat "$HEALTH_BODY" || true
     fi
 else
-    HEALTH_STATUS="$(curl -sS -o /tmp/argus-health.json -w "%{http_code}" "$ARGUS_PUBLIC_BASE_URL/health/" || true)"
-    if [ "$HEALTH_STATUS" = "200" ] && grep -q '"status": "ok"' /tmp/argus-health.json; then
+    HEALTH_STATUS="$(curl -sS -o "$HEALTH_BODY" -w "%{http_code}" "$ARGUS_PUBLIC_BASE_URL/health/" || true)"
+    if [ "$HEALTH_STATUS" = "200" ] && grep -q '"status": "ok"' "$HEALTH_BODY"; then
         ok "health OK"
     else
         fail "health failed with HTTP $HEALTH_STATUS"
-        cat /tmp/argus-health.json || true
+        cat "$HEALTH_BODY" || true
     fi
 fi
 
