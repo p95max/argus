@@ -5,8 +5,9 @@ import subprocess
 from dataclasses import dataclass
 
 from asgiref.sync import sync_to_async
-from telegram.error import BadRequest
+from django.conf import settings
 from django.utils import timezone
+from telegram.error import BadRequest
 
 from ..models import MarketplaceAlert
 from .keyboards import (
@@ -294,16 +295,89 @@ def build_doctor_script_message() -> str:
         return "🚨 <b>[DEV] Argus doctor</b>\n<pre>Doctor check timed out after 25 seconds.</pre>"
 
     output = result.stdout.strip() or "(no output)"
+    git_output = build_git_deploy_status_text()
+    combined_output = f"{output}\n\n{git_output}" if git_output else output
 
-    if len(output) > 3300:
-        output = "... truncated ...\n" + output[-3300:]
+    if len(combined_output) > 3300:
+        combined_output = "... truncated ...\n" + combined_output[-3300:]
 
     icon = "✅" if result.returncode == 0 else "🚨"
 
     return (
         f"{icon} <b>[DEV] Argus doctor</b>\n"
-        f"<pre>{html.escape(output)}</pre>"
+        f"<pre>{html.escape(combined_output)}</pre>"
     )
+
+
+def build_git_deploy_status_text() -> str:
+    branch = _run_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
+    head_sha = _run_git_command(["rev-parse", "--short", "HEAD"])
+    head_subject = _run_git_command(["log", "-1", "--pretty=%s"])
+    head_date = _run_git_command(["log", "-1", "--date=format:%d.%m.%Y %H:%M:%S", "--pretty=%cd"])
+    origin_sha = _run_git_command(["rev-parse", "--short", "origin/master"])
+    relation = _build_git_relation_text()
+
+    lines = ["🧬 Git deploy status"]
+    if branch:
+        lines.append(f"Branch: {branch}")
+    if head_sha:
+        lines.append(f"Local HEAD: {head_sha}")
+    if head_subject:
+        lines.append(f"Commit: {head_subject}")
+    if head_date:
+        lines.append(f"Date: {head_date}")
+    if origin_sha:
+        lines.append(f"Origin/master: {origin_sha}")
+    if relation:
+        lines.append(f"Status: {relation}")
+
+    if len(lines) == 1:
+        return "🧬 Git deploy status\nStatus: git info unavailable"
+
+    return "\n".join(lines)
+
+
+def _build_git_relation_text() -> str:
+    relation = _run_git_command(["rev-list", "--left-right", "--count", "HEAD...origin/master"])
+    if not relation:
+        return "unknown"
+
+    parts = relation.split()
+    if len(parts) != 2:
+        return "unknown"
+
+    try:
+        ahead, behind = int(parts[0]), int(parts[1])
+    except ValueError:
+        return "unknown"
+
+    if ahead == 0 and behind == 0:
+        return "up to date"
+    if ahead == 0:
+        return f"behind origin/master by {behind} commit(s)"
+    if behind == 0:
+        return f"ahead of origin/master by {ahead} commit(s)"
+    return f"diverged: ahead {ahead}, behind {behind}"
+
+
+def _run_git_command(args: list[str], timeout: int = 5) -> str:
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=settings.BASE_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return ""
+
+    if result.returncode != 0:
+        return ""
+
+    return result.stdout.strip()
 
 
 async def _safe_answer_callback(query, text: str, show_alert: bool = False) -> None:
@@ -357,6 +431,7 @@ async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
             alert.id,
         )
         raise
+
 
 async def handle_doctor_command(update, context):
     chat_id = str(update.effective_chat.id) if update.effective_chat else ""
