@@ -165,6 +165,11 @@
                 📋 Обращения
             {% endif %}
         </h1>
+        {% if alerts_page %}
+            <div class="small">
+                Показано {{ alerts_page.start_index }}–{{ alerts_page.end_index }} из {{ alerts_page.paginator.count }} · страница {{ alerts_page.number }} / {{ alerts_page.paginator.num_pages }}
+            </div>
+        {% endif %}
         {% for alert in alerts %}
             <article class="card alert-card">
                 <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
@@ -252,6 +257,19 @@
                 {% else %}Сейчас нет обращений для этого фильтра.{% endif %}
             </div>
         {% endfor %}
+        {% if alerts_page and alerts_page.paginator.num_pages > 1 %}
+            <nav class="actions compact-actions" aria-label="Пагинация обращений">
+                {% if alerts_page.has_previous %}
+                    <a class="link-button small-action" href="?view={{ view_mode }}&amp;page=1">« Первая</a>
+                    <a class="link-button small-action" href="?view={{ view_mode }}&amp;page={{ alerts_page.previous_page_number }}">← Назад</a>
+                {% endif %}
+                <span class="badge">{{ alerts_page.number }} / {{ alerts_page.paginator.num_pages }}</span>
+                {% if alerts_page.has_next %}
+                    <a class="link-button small-action" href="?view={{ view_mode }}&amp;page={{ alerts_page.next_page_number }}">Вперёд →</a>
+                    <a class="link-button small-action" href="?view={{ view_mode }}&amp;page={{ alerts_page.paginator.num_pages }}">Последняя »</a>
+                {% endif %}
+            </nav>
+        {% endif %}
     </section>
     {% endif %}
 
