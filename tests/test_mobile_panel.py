@@ -68,6 +68,7 @@ def test_mobile_panel_shows_needs_attention_and_empty_state(client, staff_user, 
     assert "Сегодня" in body
     assert "Мои" in body
     assert "Игнор" in body
+    assert "Архив" in body
     assert "Спам" in body
     assert "Рабочие часы" in body
     assert "Требует внимания" in body
@@ -89,6 +90,39 @@ def test_mobile_panel_can_take_alert_in_work(client, staff_user, alert):
     assert alert.taken_by == staff_user
     assert alert.taken_by_label == "staff"
     assert alert.taken_at is not None
+
+
+@pytest.mark.django_db
+def test_mobile_panel_can_archive_in_work_alert(client, staff_user, alert):
+    alert.alert_status = MarketplaceAlert.AlertStatus.IN_WORK
+    alert.taken_by = staff_user
+    alert.taken_by_label = "staff"
+    alert.taken_at = timezone.now()
+    alert.save(
+        update_fields=[
+            "alert_status",
+            "taken_by",
+            "taken_by_label",
+            "taken_at",
+            "updated_at",
+        ]
+    )
+    client.force_login(staff_user)
+
+    response = client.post(
+        reverse("mobile_update_alert_status", args=[alert.id]),
+        {
+            "status": MarketplaceAlert.AlertStatus.ARCHIVED,
+            "next": f"{reverse('mobile_dashboard')}?view=mine",
+        },
+    )
+
+    assert response.status_code == 302
+    alert.refresh_from_db()
+    assert alert.alert_status == MarketplaceAlert.AlertStatus.ARCHIVED
+    assert alert.taken_by is None
+    assert alert.taken_by_label == ""
+    assert alert.taken_at is None
 
 
 @pytest.mark.django_db
@@ -166,6 +200,7 @@ def test_mobile_panel_my_in_work_tab(client, staff_user, alert):
     assert response.status_code == 200
     body = response.content.decode("utf-8")
     assert "Мои в работе" in body
+    assert "Кейс решён" in body
     assert "Audi A4" in body
 
 
@@ -190,6 +225,33 @@ def test_mobile_panel_ignored_tab(client, staff_user, alert):
     assert "Ignored Audi A4" in body
     assert "Visible BMW" not in body
     assert "Кейсы по объявлениям" not in body
+
+
+@pytest.mark.django_db
+def test_mobile_panel_archived_tab(client, staff_user, alert):
+    alert.alert_status = MarketplaceAlert.AlertStatus.ARCHIVED
+    alert.listing_title = "Archived Audi A4"
+    alert.priority = MarketplaceAlert.Priority.URGENT
+    alert.save(update_fields=["alert_status", "listing_title", "priority", "updated_at"])
+    MarketplaceAlert.objects.create(
+        mailbox=alert.mailbox,
+        listing_title="Visible BMW",
+        message_text="Noch da?",
+        alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+    )
+    client.force_login(staff_user)
+
+    response = client.get(f"{reverse('mobile_dashboard')}?view=archived")
+
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert "Архив" in body
+    assert "Archived Audi A4" in body
+    assert "Visible BMW" not in body
+
+    attention_response = client.get(f"{reverse('mobile_dashboard')}?view=attention")
+    attention_body = attention_response.content.decode("utf-8")
+    assert "Archived Audi A4" not in attention_body
 
 
 @pytest.mark.django_db
