@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -15,6 +16,9 @@ from .gmail.gmail import check_mailbox
 from .health import build_health_report
 from .models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
+
+
+MOBILE_ALERTS_PER_PAGE = 5
 
 
 def _require_staff(user):
@@ -68,6 +72,13 @@ def mobile_dashboard(request):
         alerts = MarketplaceAlert.objects.none()
     elif view_mode == "cases":
         alerts = MarketplaceAlert.objects.none()
+
+    alerts_page = None
+    if view_mode not in {"system", "cases"}:
+        alerts_page = Paginator(alerts, MOBILE_ALERTS_PER_PAGE).get_page(
+            request.GET.get("page")
+        )
+        alerts = alerts_page.object_list
 
     service_events = ServiceEvent.objects.none()
     if view_mode == "system":
@@ -136,7 +147,8 @@ def mobile_dashboard(request):
     health_report = build_health_report()
 
     context = {
-        "alerts": alerts[:30],
+        "alerts": alerts,
+        "alerts_page": alerts_page,
         "service_events": service_events[:30],
         "case_summaries": case_summaries,
         "mailboxes": mailboxes,
