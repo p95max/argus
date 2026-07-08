@@ -140,6 +140,24 @@ def send_telegram(token, chat_id, text):
         response.read()
 
 
+def try_send_telegram(token, chat_id, text):
+    try:
+        send_telegram(token, chat_id, text)
+    except urllib.error.HTTPError as exc:
+        print(f"ERROR: Telegram API returned HTTP {exc.code}.")
+        return False
+    except urllib.error.URLError as exc:
+        print(f"ERROR: Telegram request failed: {exc.reason}")
+        return False
+    except TimeoutError:
+        print("ERROR: Telegram request timed out.")
+        return False
+    except OSError as exc:
+        print(f"ERROR: Telegram notification failed: {exc.__class__.__name__}")
+        return False
+    return True
+
+
 def load_state():
     if not STATE_FILE.exists():
         return {}
@@ -176,13 +194,14 @@ def main():
         return 2
 
     if args.test:
-        send_telegram(
+        if try_send_telegram(
             token,
             chat_id,
             f"[{label}] Argus monitor test\nTelegram notifications are working.",
-        )
-        print("Test notification sent.")
-        return 0
+        ):
+            print("Test notification sent.")
+            return 0
+        return 1
 
     problems = []
 
@@ -213,6 +232,7 @@ def main():
 
     previous_status = state.get("status")
     previous_hash = state.get("problem_hash")
+    notification_failed = False
 
     if current_status == "fail":
         if previous_status != "fail" or previous_hash != problem_hash:
@@ -222,20 +242,28 @@ def main():
                 + "\n\n"
                 + f"Time: {time.strftime('%Y-%m-%d %H:%M:%S %Z')}"
             )
-            send_telegram(token, chat_id, message)
-            print("Problem notification sent.")
+            if try_send_telegram(token, chat_id, message):
+                print("Problem notification sent.")
+            else:
+                notification_failed = True
         else:
             print("Problem still active. Notification already sent.")
     else:
         if previous_status == "fail":
-            send_telegram(
+            if try_send_telegram(
                 token,
                 chat_id,
                 f"[{label}] Argus recovered\nAll monitored services and checks are OK.",
-            )
-            print("Recovery notification sent.")
+            ):
+                print("Recovery notification sent.")
+            else:
+                notification_failed = True
         else:
             print("OK. No problems.")
+
+    if notification_failed:
+        print("State not updated because Telegram notification failed; next run will retry.")
+        return 1
 
     save_state(
         {
