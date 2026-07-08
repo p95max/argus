@@ -1,7 +1,6 @@
-from datetime import timedelta
-
 import asyncio
 import html
+from datetime import timedelta
 
 from django.conf import settings
 from django.db.models import Count, Q
@@ -10,6 +9,13 @@ from django.utils import timezone
 from ..health import build_health_report
 from ..models import MailboxAccount, MarketplaceAlert
 from .quiet_hours import quiet_hours_allows_alert
+
+TELEGRAM_HARD_MESSAGE_LIMIT = 4096
+TELEGRAM_SAFE_MESSAGE_LIMIT = 4000
+ALERT_REASON_LIMIT = 260
+ALERT_MESSAGE_BODY_LIMIT = 1200
+SYSTEM_DETAILS_LIMIT = 1200
+STATUS_TITLE_LIMIT = 70
 
 
 def should_send_telegram_for_alert(alert: MarketplaceAlert, at_time=None) -> bool:
@@ -48,18 +54,19 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
         ]
     )
     if alert.classification_reason:
-        lines.append(f"🧾 <b>Почему:</b> {html.escape(_truncate(alert.classification_reason, 260))}")
+        reason = html.escape(_truncate(alert.classification_reason, ALERT_REASON_LIMIT))
+        lines.append(f"🧾 <b>Почему:</b> {reason}")
     lines.extend(
         [
             "",
-            f"💬 {html.escape(_truncate(message, 1200))}",
+            f"💬 {html.escape(_truncate(message, ALERT_MESSAGE_BODY_LIMIT))}",
         ]
     )
-    return "\n".join(lines)
+    return _fit_telegram_message(lines)
 
 
 def build_alert_reminder_message(alert: MarketplaceAlert) -> str:
-    return "\n".join(
+    return _fit_telegram_message(
         [
             "⏰ <b>Reminder: alert всё ещё unread</b>",
             "",
@@ -133,11 +140,11 @@ def build_system_message(title: str, details: str = "") -> str:
         lines.extend(
             [
                 "",
-                f"🧾 {html.escape(_truncate(details, 1200))}",
+                f"🧾 {html.escape(_truncate(details, SYSTEM_DETAILS_LIMIT))}",
             ]
         )
 
-    return "\n".join(lines)
+    return _fit_telegram_message(lines)
 
 
 def _system_message_icon(title: str, details: str = "") -> str:
@@ -173,7 +180,7 @@ def build_mailbox_status_message() -> str:
 
     if not mailboxes.exists():
         lines.append("⚠️ Активных ящиков нет.")
-        return "\n".join(lines)
+        return _fit_telegram_message(lines)
 
     for mailbox in mailboxes:
         mailbox_alerts = MarketplaceAlert.objects.filter(mailbox=mailbox)
@@ -213,7 +220,7 @@ def build_mailbox_status_message() -> str:
             ]
         )
 
-    return "\n".join(lines).strip()
+    return _fit_telegram_message(lines)
 
 
 def build_daily_summary_message() -> str:
@@ -268,6 +275,10 @@ def build_daily_summary_message() -> str:
                 ]
             ),
         ),
+        telegram_errors=Count(
+            "id",
+            filter=~Q(telegram_error=""),
+        ),
     )
 
     mailbox_counts = MailboxAccount.objects.aggregate(
@@ -281,7 +292,7 @@ def build_daily_summary_message() -> str:
         ),
     )
 
-    return "\n".join(
+    return _fit_telegram_message(
         [
             "<b>Argus: дневная сводка</b>",
             f"📅 <b>Дата:</b> {_format_date(today)}",
@@ -298,6 +309,7 @@ def build_daily_summary_message() -> str:
             f"Игнор: {counts['ignored']}",
             f"Высокий приоритет: {counts['high_priority']}",
             f"Parser attention: {counts['parser_attention']}",
+            f"Telegram send errors: {counts['telegram_errors']}",
             "",
             f"Активные ящики: {mailbox_counts['active']}",
             f"Ящики с ошибкой: {mailbox_counts['errors']}",
@@ -313,6 +325,7 @@ def build_health_message(bot_started_at=None) -> str:
     last_success = summary["mailboxes"]["last_success_at"]
     unread = summary["alerts"]["unread"]
     today = summary["alerts"]["today"]
+    telegram_errors_recent = summary["alerts"].get("telegram_errors_recent", 0)
     open_errors = summary["open_service_errors"]
     uptime = "unknown"
     if bot_started_at:
@@ -329,22 +342,23 @@ def build_health_message(bot_started_at=None) -> str:
         return "🟢" if checks[name]["ok"] else "🔴" if checks[name]["status"] == "error" else "🟠"
 
     lines = [
-            "🩺 <b>Argus: health</b>",
-            f"📅 <b>Дата:</b> {_format_date(timezone.localdate())}",
-            f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
-            "",
-            f"{icon('database')} <b>DB:</b> {html.escape(label('database'))}",
-            f"{icon('active_mailbox')} <b>Ящики:</b> активных {summary['mailboxes']['active']} / ошибок {summary['mailboxes']['errors']}",
-            f"{icon('telegram')} <b>Telegram:</b> {html.escape(label('telegram'))}",
-            f"{icon('gmail_recent_check')} <b>Gmail:</b> {html.escape(label('gmail_recent_check'))}",
-            f"🕒 <b>Последний check:</b> {_format_dt(last_check)}",
-            f"✅ <b>Последний успех:</b> {_format_dt(last_success)}",
-            "",
-            f"🔴 <b>Открытые ошибки:</b> {open_errors}",
-            f"🆕 <b>Новые обращения:</b> {unread}",
-            f"📨 <b>Сегодня:</b> {today}",
-            f"🤖 <b>Бот работает:</b> {html.escape(uptime)}",
-        ]
+        "🩺 <b>Argus: health</b>",
+        f"📅 <b>Дата:</b> {_format_date(timezone.localdate())}",
+        f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
+        "",
+        f"{icon('database')} <b>DB:</b> {html.escape(label('database'))}",
+        f"{icon('active_mailbox')} <b>Ящики:</b> активных {summary['mailboxes']['active']} / ошибок {summary['mailboxes']['errors']}",
+        f"{icon('telegram')} <b>Telegram:</b> {html.escape(label('telegram'))}",
+        f"{icon('telegram_delivery')} <b>Telegram delivery:</b> {telegram_errors_recent} ошибок за 24ч",
+        f"{icon('gmail_recent_check')} <b>Gmail:</b> {html.escape(label('gmail_recent_check'))}",
+        f"🕒 <b>Последний check:</b> {_format_dt(last_check)}",
+        f"✅ <b>Последний успех:</b> {_format_dt(last_success)}",
+        "",
+        f"🔴 <b>Открытые ошибки:</b> {open_errors}",
+        f"🆕 <b>Новые обращения:</b> {unread}",
+        f"📨 <b>Сегодня:</b> {today}",
+        f"🤖 <b>Бот работает:</b> {html.escape(uptime)}",
+    ]
     if mobile_url:
         lines.extend(
             [
@@ -352,7 +366,7 @@ def build_health_message(bot_started_at=None) -> str:
                 f'📱 <a href="{html.escape(mobile_url)}">Перейти в мобильную админку</a>',
             ]
         )
-    return "\n".join(lines)
+    return _fit_telegram_message(lines)
 
 
 def _build_status_answer(alert: MarketplaceAlert) -> str:
@@ -362,7 +376,7 @@ def _build_status_answer(alert: MarketplaceAlert) -> str:
         f"#{alert.id}: "
         f"{alert.get_alert_status_display()} · "
         f"{alert.get_priority_display()} · "
-        f"{_truncate(title, 70)}"
+        f"{_truncate(title, STATUS_TITLE_LIMIT)}"
     )
 
 
@@ -428,6 +442,48 @@ def _build_mailbox_health_label(mailbox: MailboxAccount) -> str:
         return "🟡 OAUTH ONLY"
 
     return "⚪ NOT READY"
+
+
+def _fit_telegram_message(lines: list[str], limit: int = TELEGRAM_SAFE_MESSAGE_LIMIT) -> str:
+    return _truncate_html_message("\n".join(lines), limit)
+
+
+def _truncate_html_message(value: str, limit: int = TELEGRAM_SAFE_MESSAGE_LIMIT) -> str:
+    value = str(value or "").strip()
+
+    if len(value) <= limit:
+        return value
+
+    suffix = "..."
+    cut_limit = max(limit - len(suffix), 0)
+    candidate = value[:cut_limit].rstrip()
+    candidate = _trim_incomplete_html_entity(candidate)
+    candidate = _trim_incomplete_html_tag(candidate)
+
+    if not candidate:
+        return suffix[:limit]
+
+    return f"{candidate}{suffix}"
+
+
+def _trim_incomplete_html_entity(value: str) -> str:
+    last_ampersand = value.rfind("&")
+    last_semicolon = value.rfind(";")
+
+    if last_ampersand > last_semicolon:
+        return value[:last_ampersand].rstrip()
+
+    return value
+
+
+def _trim_incomplete_html_tag(value: str) -> str:
+    last_tag_open = value.rfind("<")
+    last_tag_close = value.rfind(">")
+
+    if last_tag_open > last_tag_close:
+        return value[:last_tag_open].rstrip()
+
+    return value
 
 
 def _truncate(value: str, limit: int) -> str:
