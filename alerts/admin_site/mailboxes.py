@@ -2,7 +2,9 @@ from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.urls import path, reverse
+from django.utils.decorators import method_decorator
 from django.utils.html import format_html
+from django.views.decorators.http import require_POST
 
 from ..gmail.gmail import check_mailbox
 from ..gmail.gmail_oauth import (
@@ -174,12 +176,22 @@ class MailboxAccountAdmin(admin.ModelAdmin):
                 <a class="btn btn-sm btn-outline-info" href="{}">
                     <i class="fas fa-plug"></i> OAuth
                 </a>
-                <a class="btn btn-sm btn-outline-success" href="{}">
+                <button
+                    class="btn btn-sm btn-outline-success"
+                    type="submit"
+                    formmethod="post"
+                    formaction="{}"
+                >
                     <i class="fas fa-play"></i> Check updates
-                </a>
-                <a class="btn btn-sm btn-outline-danger" href="{}">
+                </button>
+                <button
+                    class="btn btn-sm btn-outline-danger"
+                    type="submit"
+                    formmethod="post"
+                    formaction="{}"
+                >
                     <i class="fas fa-times"></i> Disconnect
-                </a>
+                </button>
             </div>
             """,
             connect_url,
@@ -250,6 +262,7 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         )
         return redirect("admin:alerts_mailboxaccount_change", result.mailbox.id)
 
+    @method_decorator(require_POST)
     def gmail_disconnect_view(self, request, object_id):
         self._require_mailbox_manage_permission(request)
         mailbox = self._get_mailbox_or_redirect(request, object_id)
@@ -279,6 +292,7 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         messages.success(request, f"Gmail отключен для {mailbox.email}.")
         return redirect("admin:alerts_mailboxaccount_change", mailbox.id)
 
+    @method_decorator(require_POST)
     def gmail_check_now_view(self, request, object_id):
         self._require_mailbox_manage_permission(request)
         mailbox = self._get_mailbox_or_redirect(request, object_id)

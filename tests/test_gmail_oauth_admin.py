@@ -364,7 +364,7 @@ def test_admin_gmail_disconnect_clears_oauth_fields(admin_client, admin_user, ma
     mailbox.save()
 
     url = reverse("admin:alerts_mailboxaccount_gmail_disconnect", args=[mailbox.id])
-    response = admin_client.get(url)
+    response = admin_client.post(url)
 
     assert response.status_code == 302
 
@@ -395,7 +395,7 @@ def test_admin_gmail_check_now_runs_selected_mailbox(monkeypatch, admin_client, 
     monkeypatch.setattr("alerts.admin_site.mailboxes.check_mailbox", fake_check_mailbox)
 
     url = reverse("admin:alerts_mailboxaccount_gmail_check_now", args=[mailbox.id])
-    response = admin_client.get(url)
+    response = admin_client.post(url)
 
     assert response.status_code == 302
     assert response["Location"] == reverse("admin:alerts_mailboxaccount_change", args=[mailbox.id])
