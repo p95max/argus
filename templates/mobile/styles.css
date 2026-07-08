@@ -232,7 +232,7 @@ summary:focus-visible {
 }
 
 .panel-nav-item {
-    min-height: 58px;
+    min-height: 64px;
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--panel);
@@ -251,10 +251,14 @@ summary:focus-visible {
 }
 
 .panel-nav-label {
+    display: inline-block;
+    max-width: 92px;
+    margin: 0 auto;
     font-size: 12px;
     line-height: 1.15;
     color: inherit;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: normal;
 }
 
 .panel-nav-item strong {
@@ -372,7 +376,7 @@ summary:focus-visible {
     }
 
     .panel-nav-item {
-        min-height: 54px;
+        min-height: 58px;
     }
 }
 
