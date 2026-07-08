@@ -54,14 +54,8 @@
 
                     {% if can_manage_mailboxes %}
                         <div class="actions compact-actions">
-                            <form method="post" action="{% url 'mobile_check_mailbox_now' mailbox.id %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                <button class="small-action" type="submit">Проверить почту</button>
-                            </form>
-
                             <a class="link-button small-action" href="{% url 'admin:alerts_mailboxaccount_change' mailbox.id %}">
-                                Настроить в Admin
+                                🔧Настроить в Admin
                             </a>
                         </div>
                     {% endif %}
