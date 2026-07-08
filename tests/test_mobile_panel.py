@@ -123,8 +123,7 @@ def test_mobile_panel_shows_system_events_tab(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "Журнал" in body
-    assert "Системные сообщения и ошибки" in body
+    assert "Системный журнал" in body
     assert "Telegram send failed" in body
     assert "Bot token is not configured." in body
     assert "mobile@example.local" in body
