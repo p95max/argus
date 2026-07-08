@@ -3,6 +3,8 @@ from pathlib import Path
 import environ
 from django.core.exceptions import ImproperlyConfigured
 
+from .jazzmin import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS
+
 
 # =============================================================================
 # Paths
@@ -190,7 +192,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
             ],
         },
-    },
+    }
 ]
 
 
@@ -258,7 +260,6 @@ TIME_ZONE = env.str("DJANGO_TIME_ZONE")
 USE_I18N = True
 USE_TZ = True
 
-
 # =============================================================================
 # Static files
 # =============================================================================
@@ -276,74 +277,6 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
-# =============================================================================
-# Jazzmin
-# =============================================================================
-
-JAZZMIN_SETTINGS = {
-    "site_title": "Argus",
-    "site_header": "Argus",
-    "site_brand": "Argus",
-    "welcome_sign": "Панель управления Argus",
-    "copyright": "Argus",
-    "search_model": ["auth.User", "auth.Group"],
-    "topmenu_links": [
-        {
-            "name": "Обзор",
-            "url": "admin:index",
-            "permissions": ["auth.view_user"],
-        },
-        {
-            "model": "auth.User",
-        },
-    ],
-    "usermenu_links": [
-        {
-            "name": "Проверка сервиса",
-            "url": "/health/",
-            "new_window": True,
-        },
-    ],
-    "show_sidebar": True,
-    "navigation_expanded": True,
-    "hide_apps": [],
-    "hide_models": [],
-    "order_with_respect_to": ["alerts", "auth"],
-    "icons": {
-        "alerts": "fas fa-bell",
-        "auth": "fas fa-users-cog",
-        "auth.Group": "fas fa-users",
-        "auth.User": "fas fa-user",
-    },
-    "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-circle",
-    "related_modal_active": True,
-    "changeform_format": "horizontal_tabs",
-    "show_ui_builder": False,
-}
-
-JAZZMIN_UI_TWEAKS = {
-    "theme": "darkly",
-    "default_theme_mode": "dark",
-    "navbar": "navbar-dark",
-    "sidebar": "sidebar-dark-primary",
-    "accent": "accent-info",
-    "brand_colour": "navbar-dark",
-    "navbar_fixed": True,
-    "sidebar_fixed": True,
-    "footer_fixed": False,
-    "sidebar_nav_flat_style": True,
-    "sidebar_nav_compact_style": False,
-    "button_classes": {
-        "primary": "btn-info",
-        "secondary": "btn-secondary",
-        "info": "btn-info",
-        "warning": "btn-warning",
-        "danger": "btn-danger",
-        "success": "btn-success",
-    },
-}
 
 # =============================================================================
 # Logging
