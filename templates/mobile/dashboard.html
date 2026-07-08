@@ -52,14 +52,14 @@
                 <strong>{{ alert_counts.mine }}</strong>
             </a>
 
+            <a class="panel-nav-item {% if view_mode == 'ignored' %}active{% endif %}" href="?view=ignored">
+                <span class="panel-nav-label">🚫 Игнор</span>
+                <strong>{{ alert_counts.ignored }}</strong>
+            </a>
+
             <a class="panel-nav-item {% if view_mode == 'noise' %}active{% endif %}" href="?view=noise">
                 <span class="panel-nav-label">🧹 Спам</span>
                 <strong>{{ alert_counts.noise }}</strong>
-            </a>
-
-            <a class="panel-nav-item {% if view_mode == 'cases' %}active{% endif %}" href="?view=cases">
-                <span class="panel-nav-label">Кейсы</span>
-                <strong>{{ case_summaries|length }}</strong>
             </a>
 
             <a class="panel-nav-item {% if view_mode == 'system' %}active{% endif %}" href="?view=system">
@@ -119,33 +119,6 @@
             <div class="empty">Системных сообщений и ошибок пока нет.</div>
         {% endfor %}
     </section>
-    {% elif view_mode == 'cases' %}
-    <section>
-        <h1>Кейсы по объявлениям</h1>
-        {% for case in case_summaries %}
-            <article class="card">
-                <div class="title">{{ case.title|default:"Объявление без названия" }}</div>
-                <div class="meta">{{ case.mailbox__name|default:case.mailbox__email }} · {{ case.listing_id }}</div>
-                <div class="badges">
-                    <span class="badge {% if case.case_status == 'active' %}ok{% else %}warn{% endif %}">{{ case.case_status }}</span>
-                    <span class="badge">Всего: {{ case.total }}</span>
-                    <span class="badge">Новых: {{ case.unread }}</span>
-                    <span class="badge">High: {{ case.high_priority }}</span>
-                    <span class="badge {% if case.risk %}danger{% endif %}">Risk: {{ case.risk }}</span>
-                    <span class="badge">Last price: {{ case.low_quality }}</span>
-                </div>
-                <div class="small">Последний покупатель: {{ case.last_buyer|default:"не указан" }}</div>
-                <div class="small">Последнее обращение: {{ case.last_seen_at|timesince }} назад</div>
-                {% if case.latest_alert_id %}
-                    <div class="actions compact-actions">
-                        <a class="link-button small-action" href="{% url 'mobile_alert_detail' case.latest_alert_id %}">Открыть последнее</a>
-                    </div>
-                {% endif %}
-            </article>
-        {% empty %}
-            <div class="empty">Активных кейсов по объявлениям пока нет.</div>
-        {% endfor %}
-    </section>
     {% else %}
     <section>
         <h1>
@@ -155,10 +128,10 @@
                 ⚠️ Требует внимания
             {% elif view_mode == 'mine' %}
                 🛠️ Мои в работе
+            {% elif view_mode == 'ignored' %}
+                🚫 Игнорированные обращения
             {% elif view_mode == 'noise' %}
                 🧹 Спам и рассылки
-            {% elif view_mode == 'system' %}
-                🧾 Системный журнал
             {% elif view_mode == 'all' %}
                 📋 Все обращения
             {% else %}
@@ -253,6 +226,7 @@
             <div class="empty">
                 {% if view_mode == 'today' %}Сегодня обращений пока нет.
                 {% elif view_mode == 'mine' %}У вас нет обращений в работе.
+                {% elif view_mode == 'ignored' %}Игнорированных обращений пока нет.
                 {% elif view_mode == 'noise' %}Спама и рассылок пока нет.
                 {% else %}Сейчас нет обращений для этого фильтра.{% endif %}
             </div>
