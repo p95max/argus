@@ -51,6 +51,11 @@ urlpatterns = [
         name="mobile_service_event_action",
     ),
     path(
+        "m/gmail/check-now/",
+        mobile.mobile_check_mailbox_now,
+        name="mobile_check_gmail_now",
+    ),
+    path(
         "m/mailboxes/<int:mailbox_id>/check-now/",
         mobile.mobile_check_mailbox_now,
         name="mobile_check_mailbox_now",
