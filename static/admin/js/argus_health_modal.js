@@ -8,6 +8,7 @@
         database: "База данных",
         active_mailbox: "Активные почтовые ящики",
         telegram: "Telegram",
+        telegram_delivery: "Доставка Telegram",
         gmail_recent_check: "Последняя Gmail-проверка",
         open_service_errors: "Открытые ошибки сервиса",
         secrets: "Production-секреты",

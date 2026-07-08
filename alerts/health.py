@@ -12,6 +12,8 @@ from .models import MailboxAccount, MarketplaceAlert, ServiceEvent
 from .seed_data import DEMO_MAILBOX_EMAIL
 from .telegram.config import get_telegram_config
 
+TELEGRAM_ERROR_LOOKBACK = timedelta(hours=24)
+
 
 @dataclass(frozen=True)
 class HealthCheck:
@@ -26,6 +28,7 @@ def build_health_report(*, include_deploy_checks: bool = False) -> dict:
         "database": _check_database(),
         "active_mailbox": _check_active_mailbox(),
         "telegram": _check_telegram_config(),
+        "telegram_delivery": _check_recent_telegram_delivery_errors(now),
         "gmail_recent_check": _check_recent_gmail_check(now),
         "open_service_errors": _check_open_service_errors(),
     }
@@ -52,7 +55,7 @@ def build_health_report(*, include_deploy_checks: bool = False) -> dict:
             }
             for key, check in checks.items()
         },
-        "summary": _build_health_summary(),
+        "summary": _build_health_summary(now),
     }
 
 
@@ -80,6 +83,22 @@ def _check_telegram_config() -> HealthCheck:
     if not config.allowed_chat_ids:
         return HealthCheck(False, "error", "No allowed Telegram chat is configured.")
     return HealthCheck(True, "ok", f"Allowed chats: {len(config.allowed_chat_ids)}.")
+
+
+def _check_recent_telegram_delivery_errors(now) -> HealthCheck:
+    since = now - TELEGRAM_ERROR_LOOKBACK
+    count = MarketplaceAlert.objects.exclude(telegram_error="").filter(
+        created_at__gte=since,
+    ).count()
+
+    if count:
+        return HealthCheck(
+            False,
+            "warning",
+            f"Telegram send errors in the last 24 hours: {count}.",
+        )
+
+    return HealthCheck(True, "ok", "No Telegram send errors in the last 24 hours.")
 
 
 def _check_recent_gmail_check(now) -> HealthCheck:
@@ -131,7 +150,10 @@ def _check_no_demo_mailbox() -> HealthCheck:
     return HealthCheck(True, "ok", "No demo mailbox found.")
 
 
-def _build_health_summary() -> dict:
+def _build_health_summary(now=None) -> dict:
+    now = now or timezone.now()
+    telegram_error_since = now - TELEGRAM_ERROR_LOOKBACK
+
     mailbox_counts = MailboxAccount.objects.aggregate(
         total=Count("id"),
         active=Count("id", filter=Q(is_active=True)),
@@ -148,6 +170,10 @@ def _build_health_summary() -> dict:
             filter=Q(alert_status=MarketplaceAlert.AlertStatus.UNREAD),
         ),
         today=Count("id", filter=Q(created_at__date=timezone.localdate())),
+        telegram_errors_recent=Count(
+            "id",
+            filter=Q(created_at__gte=telegram_error_since) & ~Q(telegram_error=""),
+        ),
     )
     open_errors = ServiceEvent.objects.filter(
         status=ServiceEvent.Status.OPEN,
