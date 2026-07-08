@@ -1,0 +1,15 @@
+[Unit]
+Description=Argus Django web service
+After=network.target
+
+[Service]
+User=argus
+Group=argus
+WorkingDirectory=/opt/argus
+Environment="PATH=/opt/argus/.venv/bin"
+ExecStart=/opt/argus/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 1 --threads 2 --timeout 60 --max-requests 500 --max-requests-jitter 50
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

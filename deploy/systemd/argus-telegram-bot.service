@@ -1,0 +1,15 @@
+[Unit]
+Description=Argus Telegram bot polling
+After=network.target argus-web.service
+
+[Service]
+User=argus
+Group=argus
+WorkingDirectory=/opt/argus
+Environment="PATH=/opt/argus/.venv/bin"
+ExecStart=/opt/argus/.venv/bin/python manage.py run_telegram_bot
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
