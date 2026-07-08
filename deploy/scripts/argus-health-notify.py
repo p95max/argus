@@ -119,6 +119,51 @@ def check_disk():
     return round((usage.used / usage.total) * 100, 1)
 
 
+def build_problem_message(label, problem_text):
+    return (
+        f"🔴 [{label}] Argus problem detected\n"
+        "LED: 🔴 CRITICAL\n"
+        "Status: FAIL\n\n"
+        "Problems:\n"
+        f"{format_problem_list(problem_text)}\n\n"
+        f"Time: {time.strftime('%Y-%m-%d %H:%M:%S %Z')}"
+    )
+
+
+def build_recovery_message(label):
+    return (
+        f"🟢 [{label}] Argus recovered\n"
+        "LED: 🟢 OK\n"
+        "Status: RECOVERED\n\n"
+        "All monitored services and checks are OK."
+    )
+
+
+def build_test_message(label):
+    return (
+        f"🟢 [{label}] Argus monitor test\n"
+        "LED: 🟢 OK\n"
+        "Status: TEST\n\n"
+        "Telegram notifications are working."
+    )
+
+
+def format_problem_list(problem_text):
+    lines = [line.rstrip() for line in str(problem_text or "").splitlines()]
+    if not lines:
+        return "• Unknown problem"
+
+    formatted = []
+    for line in lines:
+        if not line.strip():
+            continue
+        if line.startswith((" ", "\t", "●")):
+            formatted.append(f"  {line.strip()}")
+        else:
+            formatted.append(f"• {line.strip()}")
+    return "\n".join(formatted) or "• Unknown problem"
+
+
 def send_telegram(token, chat_id, text):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = json.dumps(
@@ -194,11 +239,7 @@ def main():
         return 2
 
     if args.test:
-        if try_send_telegram(
-            token,
-            chat_id,
-            f"[{label}] Argus monitor test\nTelegram notifications are working.",
-        ):
+        if try_send_telegram(token, chat_id, build_test_message(label)):
             print("Test notification sent.")
             return 0
         return 1
@@ -236,13 +277,7 @@ def main():
 
     if current_status == "fail":
         if previous_status != "fail" or previous_hash != problem_hash:
-            message = (
-                f"[{label}] Argus problem detected\n\n"
-                + problem_text
-                + "\n\n"
-                + f"Time: {time.strftime('%Y-%m-%d %H:%M:%S %Z')}"
-            )
-            if try_send_telegram(token, chat_id, message):
+            if try_send_telegram(token, chat_id, build_problem_message(label, problem_text)):
                 print("Problem notification sent.")
             else:
                 notification_failed = True
@@ -250,11 +285,7 @@ def main():
             print("Problem still active. Notification already sent.")
     else:
         if previous_status == "fail":
-            if try_send_telegram(
-                token,
-                chat_id,
-                f"[{label}] Argus recovered\nAll monitored services and checks are OK.",
-            ):
+            if try_send_telegram(token, chat_id, build_recovery_message(label)):
                 print("Recovery notification sent.")
             else:
                 notification_failed = True
