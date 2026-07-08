@@ -70,6 +70,8 @@ BUYER_MESSAGE_PATTERNS = (
     r"\breplied to your ad\b",
     r"\bhat auf deine anzeige geantwortet\b",
     r"\bantwortete auf deine anzeige\b",
+    r"\bein interessent hat eine anfrage zu ihrer anzeige gesendet\b",
+    r"\bein interessent hat eine anfrage zu deiner anzeige gesendet\b",
 )
 LISTING_OPERATION_PATTERNS = (
     "\\bl(?:\u00e4|ae)uft bald ab\\b",
@@ -277,6 +279,7 @@ def _parse_listing_id(text: str) -> str:
         r"(?:Anzeigen-ID|Anzeige-ID|listing[_\s-]?id|ad[_\s-]?id)\s*[:#]?\s*([A-Za-z0-9-]{5,})",
         r"/s-anzeige/[^/\s]+/([0-9]{5,})-[0-9-]+",
         r"\byour ad\s+([0-9]{5,})",
+        r"\banfrage zu (?:ihrer|deiner) anzeige gesendet\s*:\s*([0-9]{5,})",
         r"\bID\s*[:#]\s*([A-Za-z0-9-]{5,})",
     )
     for pattern in patterns:
@@ -300,6 +303,8 @@ def _parse_buyer_name(subject: str, body: str) -> str:
         match = re.search(pattern, text, flags=re.IGNORECASE | re.M)
         if match:
             return _clean_value(match.group(1))
+    if re.search(r"\bein interessent hat eine anfrage zu", text, flags=re.IGNORECASE):
+        return "Interessent"
     return ""
 
 
@@ -309,6 +314,7 @@ def _parse_message_text(body: str) -> str:
         r"Message\s*:\s*(.+?)(?:\n\n|Listing ID|Antworten|$)",
         r"schreibt\s*:\s*(.+?)(?:\n\n|Anzeigen-ID|Anzeige-ID|Antworten|$)",
         r"replied to your ad\s+[0-9]{5,}\s*:\s*(.+?)(?:\n\n|Anzeigen-ID|Anzeige-ID|Antworten|$)",
+        r"anfrage zu (?:ihrer|deiner) anzeige gesendet\s*:\s*[0-9]{5,}\s*:\s*(.+?)(?:\n\n|Anzeigen-ID|Anzeige-ID|Antworten|$)",
     )
     for pattern in patterns:
         match = re.search(pattern, body, flags=re.IGNORECASE | re.S)
