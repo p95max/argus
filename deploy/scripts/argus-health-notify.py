@@ -122,7 +122,7 @@ def check_disk():
 def build_problem_message(label, problem_text):
     return (
         f"🔴 [{label}] Argus problem detected\n"
-        "LED: 🔴 CRITICAL\n"
+        "🔴 CRITICAL\n"
         "Status: FAIL\n\n"
         "Problems:\n"
         f"{format_problem_list(problem_text)}\n\n"
@@ -133,7 +133,7 @@ def build_problem_message(label, problem_text):
 def build_recovery_message(label):
     return (
         f"🟢 [{label}] Argus recovered\n"
-        "LED: 🟢 OK\n"
+        "🟢 OK\n"
         "Status: RECOVERED\n\n"
         "All monitored services and checks are OK."
     )
@@ -142,7 +142,7 @@ def build_recovery_message(label):
 def build_test_message(label):
     return (
         f"🟢 [{label}] Argus monitor test\n"
-        "LED: 🟢 OK\n"
+        "🟢 OK\n"
         "Status: TEST\n\n"
         "Telegram notifications are working."
     )
