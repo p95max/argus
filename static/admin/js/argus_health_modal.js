@@ -96,7 +96,13 @@
                         <div class="text-muted">Загружаю диагностику сервиса…</div>
                     </div>
                     <div class="modal-footer">
-                        <a class="btn btn-outline-info argus-health-json-link" href="${HEALTH_PATH}">
+                        <a
+                            class="btn btn-outline-info argus-health-json-link"
+                            href="${HEALTH_PATH}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-argus-health-json="true"
+                        >
                             Открыть JSON
                         </a>
                         <button
@@ -317,6 +323,10 @@
 
         const link = event.target.closest("a[href]");
         if (!link) {
+            return;
+        }
+
+        if (link.matches("[data-argus-health-json]")) {
             return;
         }
 
