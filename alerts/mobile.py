@@ -65,6 +65,8 @@ def mobile_dashboard(request):
         )
     elif view_mode == "ignored":
         alerts = alerts.filter(alert_status=MarketplaceAlert.AlertStatus.IGNORED)
+    elif view_mode == "archived":
+        alerts = alerts.filter(alert_status=MarketplaceAlert.AlertStatus.ARCHIVED)
     elif view_mode == "noise":
         alerts = alerts.filter(event_type=MarketplaceAlert.EventType.NOISE)
     elif view_mode == "attention":
@@ -101,6 +103,7 @@ def mobile_dashboard(request):
             ),
         ),
         ignored=Count("id", filter=Q(alert_status=MarketplaceAlert.AlertStatus.IGNORED)),
+        archived=Count("id", filter=Q(alert_status=MarketplaceAlert.AlertStatus.ARCHIVED)),
         noise=Count("id", filter=Q(event_type=MarketplaceAlert.EventType.NOISE)),
         urgent=Count(
             "id",
@@ -215,7 +218,11 @@ def mobile_update_alert_status(request, alert_id):
         alert.taken_at = timezone.now()
         update_fields.extend(["taken_by", "taken_by_label", "taken_at"])
 
-    elif status == MarketplaceAlert.AlertStatus.UNREAD:
+    elif status in [
+        MarketplaceAlert.AlertStatus.UNREAD,
+        MarketplaceAlert.AlertStatus.IGNORED,
+        MarketplaceAlert.AlertStatus.ARCHIVED,
+    ]:
         alert.taken_by = None
         alert.taken_by_label = ""
         alert.taken_at = None
