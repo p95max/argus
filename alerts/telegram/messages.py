@@ -492,4 +492,8 @@ def _truncate(value: str, limit: int) -> str:
     if len(value) <= limit:
         return value
 
-    return f"{value[: limit - 1]}..."
+    suffix = "..."
+    if limit <= len(suffix):
+        return value[:limit]
+
+    return f"{value[: limit - len(suffix)]}{suffix}"
