@@ -63,7 +63,7 @@
             </a>
 
             <a class="panel-nav-item {% if view_mode == 'system' %}active{% endif %}" href="?view=system">
-                <span class="panel-nav-label">🧾 Журнал</span>
+                <span class="panel-nav-label">🧾 Системный журнал</span>
                 <strong>{{ service_open_errors }}</strong>
             </a>
         </nav>
@@ -71,7 +71,7 @@
 
     {% if view_mode == 'system' %}
     <section>
-        <h2>Системные сообщения и ошибки</h2>
+        <h2>Системный журнал</h2>
         {% for event in service_events %}
             <article class="card">
                 <div class="title">{{ event.title }}</div>
