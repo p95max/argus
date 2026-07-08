@@ -10,6 +10,7 @@ from django.utils import timezone
 from telegram.error import BadRequest
 
 from ..models import MarketplaceAlert
+from .git_status import build_git_deploy_status_text as build_git_deploy_status_text_v2
 from .keyboards import (
     CALLBACK_STATUS_ACTION,
     CALLBACK_STATUS_UPDATES,
@@ -295,7 +296,7 @@ def build_doctor_script_message() -> str:
         return "🚨 <b>[DEV] Argus doctor</b>\n<pre>Doctor check timed out after 25 seconds.</pre>"
 
     output = result.stdout.strip() or "(no output)"
-    git_output = build_git_deploy_status_text()
+    git_output = build_git_deploy_status_text_v2()
     combined_output = f"{output}\n\n{git_output}" if git_output else output
 
     if len(combined_output) > 3300:
