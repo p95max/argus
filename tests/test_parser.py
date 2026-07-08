@@ -27,6 +27,36 @@ def test_parse_buyer_message():
     assert "inspection_request" in result.flag_codes
 
 
+def test_parse_english_kleinanzeigen_buyer_reply_from_screenshot_format():
+    result = parse_kleinanzeigen_email(
+        "AUDI A3 1.6 MPI TÜV bis 03/27",
+        """
+        <html>
+            <head>
+                <title>Nunito Sans</title>
+                <style>
+                    span.MsoHyperlink { mso-style-priority: 1; color: inherit; }
+                </style>
+            </head>
+            <body>
+                <div>Kleinanzeigen | Anzeigen gratis inserieren mit Kleinanzeigen</div>
+                <p>Thomas über Kleinanzeigen replied to your ad 3394403772: Hätte heute Abend ab 20:00 Uhr Zeit. Wie sieht es bei Ihnen aus?</p>
+            </body>
+        </html>
+        """,
+    )
+
+    assert result.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE
+    assert result.parse_status == MarketplaceAlert.ParseStatus.SUCCESS
+    assert result.buyer_name == "Thomas"
+    assert result.listing_title == "AUDI A3 1.6 MPI TÜV bis 03/27"
+    assert result.listing_id == "3394403772"
+    assert result.message_text == "Hätte heute Abend ab 20:00 Uhr Zeit. Wie sieht es bei Ihnen aus?"
+    assert "buyer lead classifier was not applied" not in result.classification_reason
+    assert "Nunito Sans" not in result.normalized_body
+    assert "span.MsoHyperlink" not in result.normalized_body
+
+
 def test_parse_listing_expiring_system_notice():
     result = parse_kleinanzeigen_email(
         'Deine Anzeige "VW Golf GTI" läuft bald ab',
@@ -125,5 +155,21 @@ def test_generic_kleinanzeigen_system_notice_is_not_buyer_message():
 
 def test_normalize_body_removes_signature_noise():
     normalized = normalize_body("Hallo   Welt<br><br>Viele Grüße\nMax")
+
+    assert normalized == "Hallo Welt"
+
+
+def test_normalize_body_ignores_html_head_style_and_title():
+    normalized = normalize_body(
+        """
+        <html>
+            <head>
+                <title>Nunito Sans</title>
+                <style>span.MsoHyperlink { color: inherit; }</style>
+            </head>
+            <body><p>Hallo Welt</p></body>
+        </html>
+        """
+    )
 
     assert normalized == "Hallo Welt"
