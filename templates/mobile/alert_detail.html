@@ -87,27 +87,23 @@
                 </div>
             {% endif %}
 
-{% if alert.message_text %}
-    <div class="buyer-message">
-        <div class="buyer-message-header">
-            <span>💬 Сообщение покупателя</span>
-        </div>
-        <div class="buyer-message-body">
-            {{ alert.message_text }}
-        </div>
-    </div>
-{% elif alert.normalized_body %}
-    <div class="buyer-message">
-        <div class="buyer-message-header">
-            <span>💬 Текст письма</span>
-        </div>
-        <div class="buyer-message-body">
-            {{ alert.normalized_body }}
-        </div>
-    </div>
-{% else %}
-    <div class="empty">Текст письма не найден.</div>
-{% endif %}
+            {% if alert.message_text %}
+                <div class="buyer-message">
+                    <div class="buyer-message-header">
+                        <span>💬 Сообщение покупателя</span>
+                    </div>
+                    <div class="buyer-message-body">{{ alert.message_text|linebreaksbr }}</div>
+                </div>
+            {% elif alert.normalized_body %}
+                <div class="buyer-message">
+                    <div class="buyer-message-header">
+                        <span>💬 Текст письма</span>
+                    </div>
+                    <div class="buyer-message-body">{{ alert.normalized_body|linebreaksbr }}</div>
+                </div>
+            {% else %}
+                <div class="empty">Текст письма не найден.</div>
+            {% endif %}
 
             <div class="actions compact-actions">
                 <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
