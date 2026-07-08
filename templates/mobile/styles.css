@@ -480,19 +480,29 @@ summary:focus-visible {
 }
 
 .buyer-message-header {
-    padding: 8px 10px;
+    padding: 7px 10px;
     border-bottom: 1px solid rgba(54, 194, 163, .22);
     color: var(--accent);
     font-size: 12px;
     font-weight: 700;
     line-height: 1.2;
+    text-align: left;
 }
 
 .buyer-message-body {
-    padding: 11px 12px;
+    display: block;
+    margin: 0;
+    padding: 9px 10px 10px;
     color: var(--text);
     font-size: 15px;
-    line-height: 1.45;
-    white-space: pre-wrap;
+    line-height: 1.42;
+    text-align: left;
+    white-space: normal;
     overflow-wrap: anywhere;
+}
+
+.buyer-message-body br {
+    display: block;
+    content: "";
+    margin-top: 4px;
 }
