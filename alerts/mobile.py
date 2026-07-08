@@ -296,7 +296,7 @@ def mobile_check_mailbox_now(request, mailbox_id=None):
     messages.success(
         request,
         (
-            f"Проверены активные ящики: {len(mailboxes)}. "
+            f"Почта проверена. Проверены активные ящики: {len(mailboxes)}. "
             f"Получено: {total_fetched}, "
             f"создано: {total_created}, "
             f"дубли: {total_duplicates}, "
