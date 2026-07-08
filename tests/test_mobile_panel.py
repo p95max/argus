@@ -100,7 +100,7 @@ def test_mobile_alert_detail_links_to_full_admin(client, staff_user, alert):
     body = response.content.decode("utf-8")
     assert "Обращение" in body
     assert "Audi A4" in body
-    assert f"/control/alerts/marketplacealert/{alert.id}/change/" in body
+    assert reverse("admin:alerts_marketplacealert_change", args=[alert.id]) in body
     assert "Полная информация" in body
 
 

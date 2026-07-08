@@ -7,3 +7,7 @@ DATABASES = {
         "NAME": ":memory:",
     }
 }
+
+ARGUS_PUBLIC_BASE_URL = "http://127.0.0.1:8000"
+DJANGO_ADMIN_URL = "control"
+LOGIN_URL = "/control/login/"
