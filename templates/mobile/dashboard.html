@@ -19,17 +19,11 @@
 
             {% if can_manage_mailboxes and mailboxes %}
                 <div class="actions compact-actions">
-                    {% for mailbox in mailboxes %}
-                        {% if mailbox.is_active %}
-                            <form method="post" action="{% url 'mobile_check_mailbox_now' mailbox.id %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                <button class="small-action" type="submit">
-                                    Проверить {{ mailbox.email|default:mailbox.gmail_connected_email|default:"ящик" }}
-                                </button>
-                            </form>
-                        {% endif %}
-                    {% endfor %}
+                    <form method="post" action="{% url 'mobile_check_gmail_now' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="small-action" type="submit">Проверить сейчас</button>
+                    </form>
                 </div>
             {% endif %}
 
