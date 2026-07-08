@@ -104,13 +104,19 @@ def run_git(args: list[str], git_root: Path, timeout: int = 5) -> str:
 def run_raw_git(args: list[str], cwd: Path, timeout: int = 5) -> str:
     global last_git_error
 
+    git_binary = find_git_binary()
+    if not git_binary:
+        last_git_error = "git binary not found in /usr/bin/git, /bin/git or PATH"
+        return ""
+
     env = os.environ.copy()
     env.setdefault("HOME", str(cwd))
+    env.setdefault("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
     env.setdefault("GIT_CONFIG_NOSYSTEM", "1")
 
     try:
         result = subprocess.run(
-            ["git", *args],
+            [git_binary, *args],
             cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -119,9 +125,6 @@ def run_raw_git(args: list[str], cwd: Path, timeout: int = 5) -> str:
             check=False,
             env=env,
         )
-    except FileNotFoundError:
-        last_git_error = "git binary not found"
-        return ""
     except subprocess.TimeoutExpired:
         last_git_error = "git command timed out"
         return ""
@@ -135,3 +138,16 @@ def run_raw_git(args: list[str], cwd: Path, timeout: int = 5) -> str:
 
     last_git_error = ""
     return result.stdout.strip()
+
+
+def find_git_binary() -> str:
+    candidates = (
+        "/usr/bin/git",
+        "/bin/git",
+        "/usr/local/bin/git",
+        "git",
+    )
+    for candidate in candidates:
+        if candidate == "git" or Path(candidate).exists():
+            return candidate
+    return ""
