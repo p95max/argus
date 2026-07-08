@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 PROJECT_DIR="${PROJECT_DIR:-/opt/argus}"
 SYSTEMD_DIR="/etc/systemd/system"
@@ -17,11 +17,15 @@ if [ ! -d deploy/scripts ]; then
     exit 1
 fi
 
-sudo cp deploy/systemd/argus-*.service deploy/systemd/argus-*.timer "$SYSTEMD_DIR/"
-sudo cp deploy/scripts/argus-* "$BIN_DIR/"
-sudo chmod +x "$BIN_DIR"/argus-*
+sudo install -m 0644 deploy/systemd/argus-*.service deploy/systemd/argus-*.timer "$SYSTEMD_DIR/"
+sudo install -o root -g argus -m 0750 deploy/scripts/argus-* "$BIN_DIR/"
 
 sudo systemctl daemon-reload
+
+sudo systemctl enable --now \
+    argus-web.service \
+    argus-telegram-bot.service
+
 sudo systemctl enable --now \
     argus-check-gmail.timer \
     argus-unread-reminders.timer \
@@ -30,8 +34,10 @@ sudo systemctl enable --now \
     argus-backup-db.timer \
     argus-health-monitor.timer
 
+systemctl status argus-web.service --no-pager -l
+systemctl status argus-telegram-bot.service --no-pager -l
 systemctl list-timers --all | grep argus
 
 echo
-echo "Installed Argus ops scripts and timers."
-echo "Run: sudo /usr/local/bin/argus-doctor.sh"
+echo "Installed Argus ops scripts, services, and timers."
+echo "Run: /usr/local/bin/argus-doctor.sh"
