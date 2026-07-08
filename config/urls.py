@@ -1,3 +1,5 @@
+import hmac
+
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path
@@ -15,7 +17,8 @@ def health_check(request):
 def full_health_check(request):
     token = getattr(settings, "ARGUS_HEALTH_TOKEN", "")
     auth_header = request.headers.get("Authorization", "")
-    has_token_access = token and auth_header == "Bearer " + token
+    
+    has_token_access = bool(token) and hmac.compare_digest(auth_header, "Bearer " + token)
     has_staff_access = request.user.is_authenticated and request.user.is_staff
 
     if not has_token_access and not has_staff_access:
