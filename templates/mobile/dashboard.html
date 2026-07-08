@@ -210,17 +210,19 @@
                     </form>
                 {% endif %}
 
-                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <input type="hidden" name="status" value="in_work">
-                    <button
-                        type="submit"
-                        {% if alert.alert_status == 'in_work' %}disabled{% endif %}
-                    >
-                        ✅В работу
-                    </button>
-                </form>
+                {% if view_mode != 'mine' %}
+                    <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="status" value="in_work">
+                        <button
+                            type="submit"
+                            {% if alert.alert_status == 'in_work' %}disabled{% endif %}
+                        >
+                            ✅В работу
+                        </button>
+                    </form>
+                {% endif %}
 
                 <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
                     {% csrf_token %}
