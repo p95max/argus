@@ -3,6 +3,7 @@ import hashlib
 
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 
 FERNET_PREFIX = "fernet:"
@@ -34,6 +35,10 @@ def is_encrypted(value: str) -> bool:
 def _fernet() -> Fernet:
     key = getattr(settings, "GMAIL_OAUTH_TOKEN_FERNET_KEY", "").strip()
     if not key:
+        if not settings.DEBUG:
+            raise ImproperlyConfigured(
+                "GMAIL_OAUTH_TOKEN_FERNET_KEY must be configured when DJANGO_DEBUG=False."
+            )
         digest = hashlib.sha256(settings.SECRET_KEY.encode("utf-8")).digest()
         key = base64.urlsafe_b64encode(digest).decode("ascii")
     return Fernet(key.encode("ascii"))
