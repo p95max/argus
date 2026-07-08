@@ -1,14 +1,18 @@
-import logging
 import html
+import logging
+import shlex
 import subprocess
 
 from dataclasses import dataclass
 
 from asgiref.sync import sync_to_async
-from telegram.error import BadRequest
+from django.conf import settings
 from django.utils import timezone
+from telegram.error import BadRequest
 
+from ..command_locks import CommandAlreadyRunning, command_lock
 from ..models import MarketplaceAlert
+from .config import get_telegram_config
 from .keyboards import (
     CALLBACK_STATUS_ACTION,
     CALLBACK_STATUS_UPDATES,
@@ -23,7 +27,11 @@ from .messages import (
     _build_status_answer,
     _truncate,
 )
-from .permissions import is_allowed_telegram_actor, is_allowed_update
+from .permissions import (
+    is_allowed_telegram_actor,
+    is_allowed_update,
+    is_default_chat_update,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -140,7 +148,6 @@ async def handle_mailbox_status_command(update, context):
             "Этот пользователь или чат не имеет доступа к Argus.",
         )
         return
-
     text = await sync_to_async(build_mailbox_status_message)()
 
     await update.effective_message.reply_text(
@@ -176,7 +183,6 @@ async def handle_daily_summary_command(update, context):
             "Этот пользователь или чат не имеет доступа к Argus.",
         )
         return
-
     text = await sync_to_async(build_daily_summary_message)()
 
     await update.effective_message.reply_text(
@@ -208,7 +214,6 @@ async def handle_health_command(update, context):
             "Этот пользователь или чат не имеет доступа к Argus.",
         )
         return
-
     bot_started_at = context.application.bot_data.get("argus_started_at")
     text = await sync_to_async(build_health_message)(bot_started_at=bot_started_at)
 
@@ -219,6 +224,64 @@ async def handle_health_command(update, context):
     )
 
     logger.info("Telegram health command handled. chat_id=%s user_id=%s", chat_id, user_id)
+
+
+async def handle_help_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    logger.info("Telegram help command received. chat_id=%s user_id=%s", chat_id, user_id)
+
+    if not _is_default_chat_admin_update(update):
+        logger.warning(
+            "Telegram help command rejected. chat_id=%s user_id=%s",
+            chat_id,
+            user_id,
+        )
+        await update.effective_message.reply_text(
+            "Подсказка команд доступна только в TELEGRAM_DEFAULT_CHAT_ID.",
+        )
+        return
+
+    await update.effective_message.reply_text(
+        build_bot_help_message(),
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+    logger.info("Telegram help command handled. chat_id=%s user_id=%s", chat_id, user_id)
+
+
+async def handle_deploy_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    logger.info("Telegram deploy command received. chat_id=%s user_id=%s", chat_id, user_id)
+
+    if not _is_default_chat_admin_update(update):
+        logger.warning(
+            "Telegram deploy command rejected. chat_id=%s user_id=%s",
+            chat_id,
+            user_id,
+        )
+        await update.effective_message.reply_text(
+            "🚫 /deploy доступен только в TELEGRAM_DEFAULT_CHAT_ID.",
+        )
+        return
+
+    await update.effective_message.reply_text(
+        "🚀 Запускаю ручной деплой Argus…",
+    )
+
+    text = await sync_to_async(build_manual_deploy_message)()
+
+    await update.effective_message.reply_text(
+        text,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+    logger.info("Telegram deploy command handled. chat_id=%s user_id=%s", chat_id, user_id)
 
 
 def handle_alert_callback_action(
@@ -278,6 +341,85 @@ def update_alert_status_from_callback(
     return result.alert
 
 
+def build_bot_help_message() -> str:
+    return "\n".join(
+        [
+            "🤖 <b>Argus bot: команды</b>",
+            "",
+            "/health — состояние сервиса",
+            "/status или /mailboxes — статус Gmail-ящиков",
+            "/summary — дневная сводка",
+            "/doctor — диагностика VPS/script",
+            "/deploy — ручной деплой из TELEGRAM_DEFAULT_CHAT_ID",
+            "/help — эта подсказка",
+        ]
+    )
+
+
+def build_manual_deploy_message() -> str:
+    config = get_telegram_config()
+    command = config.manual_deploy_command.strip()
+
+    if not command:
+        return (
+            "🚨 <b>Argus deploy</b>\n"
+            "<pre>TELEGRAM_MANUAL_DEPLOY_COMMAND is not configured.</pre>"
+        )
+
+    try:
+        args = shlex.split(command)
+    except ValueError as exc:
+        return (
+            "🚨 <b>Argus deploy</b>\n"
+            f"<pre>Invalid TELEGRAM_MANUAL_DEPLOY_COMMAND: {html.escape(str(exc))}</pre>"
+        )
+
+    if not args:
+        return (
+            "🚨 <b>Argus deploy</b>\n"
+            "<pre>TELEGRAM_MANUAL_DEPLOY_COMMAND is empty.</pre>"
+        )
+
+    try:
+        with command_lock(
+            "telegram_manual_deploy",
+            timeout=config.manual_deploy_timeout_seconds + 30,
+        ):
+            result = subprocess.run(
+                args,
+                cwd=settings.BASE_DIR,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=config.manual_deploy_timeout_seconds,
+                check=False,
+            )
+    except CommandAlreadyRunning:
+        return "🟠 <b>Argus deploy</b>\n<pre>Deploy is already running.</pre>"
+    except FileNotFoundError:
+        return (
+            "🚨 <b>Argus deploy</b>\n"
+            f"<pre>{html.escape(args[0])} not found</pre>"
+        )
+    except subprocess.TimeoutExpired:
+        return (
+            "🚨 <b>Argus deploy</b>\n"
+            f"<pre>Deploy timed out after {config.manual_deploy_timeout_seconds} seconds.</pre>"
+        )
+
+    output = result.stdout.strip() or "(no output)"
+
+    if len(output) > 3300:
+        output = "... truncated ...\n" + output[-3300:]
+
+    icon = "✅" if result.returncode == 0 else "🚨"
+
+    return (
+        f"{icon} <b>Argus deploy finished</b>\n"
+        f"<pre>{html.escape(output)}</pre>"
+    )
+
+
 def build_doctor_script_message() -> str:
     try:
         result = subprocess.run(
@@ -304,6 +446,10 @@ def build_doctor_script_message() -> str:
         f"{icon} <b>[DEV] Argus doctor</b>\n"
         f"<pre>{html.escape(output)}</pre>"
     )
+
+
+def _is_default_chat_admin_update(update) -> bool:
+    return is_default_chat_update(update) and is_allowed_update(update)
 
 
 async def _safe_answer_callback(query, text: str, show_alert: bool = False) -> None:
@@ -344,7 +490,6 @@ async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
                 alert.id,
             )
             return
-
         if "query is too old" in message or "query id is invalid" in message:
             logger.warning(
                 "Telegram alert message edit skipped because query is too old or invalid. alert_id=%s",
@@ -357,6 +502,7 @@ async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
             alert.id,
         )
         raise
+
 
 async def handle_doctor_command(update, context):
     chat_id = str(update.effective_chat.id) if update.effective_chat else ""
@@ -374,7 +520,6 @@ async def handle_doctor_command(update, context):
             "Этот пользователь или чат не имеет доступа к Argus.",
         )
         return
-
     text = await sync_to_async(build_doctor_script_message)()
 
     await update.effective_message.reply_text(
