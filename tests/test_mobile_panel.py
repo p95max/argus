@@ -201,6 +201,7 @@ def test_mobile_panel_my_in_work_tab(client, staff_user, alert):
     body = response.content.decode("utf-8")
     assert "Мои в работе" in body
     assert "Кейс решён" in body
+    assert "✅В работу" not in body
     assert "Audi A4" in body
 
 
