@@ -1,13 +1,38 @@
 import logging
 
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 
 from alerts.command_locks import CommandAlreadyRunning, command_lock
 from alerts.gmail.gmail import check_mailbox
-from alerts.models import MailboxAccount
+from alerts.models import MailboxAccount, ServiceEvent
 
 
 logger = logging.getLogger(__name__)
+
+
+def recover_mailbox_error(mailbox: MailboxAccount) -> int:
+    """
+    Mark open Gmail check errors for this mailbox as recovered.
+
+    ServiceEvent fingerprint is created as:
+    mailbox:{mailbox.id}:gmail_check
+    """
+    if not mailbox.pk:
+        return 0
+
+    now = timezone.now()
+
+    return ServiceEvent.objects.filter(
+        fingerprint=f"mailbox:{mailbox.pk}:gmail_check",
+        event_type="mailbox_error",
+        source="gmail.check_mailbox",
+        status="open",
+    ).update(
+        status="recovered",
+        resolved_at=now,
+        updated_at=now,
+    )
 
 
 class Command(BaseCommand):
@@ -61,7 +86,20 @@ class Command(BaseCommand):
                     mailbox.pk,
                 )
 
-                MailboxAccount.objects.filter(pk=mailbox.pk).update(is_active=False)
+                MailboxAccount.objects.filter(pk=mailbox.pk).update(
+                    is_active=False,
+                    updated_at=timezone.now(),
+                )
+
+                recovered = recover_mailbox_error(mailbox)
+
+                if recovered:
+                    logger.info(
+                        "Recovered Gmail service event for disabled mailbox without email. "
+                        "mailbox_id=%s recovered=%s",
+                        mailbox.pk,
+                        recovered,
+                    )
 
                 self.stderr.write(
                     self.style.WARNING(
@@ -73,7 +111,12 @@ class Command(BaseCommand):
             mailboxes.append(mailbox)
 
         if not mailboxes:
-            raise CommandError("No connected active mailboxes found.")
+            self.stdout.write(
+                self.style.WARNING(
+                    f"No connected active mailboxes found. Skipped {total_skipped}."
+                )
+            )
+            return
 
         total_created = 0
         total_duplicates = 0
@@ -96,7 +139,21 @@ class Command(BaseCommand):
                     exc,
                 )
 
-                MailboxAccount.objects.filter(pk=mailbox.pk).update(is_active=False)
+                MailboxAccount.objects.filter(pk=mailbox.pk).update(
+                    is_active=False,
+                    updated_at=timezone.now(),
+                )
+
+                recovered = recover_mailbox_error(mailbox)
+
+                if recovered:
+                    logger.info(
+                        "Recovered Gmail service event for disabled mailbox with missing token. "
+                        "mailbox_id=%s email=%s recovered=%s",
+                        mailbox.pk,
+                        mailbox.email,
+                        recovered,
+                    )
 
                 self.stderr.write(
                     self.style.WARNING(
@@ -114,6 +171,17 @@ class Command(BaseCommand):
                     self.style.ERROR(f"{mailbox.email}: {exc}")
                 )
                 continue
+
+            recovered = recover_mailbox_error(mailbox)
+
+            if recovered:
+                logger.info(
+                    "Recovered Gmail service event after successful mailbox check. "
+                    "mailbox_id=%s email=%s recovered=%s",
+                    mailbox.pk,
+                    mailbox.email,
+                    recovered,
+                )
 
             total_created += result.created
             total_duplicates += result.duplicates
