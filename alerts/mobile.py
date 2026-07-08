@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from .attention import filter_needs_attention, needs_attention_alert_q
 from .cases import build_case_summaries
+from .command_locks import CommandAlreadyRunning, command_lock
 from .gmail.gmail import check_mailbox
 from .health import build_health_report
 from .models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
@@ -253,28 +254,53 @@ def mobile_service_event_action(request, event_id):
 
 @login_required
 @require_POST
-def mobile_check_mailbox_now(request, mailbox_id):
+def mobile_check_mailbox_now(request, mailbox_id=None):
     _require_staff(request.user)
     _require_mailbox_manage_permission(request.user)
 
-    mailbox = get_object_or_404(MailboxAccount, id=mailbox_id)
+    mailboxes = list(MailboxAccount.objects.filter(is_active=True).order_by("email"))
+    if not mailboxes:
+        messages.warning(request, "Нет активных почтовых ящиков для проверки.")
+        return redirect(_safe_next_url(request))
+
+    total_fetched = 0
+    total_created = 0
+    total_duplicates = 0
+    total_failed = 0
+    failed_mailboxes = []
 
     try:
-        result = check_mailbox(mailbox)
-    except Exception as exc:
+        lock = command_lock("check_gmail")
+        with lock:
+            for mailbox in mailboxes:
+                try:
+                    result = check_mailbox(mailbox)
+                except Exception as exc:
+                    total_failed += 1
+                    failed_mailboxes.append(f"{mailbox.email}: {exc}")
+                    continue
+
+                total_fetched += result.fetched
+                total_created += result.created
+                total_duplicates += result.duplicates
+    except CommandAlreadyRunning:
+        messages.warning(request, "Проверка Gmail уже выполняется. Повторите чуть позже.")
+        return redirect(_safe_next_url(request))
+
+    if failed_mailboxes:
         messages.error(
             request,
-            f"Проверка почты не удалась для {mailbox.email}: {exc}",
+            "Не удалось проверить: " + "; ".join(failed_mailboxes[:3]),
         )
-        return redirect(_safe_next_url(request))
 
     messages.success(
         request,
         (
-            f"Почта проверена: {mailbox.email}. "
-            f"Получено: {result.fetched}, "
-            f"создано: {result.created}, "
-            f"дубли: {result.duplicates}."
+            f"Проверены активные ящики: {len(mailboxes)}. "
+            f"Получено: {total_fetched}, "
+            f"создано: {total_created}, "
+            f"дубли: {total_duplicates}, "
+            f"ошибки: {total_failed}."
         ),
     )
 
