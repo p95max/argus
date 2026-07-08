@@ -67,6 +67,7 @@ def test_mobile_panel_shows_needs_attention_and_empty_state(client, staff_user, 
     assert "Audi A4" in body
     assert "Сегодня" in body
     assert "Мои" in body
+    assert "Игнор" in body
     assert "Спам" in body
     assert "Рабочие часы" in body
     assert "Требует внимания" in body
@@ -169,6 +170,29 @@ def test_mobile_panel_my_in_work_tab(client, staff_user, alert):
 
 
 @pytest.mark.django_db
+def test_mobile_panel_ignored_tab(client, staff_user, alert):
+    alert.alert_status = MarketplaceAlert.AlertStatus.IGNORED
+    alert.listing_title = "Ignored Audi A4"
+    alert.save(update_fields=["alert_status", "listing_title", "updated_at"])
+    MarketplaceAlert.objects.create(
+        mailbox=alert.mailbox,
+        listing_title="Visible BMW",
+        message_text="Noch da?",
+        alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+    )
+    client.force_login(staff_user)
+
+    response = client.get(f"{reverse('mobile_dashboard')}?view=ignored")
+
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert "Игнорированные обращения" in body
+    assert "Ignored Audi A4" in body
+    assert "Visible BMW" not in body
+    assert "Кейсы по объявлениям" not in body
+
+
+@pytest.mark.django_db
 def test_mobile_panel_noise_tab(client, staff_user, alert):
     alert.event_type = MarketplaceAlert.EventType.NOISE
     alert.listing_title = ""
@@ -242,32 +266,6 @@ def test_mobile_panel_shows_gmail_operational_card(client, staff_user, alert):
     assert "Gmail" in body
     assert "Последняя проверка" in body
     assert "Новых сегодня" in body
-
-
-@pytest.mark.django_db
-def test_mobile_panel_cases_tab_shows_listing_analytics(client, staff_user, alert):
-    alert.listing_id = "case-1"
-    alert.listing_title = "BMW 320d"
-    alert.buyer_name = "Max"
-    alert.priority = MarketplaceAlert.Priority.HIGH
-    alert.save(
-        update_fields=[
-            "listing_id",
-            "listing_title",
-            "buyer_name",
-            "priority",
-            "updated_at",
-        ]
-    )
-    client.force_login(staff_user)
-
-    response = client.get(f"{reverse('mobile_dashboard')}?view=cases")
-    body = response.content.decode("utf-8")
-
-    assert "Кейсы по объявлениям" in body
-    assert "BMW 320d" in body
-    assert "Всего: 1" in body
-    assert "High: 1" in body
 
 
 @pytest.mark.django_db
