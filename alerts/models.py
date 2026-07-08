@@ -95,6 +95,7 @@ class MarketplaceAlert(TimestampedModel):
         UNREAD = "unread", "Новое"
         IN_WORK = "in_work", "В работе"
         IGNORED = "ignored", "Игнор"
+        ARCHIVED = "archived", "Архив"
 
     class Priority(models.TextChoices):
         LOW = "low", "Низкий"
