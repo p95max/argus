@@ -81,7 +81,14 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Состояние сервиса Argus</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Закрыть">
+                        <button
+                            type="button"
+                            class="close"
+                            data-dismiss="modal"
+                            data-bs-dismiss="modal"
+                            data-argus-health-dismiss="true"
+                            aria-label="Закрыть"
+                        >
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
@@ -92,7 +99,13 @@
                         <a class="btn btn-outline-info argus-health-json-link" href="${HEALTH_PATH}">
                             Открыть JSON
                         </a>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            data-dismiss="modal"
+                            data-bs-dismiss="modal"
+                            data-argus-health-dismiss="true"
+                        >
                             Закрыть
                         </button>
                     </div>
@@ -112,7 +125,39 @@
             return;
         }
 
+        if (window.bootstrap && typeof window.bootstrap.Modal === "function") {
+            const instance = window.bootstrap.Modal.getOrCreateInstance(modal);
+            instance.show();
+            return;
+        }
+
         window.location.href = HEALTH_PATH;
+    }
+
+    function hideModal() {
+        const modal = document.getElementById(MODAL_ID);
+        if (!modal) {
+            return;
+        }
+
+        if (window.jQuery && typeof window.jQuery.fn.modal === "function") {
+            window.jQuery(modal).modal("hide");
+            return;
+        }
+
+        if (window.bootstrap && typeof window.bootstrap.Modal === "function") {
+            const instance = window.bootstrap.Modal.getOrCreateInstance(modal);
+            instance.hide();
+            return;
+        }
+
+        modal.classList.remove("show");
+        modal.style.display = "none";
+        modal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("modal-open");
+        document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+            backdrop.remove();
+        });
     }
 
     function renderSummary(summary) {
@@ -263,6 +308,13 @@
     }
 
     document.addEventListener("click", function (event) {
+        const dismissButton = event.target.closest("[data-argus-health-dismiss]");
+        if (dismissButton) {
+            event.preventDefault();
+            hideModal();
+            return;
+        }
+
         const link = event.target.closest("a[href]");
         if (!link) {
             return;
