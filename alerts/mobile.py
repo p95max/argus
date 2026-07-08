@@ -10,7 +10,6 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .attention import filter_needs_attention, needs_attention_alert_q
-from .cases import build_case_summaries
 from .command_locks import CommandAlreadyRunning, command_lock
 from .gmail.gmail import check_mailbox
 from .health import build_health_report
@@ -64,17 +63,17 @@ def mobile_dashboard(request):
             alert_status=MarketplaceAlert.AlertStatus.IN_WORK,
             taken_by=request.user,
         )
+    elif view_mode == "ignored":
+        alerts = alerts.filter(alert_status=MarketplaceAlert.AlertStatus.IGNORED)
     elif view_mode == "noise":
         alerts = alerts.filter(event_type=MarketplaceAlert.EventType.NOISE)
     elif view_mode == "attention":
         alerts = filter_needs_attention(alerts)
     elif view_mode == "system":
         alerts = MarketplaceAlert.objects.none()
-    elif view_mode == "cases":
-        alerts = MarketplaceAlert.objects.none()
 
     alerts_page = None
-    if view_mode not in {"system", "cases"}:
+    if view_mode != "system":
         alerts_page = Paginator(alerts, MOBILE_ALERTS_PER_PAGE).get_page(
             request.GET.get("page")
         )
@@ -87,7 +86,6 @@ def mobile_dashboard(request):
             "alert",
         ).order_by("-last_seen_at", "-created_at")
 
-    case_summaries = build_case_summaries() if view_mode == "cases" else []
     settings = TelegramSettings.load()
 
     alert_counts = base_alerts.aggregate(
@@ -102,6 +100,7 @@ def mobile_dashboard(request):
                 taken_by=request.user,
             ),
         ),
+        ignored=Count("id", filter=Q(alert_status=MarketplaceAlert.AlertStatus.IGNORED)),
         noise=Count("id", filter=Q(event_type=MarketplaceAlert.EventType.NOISE)),
         urgent=Count(
             "id",
@@ -150,7 +149,6 @@ def mobile_dashboard(request):
         "alerts": alerts,
         "alerts_page": alerts_page,
         "service_events": service_events[:30],
-        "case_summaries": case_summaries,
         "mailboxes": mailboxes,
         "mailbox_status": mailbox_status,
         "gmail_summary": gmail_summary,
@@ -266,54 +264,49 @@ def mobile_service_event_action(request, event_id):
 
 @login_required
 @require_POST
-def mobile_check_mailbox_now(request, mailbox_id=None):
-    _require_staff(request.user)
+def mobile_check_mailbox_now(request, mailbox_id):
     _require_mailbox_manage_permission(request.user)
 
-    mailboxes = list(MailboxAccount.objects.filter(is_active=True).order_by("email"))
-    if not mailboxes:
-        messages.warning(request, "Нет активных почтовых ящиков для проверки.")
-        return redirect(_safe_next_url(request))
+    mailbox = get_object_or_404(MailboxAccount, id=mailbox_id)
+    result = check_mailbox(mailbox)
+    messages.success(
+        request,
+        f"Почта проверена: fetched={result.fetched}, created={result.created}, duplicates={result.duplicates}.",
+    )
+    return redirect(_safe_next_url(request))
 
-    total_fetched = 0
-    total_created = 0
-    total_duplicates = 0
-    total_failed = 0
-    failed_mailboxes = []
+
+@login_required
+@require_POST
+def mobile_check_gmail_now(request):
+    _require_mailbox_manage_permission(request.user)
 
     try:
-        lock = command_lock("check_gmail")
-        with lock:
-            for mailbox in mailboxes:
-                try:
-                    result = check_mailbox(mailbox)
-                except Exception as exc:
-                    total_failed += 1
-                    failed_mailboxes.append(f"{mailbox.email}: {exc}")
-                    continue
-
-                total_fetched += result.fetched
-                total_created += result.created
-                total_duplicates += result.duplicates
+        with command_lock("check_gmail"):
+            summary = _run_mobile_gmail_check()
     except CommandAlreadyRunning:
-        messages.warning(request, "Проверка Gmail уже выполняется. Повторите чуть позже.")
-        return redirect(_safe_next_url(request))
-
-    if failed_mailboxes:
-        messages.error(
+        messages.warning(
             request,
-            "Не удалось проверить: " + "; ".join(failed_mailboxes[:3]),
+            "🔄 Проверка почтовых ящиков уже выполняется. Повторите чуть позже.",
         )
+        return redirect(_safe_next_url(request))
 
     messages.success(
         request,
-        (
-            f"Почта проверена. Проверены активные ящики: {len(mailboxes)}. "
-            f"Получено: {total_fetched}, "
-            f"создано: {total_created}, "
-            f"дубли: {total_duplicates}, "
-            f"ошибки: {total_failed}."
-        ),
+        "Почта проверена: "
+        f"ящиков={summary['mailboxes']}, fetched={summary['fetched']}, "
+        f"created={summary['created']}, duplicates={summary['duplicates']}.",
     )
-
     return redirect(_safe_next_url(request))
+
+
+def _run_mobile_gmail_check():
+    summary = {"mailboxes": 0, "fetched": 0, "created": 0, "duplicates": 0}
+    mailboxes = MailboxAccount.objects.filter(is_active=True).order_by("email")
+    for mailbox in mailboxes:
+        result = check_mailbox(mailbox)
+        summary["mailboxes"] += 1
+        summary["fetched"] += result.fetched
+        summary["created"] += result.created
+        summary["duplicates"] += result.duplicates
+    return summary
