@@ -3,14 +3,24 @@ from django.db.models import Q, QuerySet
 from .models import MailboxAccount, MarketplaceAlert
 
 
+def terminal_alert_status_q() -> Q:
+    return Q(
+        alert_status__in=[
+            MarketplaceAlert.AlertStatus.IGNORED,
+            MarketplaceAlert.AlertStatus.ARCHIVED,
+        ]
+    )
+
+
 def needs_attention_alert_q() -> Q:
-    return (
+    attention_q = (
         Q(alert_status=MarketplaceAlert.AlertStatus.UNREAD)
         | Q(priority__in=[MarketplaceAlert.Priority.HIGH, MarketplaceAlert.Priority.URGENT])
         | Q(parse_status__in=[MarketplaceAlert.ParseStatus.ERROR, MarketplaceAlert.ParseStatus.PARTIAL])
         | Q(mailbox__connection_status=MailboxAccount.ConnectionStatus.ERROR)
         | Q(telegram_error__gt="")
     )
+    return ~terminal_alert_status_q() & attention_q
 
 
 def filter_needs_attention(queryset: QuerySet[MarketplaceAlert]) -> QuerySet[MarketplaceAlert]:
@@ -18,6 +28,11 @@ def filter_needs_attention(queryset: QuerySet[MarketplaceAlert]) -> QuerySet[Mar
 
 
 def alert_needs_attention(alert: MarketplaceAlert) -> bool:
+    if alert.alert_status in [
+        MarketplaceAlert.AlertStatus.IGNORED,
+        MarketplaceAlert.AlertStatus.ARCHIVED,
+    ]:
+        return False
     if alert.alert_status == MarketplaceAlert.AlertStatus.UNREAD:
         return True
     if alert.priority in [MarketplaceAlert.Priority.HIGH, MarketplaceAlert.Priority.URGENT]:
