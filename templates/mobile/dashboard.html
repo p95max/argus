@@ -72,3 +72,233 @@
     {% if view_mode == 'system' %}
     <section>
         <h2>Системные сообщения и ошибки</h2>
+        {% for event in service_events %}
+            <article class="card">
+                <div class="title">{{ event.title }}</div>
+                <div class="meta">
+                    {{ event.get_event_type_display }} · {{ event.last_seen_at|date:"d.m.Y H:i" }}
+                    {% if event.occurrences > 1 %} · повторов: {{ event.occurrences }}{% endif %}
+                </div>
+                <div class="badges">
+                    <span class="badge {% if event.severity == 'critical' or event.severity == 'error' %}danger{% elif event.severity == 'warning' %}warn{% else %}ok{% endif %}">{{ event.get_severity_display }}</span>
+                    <span class="badge {% if event.status == 'open' %}danger{% else %}ok{% endif %}">{{ event.get_status_display }}</span>
+                    {% if event.source %}
+                        <span class="badge">{{ event.source }}</span>
+                    {% endif %}
+                </div>
+                {% if event.mailbox %}
+                    <div class="small">Ящик: {{ event.mailbox.email }}</div>
+                {% endif %}
+                {% if event.alert %}
+                    <div class="small"><a href="{% url 'mobile_alert_detail' event.alert.id %}">Связанное обращение #{{ event.alert.id }}</a></div>
+                {% endif %}
+                {% if event.details %}
+                    <div class="small">{{ event.details|truncatechars:260 }}</div>
+                {% endif %}
+                <div class="actions compact-actions">
+                    {% if event.status == 'open' %}
+                        <form method="post" action="{% url 'mobile_service_event_action' event.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <input type="hidden" name="action" value="mark_recovered">
+                            <button class="small-action" type="submit">Mark recovered</button>
+                        </form>
+                        <form method="post" action="{% url 'mobile_service_event_action' event.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <input type="hidden" name="action" value="ignore">
+                            <button class="small-action" type="submit">Ignore this error</button>
+                        </form>
+                    {% endif %}
+                    {% if event.mailbox %}
+                        <a class="link-button small-action" href="{% url 'admin:alerts_mailboxaccount_change' event.mailbox.id %}">Open related mailbox</a>
+                    {% endif %}
+                </div>
+            </article>
+        {% empty %}
+            <div class="empty">Системных сообщений и ошибок пока нет.</div>
+        {% endfor %}
+    </section>
+    {% elif view_mode == 'cases' %}
+    <section>
+        <h1>Кейсы по объявлениям</h1>
+        {% for case in case_summaries %}
+            <article class="card">
+                <div class="title">{{ case.title|default:"Объявление без названия" }}</div>
+                <div class="meta">{{ case.mailbox__name|default:case.mailbox__email }} · {{ case.listing_id }}</div>
+                <div class="badges">
+                    <span class="badge {% if case.case_status == 'active' %}ok{% else %}warn{% endif %}">{{ case.case_status }}</span>
+                    <span class="badge">Всего: {{ case.total }}</span>
+                    <span class="badge">Новых: {{ case.unread }}</span>
+                    <span class="badge">High: {{ case.high_priority }}</span>
+                    <span class="badge {% if case.risk %}danger{% endif %}">Risk: {{ case.risk }}</span>
+                    <span class="badge">Last price: {{ case.low_quality }}</span>
+                </div>
+                <div class="small">Последний покупатель: {{ case.last_buyer|default:"не указан" }}</div>
+                <div class="small">Последнее обращение: {{ case.last_seen_at|timesince }} назад</div>
+                {% if case.latest_alert_id %}
+                    <div class="actions compact-actions">
+                        <a class="link-button small-action" href="{% url 'mobile_alert_detail' case.latest_alert_id %}">Открыть последнее</a>
+                    </div>
+                {% endif %}
+            </article>
+        {% empty %}
+            <div class="empty">Активных кейсов по объявлениям пока нет.</div>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section>
+        <h1>
+            {% if view_mode == 'today' %}
+                📅 Сегодня
+            {% elif view_mode == 'attention' %}
+                ⚠️ Требует внимания
+            {% elif view_mode == 'mine' %}
+                🛠️ Мои в работе
+            {% elif view_mode == 'noise' %}
+                🧹 Спам и рассылки
+            {% elif view_mode == 'system' %}
+                🧾 Системный журнал
+            {% elif view_mode == 'all' %}
+                📋 Все обращения
+            {% else %}
+                📋 Обращения
+            {% endif %}
+        </h1>
+        {% for alert in alerts %}
+            <article class="card alert-card">
+                <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
+                <div class="alert-meta-grid">
+                    <div class="alert-mailbox">
+                        <span class="meta-label">📬 Ящик</span>
+                        <strong>{{ alert.mailbox.name|default:alert.mailbox.email }}</strong>
+                        <span>{{ alert.mailbox.email }}</span>
+                    </div>
+
+                    <div class="alert-date">
+                        <span class="meta-label">📅 Дата</span>
+                        <strong>{{ alert.created_at|date:"d.m.Y" }}</strong>
+                        <span>{{ alert.created_at|date:"H:i" }}</span>
+                    </div>
+                </div>
+                <div class="badges">
+                    <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">{{ alert.get_alert_status_display }}</span>
+                    <span class="badge {% if alert.priority == 'urgent' or alert.priority == 'high' %}danger{% endif %}">{{ alert.get_priority_display }}</span>
+                    <span class="badge">{{ alert.get_event_type_display }}</span>
+                    {% for flag in alert.flags.all %}
+                        <span class="badge {% if flag.category == 'risk' %}danger{% endif %}">{{ flag.name }}</span>
+                    {% endfor %}
+                </div>
+                {% if alert.taken_by or alert.taken_by_label %}
+                    <div class="info-row work-owner">
+                        <span class="info-icon">👷</span>
+                        <span class="info-content">
+                            <span class="info-label">В работе у</span>
+                            <strong>
+                                {% if alert.taken_by %}
+                                    {{ alert.taken_by.get_full_name|default:alert.taken_by.username }}
+                                {% else %}
+                                    {{ alert.taken_by_label }}
+                                {% endif %}
+                            </strong>
+                        </span>
+                    </div>
+                {% endif %}
+
+                {% if alert.classification_reason %}
+                    <div class="info-row classification-note">
+                        <span class="info-icon">🧠</span>
+                        <span class="info-content">
+                            <span class="info-label">Классификация</span>
+                            <span>{{ alert.classification_reason }}</span>
+                        </span>
+                    </div>
+                {% endif %}
+
+            <div class="actions">
+                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input type="hidden" name="status" value="in_work">
+                    <button
+                        type="submit"
+                        {% if alert.alert_status == 'in_work' %}disabled{% endif %}
+                    >
+                        ✅В работу
+                    </button>
+                </form>
+
+                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input type="hidden" name="status" value="ignored">
+                    <button
+                        type="submit"
+                        {% if alert.alert_status == 'ignored' %}disabled{% endif %}
+                    >
+                        🚫Игнор
+                    </button>
+                </form>
+
+                <a class="link-button" href="{% url 'mobile_alert_detail' alert.id %}">📋Открыть</a>
+            </div>
+
+            </article>
+        {% empty %}
+            <div class="empty">
+                {% if view_mode == 'today' %}Сегодня обращений пока нет.
+                {% elif view_mode == 'mine' %}У вас нет обращений в работе.
+                {% elif view_mode == 'noise' %}Спама и рассылок пока нет.
+                {% else %}Сейчас нет обращений для этого фильтра.{% endif %}
+            </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    {% include "mobile/_mailbox_status.html" %}
+    <section>
+        <details class="card collapsible-card quiet-hours-block">
+            <summary class="collapsible-summary">
+                <span class="summary-title">🔕Рабочие часы
+
+                                    {% if telegram_settings.quiet_hours_enabled %}
+                    <span class="status-pill ok">
+                        <span class="status-dot"></span>
+                        Вкл.
+                    </span>
+                {% else %}
+                    <span class="status-pill muted">
+                        <span class="status-dot"></span>
+                        Выкл.
+                    </span>
+                {% endif %}
+
+                </span>
+            </summary>
+
+            <div class="collapsible-content">
+                <div class="small">
+                    {% if telegram_settings.quiet_hours_enabled %}
+                        Обычные уведомления приглушаются с {{ telegram_settings.quiet_hours_start|time:"H:i" }} до {{ telegram_settings.quiet_hours_end|time:"H:i" }}.
+                    {% else %}
+                        Обычные уведомления приходят без паузы по времени.
+                    {% endif %}
+                </div>
+
+                <div class="actions compact-actions">
+                    <form method="post" action="{% url 'mobile_toggle_quiet_hours' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="small-action" type="submit">
+                            {% if telegram_settings.quiet_hours_enabled %}Выключить{% else %}Включить{% endif %}
+                        </button>
+                    </form>
+
+                    <a class="link-button small-action" href="{{ admin_telegram_settings_url }}">
+                        Настроить время
+                    </a>
+                </div>
+            </div>
+        </details>
+    </section>
+{% endblock %}
