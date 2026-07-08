@@ -57,6 +57,21 @@ def test_parse_english_kleinanzeigen_buyer_reply_from_screenshot_format():
     assert "span.MsoHyperlink" not in result.normalized_body
 
 
+def test_parse_german_interested_buyer_request_from_real_mailbox_format():
+    result = parse_kleinanzeigen_email(
+        "AUDI A3 1.6 MPI TÜV bis 03/27",
+        "Ein Interessent hat eine Anfrage zu Ihrer Anzeige gesendet: 3394403772: Guten Tag, ist das Fahrzeug noch zu haben?",
+    )
+
+    assert result.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE
+    assert result.parse_status == MarketplaceAlert.ParseStatus.SUCCESS
+    assert result.buyer_name == "Interessent"
+    assert result.listing_title == "AUDI A3 1.6 MPI TÜV bis 03/27"
+    assert result.listing_id == "3394403772"
+    assert result.message_text == "Guten Tag, ist das Fahrzeug noch zu haben?"
+    assert "buyer lead classifier was not applied" not in result.classification_reason
+
+
 def test_parse_listing_expiring_system_notice():
     result = parse_kleinanzeigen_email(
         'Deine Anzeige "VW Golf GTI" läuft bald ab',
