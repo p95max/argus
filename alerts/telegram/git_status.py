@@ -1,8 +1,12 @@
+import os
 import subprocess
 
 from pathlib import Path
 
 from django.conf import settings
+
+
+last_git_error = ""
 
 
 def build_git_deploy_status_text() -> str:
@@ -36,6 +40,8 @@ def build_git_deploy_status_text() -> str:
 
     if len(lines) == 2:
         lines.append("Status: git command failed")
+    elif relation == "unknown" and last_git_error:
+        lines.append(f"Git error: {last_git_error[:220]}")
 
     return "\n".join(lines)
 
@@ -83,27 +89,49 @@ def build_git_relation_text(git_root: Path) -> str:
 
 def run_git(args: list[str], git_root: Path, timeout: int = 5) -> str:
     return run_raw_git(
-        ["-C", str(git_root), *args],
+        [
+            "-c",
+            f"safe.directory={git_root}",
+            "-C",
+            str(git_root),
+            *args,
+        ],
         cwd=git_root,
         timeout=timeout,
     )
 
 
 def run_raw_git(args: list[str], cwd: Path, timeout: int = 5) -> str:
+    global last_git_error
+
+    env = os.environ.copy()
+    env.setdefault("HOME", str(cwd))
+    env.setdefault("GIT_CONFIG_NOSYSTEM", "1")
+
     try:
         result = subprocess.run(
             ["git", *args],
             cwd=cwd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             text=True,
             timeout=timeout,
             check=False,
+            env=env,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+    except FileNotFoundError:
+        last_git_error = "git binary not found"
+        return ""
+    except subprocess.TimeoutExpired:
+        last_git_error = "git command timed out"
+        return ""
+    except OSError as exc:
+        last_git_error = str(exc)
         return ""
 
     if result.returncode != 0:
+        last_git_error = (result.stderr or result.stdout or "git command failed").strip()
         return ""
 
+    last_git_error = ""
     return result.stdout.strip()
