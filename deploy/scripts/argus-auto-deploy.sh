@@ -8,6 +8,7 @@ PYTHON_BIN="${PYTHON_BIN:-$PROJECT_DIR/.venv/bin/python}"
 GIT_BIN="${GIT_BIN:-/usr/bin/git}"
 RUN_DOCTOR="${RUN_DOCTOR:-1}"
 RESTART_SERVICES="${RESTART_SERVICES:-argus-web.service argus-telegram-bot.service}"
+AUTO_INSTALL_OPS="${AUTO_INSTALL_OPS:-0}"
 
 log() {
     printf '[%s] %s\n' "$(date -Is)" "$*"
@@ -55,13 +56,22 @@ if [ "$old_rev" = "$new_rev" ]; then
 fi
 
 changed_files="$($GIT_BIN diff --name-only "$old_rev" "$new_rev")"
+ops_changed=0
+if printf '%s\n' "$changed_files" | grep -Eq '^(deploy/systemd/|deploy/scripts/|deploy/install-ops\.sh$)'; then
+    ops_changed=1
+fi
+
 log "Deploying $new_rev"
 
 "$GIT_BIN" reset --hard "$REMOTE_NAME/$DEPLOY_BRANCH"
 
-if printf '%s\n' "$changed_files" | grep -Eq '^(deploy/systemd/|deploy/scripts/|deploy/install-ops\.sh$)'; then
-    log "Operational files changed; reinstalling systemd units and helper scripts"
-    bash deploy/install-ops.sh
+if [ "$ops_changed" = "1" ]; then
+    if [ "$AUTO_INSTALL_OPS" = "1" ]; then
+        log "Operational files changed; reinstalling systemd units and helper scripts"
+        bash deploy/install-ops.sh
+    else
+        log "Operational files changed; manual install required: bash deploy/install-ops.sh"
+    fi
 fi
 
 if printf '%s\n' "$changed_files" | grep -Eq '^(pyproject\.toml|poetry\.lock)$'; then
@@ -84,8 +94,12 @@ log "Restarting services: $RESTART_SERVICES"
 run_systemctl restart $RESTART_SERVICES
 
 if [ "$RUN_DOCTOR" = "1" ]; then
-    log "Running Argus doctor"
-    bash deploy/scripts/argus-doctor.sh
+    if [ "$ops_changed" = "1" ] && [ "$AUTO_INSTALL_OPS" != "1" ]; then
+        log "Skipping full doctor because operational files changed and were not auto-installed"
+    else
+        log "Running Argus doctor"
+        bash deploy/scripts/argus-doctor.sh
+    fi
 fi
 
 log "Auto deploy completed: $old_rev -> $new_rev"
