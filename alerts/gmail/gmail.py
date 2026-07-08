@@ -1,10 +1,11 @@
+import base64
 import json
+import logging
+import os
+import time
 
 from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
-import base64
-import logging
-import os
 from pathlib import Path
 
 from django.db import transaction
@@ -13,6 +14,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from ..crypto import decrypt_text, encrypt_text
 from ..models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
@@ -25,6 +27,8 @@ GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/userinfo.profile",
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
+GMAIL_API_RETRY_ATTEMPTS = 3
+GMAIL_API_RETRY_BASE_SLEEP_SECONDS = 1.0
 logger = logging.getLogger(__name__)
 
 
@@ -168,12 +172,12 @@ def load_or_refresh_mailbox_credentials(mailbox: MailboxAccount) -> Credentials:
 
 
 def fetch_gmail_messages(service, query: str, max_results: int = 25) -> list[GmailMessage]:
-    response = (
-        service.users()
-        .messages()
-        .list(userId="me", q=query, maxResults=max_results)
-        .execute()
+    request = service.users().messages().list(
+        userId="me",
+        q=query,
+        maxResults=max_results,
     )
+    response = _execute_gmail_request_with_retry(request, operation="messages.list")
     messages = response.get("messages", [])
     payloads = _fetch_gmail_message_payloads(service, messages)
     return [parse_gmail_api_message(payload) for payload in payloads]
@@ -183,33 +187,55 @@ def _fetch_gmail_message_payloads(service, messages: list[dict]) -> list[dict]:
     if not messages:
         return []
 
-    if not hasattr(service, "new_batch_http_request"):
-        return [_fetch_single_gmail_message_payload(service, item["id"]) for item in messages]
-
-    payloads_by_id = {}
-
-    def callback(request_id, response, exception):
-        if exception is not None:
-            raise exception
-        payloads_by_id[request_id] = response
-
-    batch = service.new_batch_http_request(callback=callback)
-    for item in messages:
-        message_id = item["id"]
-        batch.add(
-            service.users().messages().get(userId="me", id=message_id, format="full"),
-            request_id=message_id,
-        )
-    batch.execute()
-    return [payloads_by_id[item["id"]] for item in messages if item["id"] in payloads_by_id]
+    # Gmail can return "Too many concurrent requests for user" when batch requests
+    # fan out many users.messages.get calls at once. Fetch sequentially instead.
+    return [_fetch_single_gmail_message_payload(service, item["id"]) for item in messages]
 
 
 def _fetch_single_gmail_message_payload(service, message_id: str) -> dict:
+    request = service.users().messages().get(
+        userId="me",
+        id=message_id,
+        format="full",
+    )
+    return _execute_gmail_request_with_retry(
+        request,
+        operation=f"messages.get:{message_id}",
+    )
+
+
+def _execute_gmail_request_with_retry(request, operation: str):
+    for attempt in range(1, GMAIL_API_RETRY_ATTEMPTS + 1):
+        try:
+            return request.execute()
+        except HttpError as exc:
+            if attempt >= GMAIL_API_RETRY_ATTEMPTS or not _is_retryable_gmail_error(exc):
+                raise
+
+            sleep_seconds = GMAIL_API_RETRY_BASE_SLEEP_SECONDS * (2 ** (attempt - 1))
+            logger.warning(
+                "Gmail API request failed with retryable error. operation=%s attempt=%s/%s sleep=%ss error=%s",
+                operation,
+                attempt,
+                GMAIL_API_RETRY_ATTEMPTS,
+                sleep_seconds,
+                exc,
+            )
+            time.sleep(sleep_seconds)
+
+    raise RuntimeError(f"Gmail API request did not complete: {operation}")
+
+
+def _is_retryable_gmail_error(exc: HttpError) -> bool:
+    status = getattr(getattr(exc, "resp", None), "status", None)
+    if status in {429, 500, 502, 503, 504}:
+        return True
+
+    message = str(exc).lower()
     return (
-        service.users()
-        .messages()
-        .get(userId="me", id=message_id, format="full")
-        .execute()
+        "ratelimitexceeded" in message
+        or "userratelimitexceeded" in message
+        or "too many concurrent requests" in message
     )
 
 
