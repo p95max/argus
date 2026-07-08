@@ -7,6 +7,9 @@ ENV_FILE="${ENV_FILE:-$PROJECT_DIR/.env.local}"
 ARGUS_PUBLIC_BASE_URL="http://127.0.0.1:8000"
 ARGUS_HEALTH_TOKEN=""
 GIT_BIN="${GIT_BIN:-/usr/bin/git}"
+HEALTH_RETRIES="${HEALTH_RETRIES:-5}"
+HEALTH_RETRY_SLEEP_SECONDS="${HEALTH_RETRY_SLEEP_SECONDS:-2}"
+HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-8}"
 EXIT_CODE=0
 HEALTH_BODY=""
 
@@ -86,6 +89,38 @@ check_deployed_copy() {
     fi
 }
 
+check_health_url() {
+    local label="$1"
+    local body_file="$2"
+    shift 2
+
+    local attempt=1
+    local status="000"
+
+    while [ "$attempt" -le "$HEALTH_RETRIES" ]; do
+        : > "$body_file"
+        status="$(curl -sS --max-time "$HEALTH_TIMEOUT_SECONDS" -o "$body_file" -w "%{http_code}" "$@" || true)"
+
+        if [ "$status" = "200" ] && grep -q '"status": "ok"' "$body_file"; then
+            if [ "$attempt" -eq 1 ]; then
+                ok "$label OK"
+            else
+                ok "$label OK after $attempt attempts"
+            fi
+            return 0
+        fi
+
+        if [ "$attempt" -lt "$HEALTH_RETRIES" ]; then
+            sleep "$HEALTH_RETRY_SLEEP_SECONDS"
+        fi
+        attempt=$((attempt + 1))
+    done
+
+    fail "$label failed with HTTP $status after $HEALTH_RETRIES attempts"
+    cat "$body_file" || true
+    return 1
+}
+
 cd "$PROJECT_DIR"
 
 HEALTH_BODY="$(mktemp /tmp/argus-health.XXXXXX.json)"
@@ -133,21 +168,16 @@ check_deployed_copy deploy/scripts/argus-auto-deploy.sh
 check_deployed_copy deploy/scripts/argus-doctor.sh
 
 if [ -n "$ARGUS_HEALTH_TOKEN" ]; then
-    HEALTH_STATUS="$(curl -sS -o "$HEALTH_BODY" -w "%{http_code}" -H "Authorization: Bearer $ARGUS_HEALTH_TOKEN" "$ARGUS_PUBLIC_BASE_URL/health/full/" || true)"
-    if [ "$HEALTH_STATUS" = "200" ] && grep -q '"status": "ok"' "$HEALTH_BODY"; then
-        ok "full health OK"
-    else
-        fail "full health failed with HTTP $HEALTH_STATUS"
-        cat "$HEALTH_BODY" || true
-    fi
+    check_health_url \
+        "full health" \
+        "$HEALTH_BODY" \
+        -H "Authorization: Bearer $ARGUS_HEALTH_TOKEN" \
+        "$ARGUS_PUBLIC_BASE_URL/health/full/"
 else
-    HEALTH_STATUS="$(curl -sS -o "$HEALTH_BODY" -w "%{http_code}" "$ARGUS_PUBLIC_BASE_URL/health/" || true)"
-    if [ "$HEALTH_STATUS" = "200" ] && grep -q '"status": "ok"' "$HEALTH_BODY"; then
-        ok "health OK"
-    else
-        fail "health failed with HTTP $HEALTH_STATUS"
-        cat "$HEALTH_BODY" || true
-    fi
+    check_health_url \
+        "health" \
+        "$HEALTH_BODY" \
+        "$ARGUS_PUBLIC_BASE_URL/health/"
 fi
 
 if systemctl --failed --no-legend | grep -q .; then
