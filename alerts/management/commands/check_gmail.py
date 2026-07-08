@@ -42,10 +42,38 @@ class Command(BaseCommand):
             else:
                 queryset = queryset.filter(email=value)
 
-        mailboxes = list(queryset)
+        raw_mailboxes = list(queryset)
+
+        if not raw_mailboxes:
+            raise CommandError("No active mailboxes found.")
+
+        mailboxes = []
+        total_skipped = 0
+
+        for mailbox in raw_mailboxes:
+            email = (mailbox.email or "").strip()
+
+            if not email:
+                total_skipped += 1
+
+                logger.warning(
+                    "Skipping active Gmail mailbox without email. mailbox_id=%s",
+                    mailbox.pk,
+                )
+
+                MailboxAccount.objects.filter(pk=mailbox.pk).update(is_active=False)
+
+                self.stderr.write(
+                    self.style.WARNING(
+                        f"Mailbox #{mailbox.pk}: skipped and disabled because email is empty."
+                    )
+                )
+                continue
+
+            mailboxes.append(mailbox)
 
         if not mailboxes:
-            raise CommandError("No active mailboxes found.")
+            raise CommandError("No connected active mailboxes found.")
 
         total_created = 0
         total_duplicates = 0
@@ -57,9 +85,31 @@ class Command(BaseCommand):
                     mailbox,
                     max_results=options["max_results"],
                 )
+            except FileNotFoundError as exc:
+                total_skipped += 1
+
+                logger.warning(
+                    "Skipping Gmail mailbox because credentials/token file is missing. "
+                    "mailbox_id=%s email=%s error=%s",
+                    mailbox.pk,
+                    mailbox.email,
+                    exc,
+                )
+
+                MailboxAccount.objects.filter(pk=mailbox.pk).update(is_active=False)
+
+                self.stderr.write(
+                    self.style.WARNING(
+                        f"{mailbox.email}: skipped and disabled because Gmail credentials/token "
+                        f"file is missing: {exc}"
+                    )
+                )
+                continue
             except Exception as exc:
                 total_failed += 1
+
                 logger.exception("Gmail check failed for mailbox %s", mailbox.email)
+
                 self.stderr.write(
                     self.style.ERROR(f"{mailbox.email}: {exc}")
                 )
@@ -86,6 +136,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Done. Created {total_created}, "
-                f"duplicates {total_duplicates}, failed {total_failed}."
+                f"duplicates {total_duplicates}, "
+                f"failed {total_failed}, skipped {total_skipped}."
             )
         )
