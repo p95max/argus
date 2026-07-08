@@ -9,20 +9,36 @@ from .classifier import classify_marketplace_message
 
 class BodyTextExtractor(HTMLParser):
     block_tags = {"br", "div", "p", "li", "tr", "table", "section", "article"}
+    ignored_tags = {"head", "style", "script", "title", "meta", "noscript"}
 
     def __init__(self):
         super().__init__()
         self.parts = []
+        self.ignored_depth = 0
 
     def handle_starttag(self, tag, attrs):
-        if tag.lower() in self.block_tags:
+        tag = tag.lower()
+        if tag in self.ignored_tags:
+            self.ignored_depth += 1
+            return
+        if self.ignored_depth:
+            return
+        if tag in self.block_tags:
             self.parts.append("\n")
 
     def handle_endtag(self, tag):
-        if tag.lower() in self.block_tags:
+        tag = tag.lower()
+        if tag in self.ignored_tags:
+            self.ignored_depth = max(self.ignored_depth - 1, 0)
+            return
+        if self.ignored_depth:
+            return
+        if tag in self.block_tags:
             self.parts.append("\n")
 
     def handle_data(self, data):
+        if self.ignored_depth:
+            return
         self.parts.append(data)
 
     def text(self):
@@ -51,6 +67,9 @@ BUYER_MESSAGE_PATTERNS = (
     r"\bneue nachricht von\b",
     r"\bhat dir eine nachricht geschrieben\b",
     r"\bvon\s*:\s*.+\bnachricht\s*:",
+    r"\breplied to your ad\b",
+    r"\bhat auf deine anzeige geantwortet\b",
+    r"\bantwortete auf deine anzeige\b",
 )
 LISTING_OPERATION_PATTERNS = (
     "\\bl(?:\u00e4|ae)uft bald ab\\b",
@@ -80,7 +99,6 @@ GENERIC_SYSTEM_PATTERNS = (
     r"\bpasswort\b",
     r"\bsicherheitshinweis\b",
     r"\bdein konto\b",
-    r"\bkleinanzeigen\b",
 )
 
 
@@ -120,12 +138,14 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
         event_type = MarketplaceAlert.EventType.SYSTEM_NOTICE
 
     listing_title = _parse_listing_title(raw_subject, normalized_body)
+    if event_type == MarketplaceAlert.EventType.BUYER_MESSAGE and not listing_title:
+        listing_title = _parse_listing_title_from_subject(raw_subject)
     listing_id = _parse_listing_id(combined)
     buyer_name = ""
     message_text = ""
     if event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
         buyer_name = _parse_buyer_name(raw_subject, normalized_body)
-        message_text = _parse_message_text(normalized_body)
+        message_text = _parse_message_text(combined)
     elif event_type != MarketplaceAlert.EventType.NOISE:
         message_text = _parse_operational_message(normalized_body)
 
@@ -231,10 +251,32 @@ def _parse_listing_title(subject: str, body: str) -> str:
     return ""
 
 
+def _parse_listing_title_from_subject(subject: str) -> str:
+    value = _clean_value(subject)
+    if not value or len(value) > 140:
+        return ""
+
+    normalized = _normalize_matching_text(value).lower()
+    notification_patterns = (
+        BUYER_MESSAGE_PATTERNS
+        + LISTING_OPERATION_PATTERNS
+        + PROMOTIONAL_NOISE_PATTERNS
+        + GENERIC_SYSTEM_PATTERNS
+    )
+    if _matches_any(normalized, notification_patterns):
+        return ""
+
+    if normalized in {"nunito sans", "kleinanzeigen"}:
+        return ""
+
+    return value
+
+
 def _parse_listing_id(text: str) -> str:
     patterns = (
         r"(?:Anzeigen-ID|Anzeige-ID|listing[_\s-]?id|ad[_\s-]?id)\s*[:#]?\s*([A-Za-z0-9-]{5,})",
         r"/s-anzeige/[^/\s]+/([0-9]{5,})-[0-9-]+",
+        r"\byour ad\s+([0-9]{5,})",
         r"\bID\s*[:#]\s*([A-Za-z0-9-]{5,})",
     )
     for pattern in patterns:
@@ -249,11 +291,13 @@ def _parse_buyer_name(subject: str, body: str) -> str:
     patterns = (
         r"Neue Nachricht von\s+(.+?)(?:\s+zu|\n|$)",
         r"(.+?)\s+hat dir eine Nachricht geschrieben",
+        r"^(.+?)\s+über\s+Kleinanzeigen\s+replied to your ad\b",
+        r"^(.+?)\s+via\s+Kleinanzeigen\s+replied to your ad\b",
         r"Von\s*:\s*(.+)",
         r"Absender\s*:\s*(.+)",
     )
     for pattern in patterns:
-        match = re.search(pattern, text, flags=re.IGNORECASE)
+        match = re.search(pattern, text, flags=re.IGNORECASE | re.M)
         if match:
             return _clean_value(match.group(1))
     return ""
@@ -264,6 +308,7 @@ def _parse_message_text(body: str) -> str:
         r"Nachricht\s*:\s*(.+?)(?:\n\n|Anzeigen-ID|Anzeige-ID|Antworten|$)",
         r"Message\s*:\s*(.+?)(?:\n\n|Listing ID|Antworten|$)",
         r"schreibt\s*:\s*(.+?)(?:\n\n|Anzeigen-ID|Anzeige-ID|Antworten|$)",
+        r"replied to your ad\s+[0-9]{5,}\s*:\s*(.+?)(?:\n\n|Anzeigen-ID|Anzeige-ID|Antworten|$)",
     )
     for pattern in patterns:
         match = re.search(pattern, body, flags=re.IGNORECASE | re.S)
@@ -278,6 +323,8 @@ def _parse_message_text(body: str) -> str:
         "von:",
         "antworten",
         "hallo",
+        "kleinanzeigen |",
+        "span.",
     )
     message_lines = [
         line for line in lines if not line.lower().startswith(ignored_prefixes)
@@ -292,6 +339,8 @@ def _parse_operational_message(body: str) -> str:
         "anzeige-id",
         "id:",
         "hallo",
+        "kleinanzeigen |",
+        "span.",
     )
     message_lines = [
         line for line in lines if not line.lower().startswith(ignored_prefixes)
