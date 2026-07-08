@@ -16,6 +16,7 @@
             </div>
             <div class="small">Последняя проверка: {{ gmail_summary.last_checked_at|date:"H:i"|default:"ещё не было" }}</div>
             <div class="small">Последний успех: {{ gmail_summary.last_success_at|date:"H:i"|default:"ещё не было" }}</div>
+
             {% if can_manage_mailboxes and mailboxes %}
                 <div class="actions compact-actions">
                     {% for mailbox in mailboxes %}
@@ -23,12 +24,15 @@
                             <form method="post" action="{% url 'mobile_check_mailbox_now' mailbox.id %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                <button class="small-action" type="submit">Проверить сейчас</button>
+                                <button class="small-action" type="submit">
+                                    Проверить {{ mailbox.email|default:mailbox.gmail_connected_email|default:"ящик" }}
+                                </button>
                             </form>
                         {% endif %}
                     {% endfor %}
                 </div>
             {% endif %}
+
         </article>
     </section>
 
