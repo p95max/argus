@@ -61,4 +61,4 @@ jobs:
         run: poetry run python manage.py makemigrations --check --dry-run
 
       - name: Run tests with coverage
-        run: poetry run pytest --cov=alerts --cov=config --cov-report=term-missing
+        run: poetry run pytest --cov=alerts --cov=config --cov-report=term-missing --cov-fail-under=80
