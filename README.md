@@ -7,6 +7,7 @@ The project was built as a commissioned internal operations tool. Because the ta
 ## Current Production Shape
 
 - Deployed on a VPS as an internal production service. No public project URL is documented here.
+- Intentionally deployed without Docker to keep RAM, CPU, and disk overhead low on a minimal VPS plan.
 - Full Jazzmin Admin at `/control/`.
 - Mobile staff panel at `/m/`.
 - Public health endpoint at `/health/`.
@@ -161,6 +162,8 @@ The deploy check fails if local demo data leaks into production, including the `
 ## Production Operations
 
 Production helper scripts live in `deploy/scripts/` and are installed into `/usr/local/bin/`. Systemd unit and timer templates live in `deploy/systemd/` and are installed into `/etc/systemd/system`.
+
+The production stack intentionally avoids Docker. It runs directly on the VPS with a Python virtual environment, Gunicorn, and systemd services/timers to reduce overhead on a small VPS plan.
 
 Install or update production ops files on the VPS:
 
