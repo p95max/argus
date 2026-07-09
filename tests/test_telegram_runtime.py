@@ -122,6 +122,7 @@ def test_help_command_rejects_unknown_chat(monkeypatch):
     assert "не имеет доступа" in update.effective_message.replies[0]["text"]
 
 
+@pytest.mark.django_db
 def test_status_command_replies_with_html_for_allowed_chat(monkeypatch):
     update = FakeTelegramUpdate(chat_id="42", user_id="100")
     monkeypatch.setattr("alerts.telegram.handlers.is_allowed_update", lambda update: True)
