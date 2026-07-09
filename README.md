@@ -4,6 +4,7 @@ Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads
 
 ## Current Production Shape
 
+- Deployed on a VPS as an internal production service. No public project URL is documented here.
 - Full Jazzmin Admin at `/control/`.
 - Mobile staff panel at `/m/`.
 - Public health endpoint at `/health/`.
