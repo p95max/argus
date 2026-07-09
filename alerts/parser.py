@@ -72,6 +72,7 @@ BUYER_MESSAGE_PATTERNS = (
     r"\bantwortete auf deine anzeige\b",
     r"\bein interessent hat eine anfrage zu ihrer anzeige gesendet\b",
     r"\bein interessent hat eine anfrage zu deiner anzeige gesendet\b",
+    r"\bnutzer-anfrage zu deiner anzeige\b",
 )
 LISTING_OPERATION_PATTERNS = (
     "\\bl(?:\u00e4|ae)uft bald ab\\b",
@@ -314,6 +315,8 @@ def _parse_buyer_name(subject: str, body: str) -> str:
         if match:
             return _clean_value(match.group(1))
     if re.search(r"\bein interessent hat eine anfrage zu", text, flags=re.IGNORECASE):
+        return "Interessent"
+    if re.search(r"\bnutzer-anfrage zu deiner anzeige\b", text, flags=re.IGNORECASE):
         return "Interessent"
     return ""
 

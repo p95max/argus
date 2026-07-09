@@ -77,6 +77,34 @@ def test_build_unread_reminder_report_rounds_oldest_age():
     assert "1199 мин" not in message
 
 
+def test_build_unread_reminder_report_uses_latest_known_buyer_in_case():
+    older = _make_alert(message_text="Noch da?")
+    older.id = 201
+    older.listing_id = "case-1"
+    older.buyer_name = "Max"
+    older.created_at = timezone.now() - timedelta(hours=2)
+    newer = _make_alert(message_text="Kann ich kommen?")
+    newer.id = 202
+    newer.listing_id = "case-1"
+    newer.buyer_name = ""
+    newer.created_at = timezone.now() - timedelta(hours=1)
+
+    message = build_unread_reminder_report_message([older, newer])
+
+    assert "👤 <b>Последний:</b> Max" in message
+    assert "неизвестно" not in message
+
+
+def test_build_unread_reminder_report_infers_interested_buyer_from_subject():
+    alert = _make_alert(message_text="Guten Tag")
+    alert.buyer_name = ""
+    alert.subject = 'Re: Nutzer-Anfrage zu deiner Anzeige "AUDI A3"'
+
+    message = build_unread_reminder_report_message([alert])
+
+    assert "👤 <b>Последний:</b> Interessent" in message
+
+
 def test_truncate_html_message_drops_incomplete_entity_before_suffix():
     source = "A" * (TELEGRAM_SAFE_MESSAGE_LIMIT - 4) + "&amp;tail"
 

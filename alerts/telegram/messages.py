@@ -116,7 +116,7 @@ def build_unread_reminder_report_message(alerts) -> str:
             latest.listing_title or latest.subject or latest.get_event_type_display(),
             REMINDER_REPORT_TITLE_LIMIT,
         )
-        buyer = latest.buyer_name or "неизвестно"
+        buyer = _latest_known_buyer_name(case["alerts"])
         mailbox_label = _alert_mailbox_label(latest)
         link = _mobile_alert_url(latest)
 
@@ -157,9 +157,11 @@ def _group_unread_reminder_cases(alerts: list[MarketplaceAlert]) -> list[dict]:
                 "high_count": 0,
                 "latest": alert,
                 "oldest": alert,
+                "alerts": [],
             },
         )
         item["count"] += 1
+        item["alerts"].append(alert)
         if alert.priority in [MarketplaceAlert.Priority.HIGH, MarketplaceAlert.Priority.URGENT]:
             item["high_count"] += 1
         if alert.created_at > item["latest"].created_at:
@@ -175,6 +177,37 @@ def _group_unread_reminder_cases(alerts: list[MarketplaceAlert]) -> list[dict]:
             item["latest"].id,
         ),
     )
+
+
+def _latest_known_buyer_name(alerts: list[MarketplaceAlert]) -> str:
+    ordered_alerts = sorted(alerts, key=lambda alert: (alert.created_at, alert.id), reverse=True)
+    for alert in ordered_alerts:
+        buyer_name = (alert.buyer_name or "").strip()
+        if buyer_name:
+            return buyer_name
+
+    for alert in ordered_alerts:
+        inferred_name = _infer_buyer_name_for_reminder(alert)
+        if inferred_name:
+            return inferred_name
+
+    return "неизвестно"
+
+
+def _infer_buyer_name_for_reminder(alert: MarketplaceAlert) -> str:
+    text = " ".join(
+        [
+            alert.subject or "",
+            alert.raw_subject or "",
+            alert.message_text or "",
+            alert.normalized_body or "",
+        ]
+    ).lower()
+    if "nutzer-anfrage zu deiner anzeige" in text:
+        return "Interessent"
+    if "ein interessent hat eine anfrage zu" in text:
+        return "Interessent"
+    return ""
 
 
 def _build_alert_header(alert: MarketplaceAlert) -> str:
