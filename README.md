@@ -2,12 +2,12 @@
 
 Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads Gmail messages through per-mailbox OAuth, classifies marketplace emails into buyer leads, noise/system messages, and operational service events, sends Telegram notifications, and gives operators both a full Django Admin UI and a compact mobile control panel.
 
-The project was built as a commissioned internal operations tool. Because the target operators are Russian-speaking, the runtime Admin and Mobile UI intentionally use Russian-language labels. This README is kept in English for repository review and technical documentation.
+The project was built as a commissioned internal operations tool.
 
 ## Current Production Shape
 
-- Deployed on a VPS as an internal production service. No public project URL is documented here.
-- Intentionally deployed without Docker to keep RAM, CPU, and disk overhead low on a minimal VPS plan.
+- `Deployed on a VPS` as an `internal production service`.
+- Intentionally `deployed without Docker` to keep RAM, CPU, and disk overhead low on a minimal VPS plan.
 - Full Jazzmin Admin at `/control/`.
 - Mobile staff panel at `/m/`.
 - Public health endpoint at `/health/`.
