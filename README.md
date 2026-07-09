@@ -1,5 +1,7 @@
 # Argus
 
+[![CI](https://github.com/p95max/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/p95max/argus/actions/workflows/ci.yml)
+
 Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads Gmail messages through per-mailbox OAuth, classifies marketplace emails into buyer leads, noise/system messages, and operational service events, sends Telegram notifications, and gives operators both a full Django Admin UI and a compact mobile control panel.
 
 `The project was built as a commissioned internal operations tool.`
@@ -18,6 +20,7 @@ Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads
 - Telegram bot with inline alert actions, status commands, health/doctor commands, and mobile links.
 - PostgreSQL/Neon support through `DATABASE_URL`.
 - Tests use `config.test_settings` and in-memory SQLite, even when `.env.local` points to PostgreSQL.
+- GitHub Actions CI runs tests, migration checks, and linting on every push to `master` and every pull request.
 - Production systemd operation scripts under `deploy/`. Detailed production operations documentation is in [`docs/production-operations.md`](docs/production-operations.md).
 
 ## Main URLs
@@ -147,6 +150,21 @@ alerts_count = 3 if DEV_SEED_SAMPLE_DATA=True
 
 There is no SQLite-to-PostgreSQL migration script. New cloud databases are initialized from Django migrations plus `init_dev`.
 
+## CI Quality Gate
+
+GitHub Actions is the required quality gate before merge or deploy. The `CI` workflow runs on every push to `master` and on every pull request.
+
+The workflow enforces:
+
+```powershell
+python -m poetry check --lock
+python -m poetry run ruff check alerts config tests
+python -m poetry run python manage.py makemigrations --check --dry-run
+python -m poetry run pytest --cov=alerts --cov=config --cov-report=term-missing
+```
+
+A change should not be merged or deployed unless the GitHub Actions `CI` check is green.
+
 ## Deploy Checks
 
 Run production readiness checks before deploy:
@@ -217,217 +235,3 @@ python manage.py check_gmail --max-results 25
 `check_gmail` is protected by an atomic file lock in `tmp/command_locks` (`ARGUS_COMMAND_LOCK_TIMEOUT_SECONDS`) so overlapping timers do not run the same command concurrently. `cleanup_old_leads` uses the same lock pattern.
 
 ## Alerts And Cases
-
-`MarketplaceAlert` is the main operational record. A branch/case is grouped by:
-
-```text
-mailbox + listing_id
-```
-
-The Admin has a close-case action that deletes alerts for a selected `listing_id` branch but keeps `ProcessedEmail`, so old Gmail messages do not recreate alerts after the branch was removed.
-
-Alerts are treated as requiring attention when they are unread, high/urgent priority, parser-problematic, linked to a mailbox error, or have Telegram delivery errors.
-
-## Cleanup
-
-Automatic cleanup:
-
-```powershell
-python -m poetry run python manage.py cleanup_old_leads --days 30 --limit 100 --dry-run
-python -m poetry run python manage.py cleanup_old_leads --days 30 --limit 100
-```
-
-Rules:
-
-- deletes only branches grouped by `mailbox + listing_id`;
-- deletes only old inactive branches;
-- a branch is inactive only when all its alerts are ignored;
-- branches with any unread or in-work alert are never deleted automatically;
-- `ProcessedEmail` is kept for dedupe.
-
-## Anti-Spam And Events
-
-Argus separates:
-
-- buyer messages;
-- promotional/system/noise emails;
-- operational listing events, for example listing expiration;
-- service health events.
-
-Noise is stored separately through the localized spam/noise Admin section and is not sent to Telegram as a normal buyer lead. Useful noise can be promoted back to a buyer message from Admin.
-
-Operational events are kept separate from buyer messages and can still be sent as service/operational notifications where appropriate.
-
-## Telegram
-
-Set:
-
-```env
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_DEFAULT_CHAT_ID=
-TELEGRAM_ALLOWED_CHAT_IDS=
-TELEGRAM_ALLOWED_USER_IDS=
-TELEGRAM_SEND_ON_GMAIL_CHECK=False
-```
-
-Management commands:
-
-```powershell
-python -m poetry run python manage.py send_telegram_alert 1
-python -m poetry run python manage.py send_telegram_system "Argus is running"
-python -m poetry run python manage.py run_telegram_bot
-python -m poetry run python manage.py send_unread_reminders --dry-run
-```
-
-Bot commands:
-
-```text
-/help        What the bot can do and the active command list
-/status      Gmail mailbox status and latest checks
-/mailboxes   Alias for /status
-/summary     Daily alerts summary
-/unread      Aggregated unread alerts report without updating reminder timestamps
-/health      Service health: DB, Gmail, Telegram, open errors
-/doctor      Runs /usr/local/bin/argus-doctor.sh and appends git deploy status
-```
-
-The Telegram bot is the fast operational interface: it sends new buyer alerts, exposes inline status actions, links each alert to the mobile admin, shows unread reports, mailbox health, deploy/doctor status, and service health.
-
-Inline alert actions:
-
-```text
-in_work
-unread
-ignored
-status
-```
-
-The "Open Mobile" inline button uses `ARGUS_PUBLIC_BASE_URL` and opens:
-
-```text
-/m/alerts/<id>/
-```
-
-Automatic Telegram sending from Gmail checks is off by default:
-
-```env
-TELEGRAM_SEND_ON_GMAIL_CHECK=False
-```
-
-Unread reminders:
-
-```powershell
-python -m poetry run python manage.py send_unread_reminders --dry-run
-python -m poetry run python manage.py send_unread_reminders --min-age-minutes 30 --reminder-interval-minutes 60 --limit 25
-```
-
-Each run sends one aggregated Telegram report for all due unread alerts instead of one message per alert/case. The report groups alerts by listing/case and updates `last_reminded_at` for every alert included in the report.
-
-Quiet hours are configured in Admin through the localized Telegram settings section. Normal alerts and reminders are skipped during quiet hours unless urgent alerts are explicitly allowed. Noise alerts are never sent.
-
-## Admin
-
-Main sections:
-
-- overview dashboard;
-- mailbox configuration, Gmail OAuth, health, and manual checks;
-- buyer leads and operational events;
-- spam, promotional, and noise messages;
-- processed email dedupe log, read-only for normal users;
-- lead priority and risk classification rules;
-- service journal with errors and recovery events;
-- Telegram settings and quiet hours.
-
-Admin includes status/priority/risk badges, an attention-required filter, explanation text for priority/flags, visible operator ownership for alerts in work, and a test Telegram alert action.
-
-Mailbox management requires superuser access or explicit add/change/delete permissions for `MailboxAccount`. Staff users can view mailbox operational profile data.
-
-Admin code is split under `alerts/admin_site/`; `alerts/admin.py` only re-exports registrations.
-
-## Mobile Control Panel
-
-`/m/` is a compact staff-only phone panel. It uses the same Django auth/session and the same mailbox permission checks as Admin.
-
-It includes:
-
-- operational Gmail card with status, last check, last success, today's new alerts, and a check-now action;
-- attention-required default view;
-- today view;
-- my in-work view;
-- spam and noise view;
-- cases grouped by `mailbox + listing_id` with basic listing analytics;
-- service journal;
-- quiet-hours toggle with a link to full Admin settings;
-- manual mailbox check button for users with mailbox management permissions;
-- alert detail page;
-- quick status actions;
-- visible operator ownership;
-- priority/flag explanation;
-- mailbox health;
-- links back to full Admin.
-
-The mobile system journal supports operational actions on open service events:
-
-- mark recovered;
-- ignore this error;
-- open related mailbox.
-
-## Templates And Static
-
-Mobile templates extend the root template:
-
-```text
-templates/base.html
-```
-
-The base template includes the favicon block. The current favicon is:
-
-```text
-static/favicon.svg
-```
-
-`/favicon.ico` redirects to the static favicon through `config/urls.py`.
-
-## Security
-
-- Gmail OAuth refresh tokens are encrypted before being stored.
-- Migration `0012_encrypt_gmail_oauth_tokens` encrypts older plaintext mailbox tokens.
-- Set `GMAIL_OAUTH_TOKEN_FERNET_KEY` explicitly for production and keep it stable across deploys, backups, and restores.
-- If `GMAIL_OAUTH_TOKEN_FERNET_KEY` is empty, Argus derives a local Fernet key from `DJANGO_SECRET_KEY`.
-- Admin login has cache-backed lockout by IP plus username.
-- Mobile POST redirects validate `next` against the current host.
-- Telegram async sending uses async-safe ORM calls.
-- Private mailbox connection data is not shown after save.
-- Keep production GitHub tokens out of `origin` URLs and store them only through Git credential helpers when needed.
-
-## Tests
-
-Run:
-
-```powershell
-python -m poetry run pytest
-```
-
-Current test setup:
-
-- `pytest.ini` uses `DJANGO_SETTINGS_MODULE = config.test_settings`.
-- `config.test_settings` inherits runtime settings but forces in-memory SQLite.
-- Tests do not use Neon, even when `.env.local` contains `DATABASE_URL`.
-- Pytest cache is disabled with `-p no:cacheprovider` to avoid restricted Windows cache writes.
-
-Useful focused checks:
-
-```powershell
-python -m poetry run pytest tests/test_local_qa_flow.py
-python -m poetry run pytest tests/test_cleanup.py tests/test_gmail.py tests/test_quiet_hours.py tests/test_unread_reminders.py
-python -m poetry run python manage.py makemigrations --check --dry-run
-python -m poetry run ruff check alerts
-```
-
-## Contacts
-
-Author: Maksym Petrykin
-
-Email: [m.petrykin@gmx.de](mailto:m.petrykin@gmx.de)
-
-Telegram: [@max_p95](https://t.me/max_p95)
