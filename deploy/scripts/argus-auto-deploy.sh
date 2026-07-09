@@ -48,7 +48,7 @@ old_rev="$($GIT_BIN rev-parse HEAD)"
 log "Checking $REMOTE_NAME/$DEPLOY_BRANCH for updates from $old_rev"
 
 "$GIT_BIN" fetch --prune "$REMOTE_NAME" "$DEPLOY_BRANCH"
-new_rev="$($GIT_BIN rev-parse "$REMOTE_NAME/$DEPLOY_BRANCH")"
+new_rev="$($GIT_BIN" rev-parse "$REMOTE_NAME/$DEPLOY_BRANCH")
 
 if [ "$old_rev" = "$new_rev" ]; then
     log "Already up to date: $new_rev"
@@ -88,6 +88,9 @@ log "Collecting static files"
 
 log "Running Django deploy checks"
 "$PYTHON_BIN" manage.py check --deploy --fail-level ERROR
+
+log "Running Argus deploy readiness checks"
+"$PYTHON_BIN" manage.py argus_check_deploy
 
 log "Restarting services: $RESTART_SERVICES"
 # shellcheck disable=SC2086
