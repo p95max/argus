@@ -170,19 +170,21 @@ def test_local_mvp_flow_end_to_end(monkeypatch):
     MarketplaceAlert.objects.filter(id=reminder_alert.id).update(created_at=old_at)
     sent_reminders = []
 
-    def fake_send_reminder(alert):
-        sent_reminders.append(alert.id)
-        alert.last_reminded_at = timezone.now()
-        alert.save(update_fields=["last_reminded_at", "updated_at"])
+    def fake_send_reminder_report(alerts):
+        sent_reminders.append([alert.id for alert in alerts])
+        now = timezone.now()
+        for alert in alerts:
+            alert.last_reminded_at = now
+            alert.save(update_fields=["last_reminded_at", "updated_at"])
 
     monkeypatch.setattr(
-        "alerts.management.commands.send_unread_reminders.send_telegram_reminder",
-        fake_send_reminder,
+        "alerts.management.commands.send_unread_reminders.send_telegram_reminder_report",
+        fake_send_reminder_report,
     )
     stdout = StringIO()
     call_command("send_unread_reminders", "--min-age-minutes=30", stdout=stdout)
     reminder_alert.refresh_from_db()
-    assert sent_reminders == [reminder_alert.id]
+    assert sent_reminders == [[reminder_alert.id]]
     assert reminder_alert.last_reminded_at is not None
 
     cleanup_alert = MarketplaceAlert.objects.create(

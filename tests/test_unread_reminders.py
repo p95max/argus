@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from alerts.models import MailboxAccount, MarketplaceAlert, TelegramSettings
 from alerts.reminders import unread_alerts_due_for_reminder
-from alerts.telegram.sender import async_send_telegram_reminder
+from alerts.telegram.sender import async_send_telegram_reminder, async_send_telegram_reminder_report
 
 
 class FakeTelegramMessage:
@@ -78,16 +78,19 @@ def test_send_unread_reminders_command_sends_due_alerts_and_updates_last_reminde
 ):
     sent = []
     due = create_alert(mailbox, minutes_old=45)
+    due_same_case = create_alert(mailbox, minutes_old=50)
     create_alert(mailbox, minutes_old=45, last_reminded_minutes_ago=10)
 
-    def fake_send_reminder(alert):
-        sent.append(alert.id)
-        alert.last_reminded_at = timezone.now()
-        alert.save(update_fields=["last_reminded_at", "updated_at"])
+    def fake_send_reminder_report(alerts):
+        sent.append([alert.id for alert in alerts])
+        now = timezone.now()
+        for alert in alerts:
+            alert.last_reminded_at = now
+            alert.save(update_fields=["last_reminded_at", "updated_at"])
 
     monkeypatch.setattr(
-        "alerts.management.commands.send_unread_reminders.send_telegram_reminder",
-        fake_send_reminder,
+        "alerts.management.commands.send_unread_reminders.send_telegram_reminder_report",
+        fake_send_reminder_report,
     )
 
     stdout = StringIO()
@@ -99,9 +102,12 @@ def test_send_unread_reminders_command_sends_due_alerts_and_updates_last_reminde
     )
 
     due.refresh_from_db()
-    assert sent == [due.id]
+    due_same_case.refresh_from_db()
+    assert sent == [[due_same_case.id, due.id]]
     assert due.last_reminded_at is not None
-    assert "Sent 1, failed 0" in stdout.getvalue()
+    assert due_same_case.last_reminded_at is not None
+    assert "Reminder report sent: 2 alerts." in stdout.getvalue()
+    assert "Sent 2, failed 0" in stdout.getvalue()
 
 
 @pytest.mark.django_db
@@ -109,8 +115,8 @@ def test_send_unread_reminders_dry_run_does_not_send(monkeypatch, mailbox):
     sent = []
     due = create_alert(mailbox, minutes_old=45)
     monkeypatch.setattr(
-        "alerts.management.commands.send_unread_reminders.send_telegram_reminder",
-        lambda alert: sent.append(alert.id),
+        "alerts.management.commands.send_unread_reminders.send_telegram_reminder_report",
+        lambda alerts: sent.append([alert.id for alert in alerts]),
     )
 
     stdout = StringIO()
@@ -132,8 +138,8 @@ def test_send_unread_reminders_skips_quiet_hours(monkeypatch, mailbox):
         quiet_hours_end=time(0, 0),
     )
     monkeypatch.setattr(
-        "alerts.management.commands.send_unread_reminders.send_telegram_reminder",
-        lambda alert: sent.append(alert.id),
+        "alerts.management.commands.send_unread_reminders.send_telegram_reminder_report",
+        lambda alerts: sent.append([alert.id for alert in alerts]),
     )
 
     stdout = StringIO()
@@ -162,3 +168,28 @@ def test_async_send_telegram_reminder_saves_last_reminded_at(monkeypatch, mailbo
     assert bot.calls[0]["reply_markup"] is not None
     assert alert.last_reminded_at is not None
     assert alert.telegram_error == ""
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_send_telegram_reminder_report_sends_single_message(monkeypatch, mailbox):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
+    first = create_alert(mailbox, minutes_old=45)
+    second = create_alert(mailbox, minutes_old=55)
+    first._telegram_mailbox_label = "Reminder inbox (reminders@example.local)"
+    second._telegram_mailbox_label = "Reminder inbox (reminders@example.local)"
+    bot = FakeTelegramBot()
+
+    asyncio.run(async_send_telegram_reminder_report([first, second], chat_id="42", bot=bot))
+
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert len(bot.calls) == 1
+    assert bot.calls[0]["chat_id"] == "42"
+    assert "unread reminder report" in bot.calls[0]["text"]
+    assert "Due alerts:</b> 2" in bot.calls[0]["text"]
+    assert bot.calls[0].get("reply_markup") is None
+    assert first.last_reminded_at is not None
+    assert second.last_reminded_at is not None
+    assert first.telegram_error == ""
+    assert second.telegram_error == ""

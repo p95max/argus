@@ -12,6 +12,7 @@ from .messages import (
     build_alert_message,
     build_alert_reminder_message,
     build_system_message,
+    build_unread_reminder_report_message,
     should_send_telegram_for_alert,
 )
 from .permissions import is_allowed_chat
@@ -44,6 +45,22 @@ def send_telegram_reminder(
     return asyncio.run(
         async_send_telegram_reminder(
             alert,
+            chat_id=chat_id,
+            bot=bot,
+        )
+    )
+
+
+def send_telegram_reminder_report(
+    alerts: list[MarketplaceAlert],
+    chat_id: str | None = None,
+    bot: Bot | None = None,
+):
+    for alert in alerts:
+        _preload_alert_message_fields(alert)
+    return asyncio.run(
+        async_send_telegram_reminder_report(
+            alerts,
             chat_id=chat_id,
             bot=bot,
         )
@@ -167,6 +184,80 @@ async def async_send_telegram_reminder(
         bot=bot,
         save_fields=("last_reminded_at", "telegram_error"),
     )
+
+
+async def async_send_telegram_reminder_report(
+    alerts: list[MarketplaceAlert],
+    chat_id: str | None = None,
+    bot: Bot | None = None,
+):
+    if not alerts:
+        logger.info("Telegram unread reminder report skipped: no alerts.")
+        return None
+
+    config = get_telegram_config()
+    target_chat_id = str(chat_id or config.default_chat_id).strip()
+    alert_ids = [alert.id for alert in alerts]
+
+    logger.info(
+        "Telegram unread reminder report send requested. alerts=%s target_chat_id=%s",
+        len(alerts),
+        target_chat_id or "empty",
+    )
+
+    if not target_chat_id:
+        logger.error("Telegram unread reminder report failed: TELEGRAM_DEFAULT_CHAT_ID is not configured.")
+        raise ValueError("TELEGRAM_DEFAULT_CHAT_ID is not configured.")
+
+    if not is_allowed_chat(target_chat_id):
+        logger.warning(
+            "Telegram unread reminder report rejected: chat is not allowed. target_chat_id=%s",
+            target_chat_id,
+        )
+        raise PermissionError("Telegram chat is not allowed.")
+
+    if bot is None:
+        if not config.bot_token:
+            logger.error("Telegram unread reminder report failed: TELEGRAM_BOT_TOKEN is not configured.")
+            raise ValueError("TELEGRAM_BOT_TOKEN is not configured.")
+
+        bot = Bot(token=config.bot_token)
+
+    try:
+        message = await bot.send_message(
+            chat_id=target_chat_id,
+            text=build_unread_reminder_report_message(alerts),
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )
+    except Exception as exc:
+        error = str(exc)
+        await MarketplaceAlert.objects.filter(id__in=alert_ids).aupdate(
+            telegram_error=error,
+            updated_at=timezone.now(),
+        )
+        logger.exception(
+            "Telegram unread reminder report failed. alerts=%s target_chat_id=%s",
+            len(alerts),
+            target_chat_id,
+        )
+        raise
+
+    now = timezone.now()
+    await MarketplaceAlert.objects.filter(id__in=alert_ids).aupdate(
+        last_reminded_at=now,
+        telegram_error="",
+        updated_at=now,
+    )
+
+    logger.info(
+        "Telegram unread reminder report sent. alerts=%s target_chat_id=%s telegram_message_id=%s",
+        len(alerts),
+        target_chat_id,
+        getattr(message, "message_id", ""),
+    )
+
+    return message
 
 
 async def send_system_telegram_message(

@@ -8,7 +8,7 @@ from alerts.reminders import (
     unread_alerts_due_for_reminder,
 )
 from alerts.telegram.messages import should_send_telegram_for_alert
-from alerts.telegram.sender import send_telegram_reminder
+from alerts.telegram.sender import send_telegram_reminder_report
 
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,7 @@ class Command(BaseCommand):
         sent = 0
         failed = 0
         skipped_quiet = 0
+        eligible_alerts = []
 
         for alert in alerts:
             label = f"alert #{alert.id} ({alert.mailbox.email})"
@@ -73,24 +74,39 @@ class Command(BaseCommand):
                 self.stdout.write(f"Quiet hours skipped: {label}")
                 continue
 
-            if dry_run:
-                self.stdout.write(f"Due reminder: {label}")
-                continue
-
-            try:
-                send_telegram_reminder(alert)
-            except Exception as exc:
-                failed += 1
-                logger.exception("Unread reminder failed for alert %s", alert.id)
-                self.stderr.write(self.style.ERROR(f"{label}: {exc}"))
-                continue
-
-            sent += 1
-            self.stdout.write(self.style.SUCCESS(f"Reminder sent: {label}"))
+            eligible_alerts.append(alert)
 
         if dry_run:
-            self.stdout.write(self.style.SUCCESS(f"Done. Due reminders {len(alerts)}."))
+            for alert in eligible_alerts:
+                self.stdout.write(f"Due reminder: alert #{alert.id} ({alert.mailbox.email})")
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Done. Due reminders {len(eligible_alerts)}, "
+                    f"quiet-hours skipped {skipped_quiet}."
+                )
+            )
             return
+
+        if eligible_alerts:
+            try:
+                send_telegram_reminder_report(eligible_alerts)
+            except Exception as exc:
+                failed = len(eligible_alerts)
+                logger.exception(
+                    "Unread reminder report failed for %s alerts",
+                    len(eligible_alerts),
+                )
+                self.stderr.write(self.style.ERROR(f"Unread reminder report: {exc}"))
+            else:
+                sent = len(eligible_alerts)
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Reminder report sent: {len(eligible_alerts)} alerts."
+                    )
+                )
+
+        else:
+            self.stdout.write("No unread reminders to send.")
 
         self.stdout.write(
             self.style.SUCCESS(

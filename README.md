@@ -317,6 +317,8 @@ python -m poetry run python manage.py send_unread_reminders --dry-run
 python -m poetry run python manage.py send_unread_reminders --min-age-minutes 30 --reminder-interval-minutes 60 --limit 25
 ```
 
+Each run sends one aggregated Telegram report for all due unread alerts instead of one message per alert/case. The report groups alerts by listing/case and updates `last_reminded_at` for every alert included in the report.
+
 Quiet hours are configured in Admin through the localized Telegram settings section. Normal alerts and reminders are skipped during quiet hours unless urgent alerts are explicitly allowed. Noise alerts are never sent.
 
 ## Admin

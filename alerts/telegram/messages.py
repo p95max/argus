@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db.models import Count, Q
+from django.urls import reverse
 from django.utils import timezone
 
 from ..health import build_health_report
@@ -16,6 +17,8 @@ ALERT_REASON_LIMIT = 260
 ALERT_MESSAGE_BODY_LIMIT = 1200
 SYSTEM_DETAILS_LIMIT = 1200
 STATUS_TITLE_LIMIT = 70
+REMINDER_REPORT_CASE_LIMIT = 12
+REMINDER_REPORT_TITLE_LIMIT = 70
 
 
 def should_send_telegram_for_alert(alert: MarketplaceAlert, at_time=None) -> bool:
@@ -72,6 +75,93 @@ def build_alert_reminder_message(alert: MarketplaceAlert) -> str:
             "",
             build_alert_message(alert),
         ]
+    )
+
+
+def build_unread_reminder_report_message(alerts) -> str:
+    alerts = list(alerts)
+    now = timezone.now()
+    cases = _group_unread_reminder_cases(alerts)
+    mobile_url = _build_mobile_url()
+
+    lines = [
+        "<b>Argus: unread reminder report</b>",
+        f"<b>Due alerts:</b> {len(alerts)}",
+        f"<b>Cases:</b> {len(cases)}",
+        f"<b>Time:</b> {_format_time(now)}",
+        "",
+    ]
+
+    if not alerts:
+        lines.append("No unread alerts are due for reminder.")
+        return _fit_telegram_message(lines)
+
+    for index, case in enumerate(cases[:REMINDER_REPORT_CASE_LIMIT], start=1):
+        latest = case["latest"]
+        oldest = case["oldest"]
+        age_minutes = max(int((now - oldest.created_at).total_seconds() // 60), 0)
+        title = _truncate(
+            latest.listing_title or latest.subject or latest.get_event_type_display(),
+            REMINDER_REPORT_TITLE_LIMIT,
+        )
+        buyer = latest.buyer_name or "unknown"
+        mailbox_label = _alert_mailbox_label(latest)
+        link = _mobile_alert_url(latest)
+
+        lines.extend(
+            [
+                f"{index}. <b>{html.escape(title)}</b>",
+                (
+                    f"Unread: {case['count']} | "
+                    f"High: {case['high_count']} | "
+                    f"Oldest: {age_minutes}m"
+                ),
+                f"Buyer: {html.escape(buyer)}",
+                f"Mailbox: {html.escape(mailbox_label)}",
+                f'<a href="{html.escape(link)}">Open latest</a>',
+                "",
+            ]
+        )
+
+    hidden_cases = len(cases) - REMINDER_REPORT_CASE_LIMIT
+    if hidden_cases > 0:
+        lines.append(f"...and {hidden_cases} more cases.")
+        lines.append("")
+
+    if mobile_url:
+        lines.append(f'<a href="{html.escape(mobile_url)}">Open mobile dashboard</a>')
+
+    return _fit_telegram_message(lines)
+
+
+def _group_unread_reminder_cases(alerts: list[MarketplaceAlert]) -> list[dict]:
+    grouped = {}
+    for alert in alerts:
+        key = (alert.mailbox_id, alert.listing_id or alert.listing_title or alert.subject or alert.id)
+        item = grouped.setdefault(
+            key,
+            {
+                "count": 0,
+                "high_count": 0,
+                "latest": alert,
+                "oldest": alert,
+            },
+        )
+        item["count"] += 1
+        if alert.priority in [MarketplaceAlert.Priority.HIGH, MarketplaceAlert.Priority.URGENT]:
+            item["high_count"] += 1
+        if alert.created_at > item["latest"].created_at:
+            item["latest"] = alert
+        if alert.created_at < item["oldest"].created_at:
+            item["oldest"] = alert
+
+    return sorted(
+        grouped.values(),
+        key=lambda item: (
+            -item["high_count"],
+            item["oldest"].created_at,
+            item["latest"].id,
+        ),
     )
 
 
@@ -385,6 +475,14 @@ def _build_mobile_url() -> str:
     if not base_url:
         return ""
     return f"{base_url}/m/"
+
+
+def _mobile_alert_url(alert: MarketplaceAlert) -> str:
+    path = reverse("mobile_alert_detail", args=[alert.id])
+    base_url = getattr(settings, "ARGUS_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if base_url:
+        return f"{base_url}{path}"
+    return path
 
 
 def _format_date(value) -> str:
