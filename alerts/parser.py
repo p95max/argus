@@ -79,8 +79,6 @@ LISTING_OPERATION_PATTERNS = (
     r"\blisting expiring\b",
     r"\bdeine anzeige endet\b",
     "\\bdeine anzeige l(?:\u00e4|ae)uft\\b",
-    "\\bdeine anzeige wurde ver(?:\u00f6|oe)ffentlicht\\b",
-    r"\bdeine anzeige ist online\b",
 )
 PROMOTIONAL_NOISE_PATTERNS = (
     r"\bnewsletter\b",
@@ -101,7 +99,11 @@ GENERIC_SYSTEM_PATTERNS = (
     r"\bpasswort\b",
     r"\bsicherheitshinweis\b",
     r"\bdein konto\b",
+    "\\banzeige wurde erfolgreich ver(?:\u00f6|oe)ffentlicht\\b",
+    "\\berfolgreich ver(?:\u00f6|oe)ffentlicht\\b",
+    "\\banzeige gel(?:\u00f6|oe)scht\\b",
 )
+QUOTED_VALUE = r"[\"„“”‟«]([^\"„“”‟«»\n]{3,120})[\"“”‟»]"
 
 
 def normalize_body(body: str) -> str:
@@ -241,11 +243,15 @@ def _matches_any(text: str, patterns: tuple[str, ...]) -> bool:
 
 def _parse_listing_title(subject: str, body: str) -> str:
     candidates = (
+        rf"Anzeige\s+{QUOTED_VALUE}\s+erfolgreich ver(?:ö|oe)ffentlicht",
+        rf"Anzeige\s+gel(?:ö|oe)scht\s*:\s*{QUOTED_VALUE}",
+        rf"die Anzeige\s+{QUOTED_VALUE}",
+        rf"zu\s+Anzeige\s+{QUOTED_VALUE}",
         r'(?:Anzeige|Artikel|Inserat|Angebot)\s*[:"]\s*"?([^"\n]+)"?',
-        r'zu deiner Anzeige\s+"([^"]+)"',
-        r'zu\s+"([^"]+)"',
-        r'für\s+"([^"]+)"',
-        r'"([^"]{3,120})"',
+        rf"zu deiner Anzeige\s+{QUOTED_VALUE}",
+        rf"zu\s+{QUOTED_VALUE}",
+        rf"für\s+{QUOTED_VALUE}",
+        QUOTED_VALUE,
     )
     text = f"{subject}\n{body}"
     for pattern in candidates:
@@ -278,7 +284,7 @@ def _parse_listing_title_from_subject(subject: str) -> str:
 
 def _parse_listing_id(text: str) -> str:
     patterns = (
-        r"(?:Anzeigen-ID|Anzeige-ID|listing[_\s-]?id|ad[_\s-]?id)\s*[:#]?\s*([A-Za-z0-9-]{5,})",
+        r"(?:Anzeigen-ID|Anzeige-ID|Anzeigennummer|listing[_\s-]?id|ad[_\s-]?id)\s*[:#]?\s*([A-Za-z0-9-]{5,})",
         r"/s-anzeige/[^/\s]+/([0-9]{5,})-[0-9-]+",
         r"\byour ad\s+([0-9]{5,})",
         r"\banfrage zu (?:ihrer|deiner) anzeige gesendet\s*:\s*([0-9]{5,})",
@@ -359,4 +365,4 @@ def _parse_operational_message(body: str) -> str:
 def _clean_value(value: str) -> str:
     value = unescape(value or "")
     value = re.sub(r"\s+", " ", value)
-    return value.strip(" \t\n\r\"'")
+    return value.strip(" \t\n\r\"'„“”‟«»")
