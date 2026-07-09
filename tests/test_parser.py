@@ -57,6 +57,35 @@ def test_parse_english_kleinanzeigen_buyer_reply_from_screenshot_format():
     assert "span.MsoHyperlink" not in result.normalized_body
 
 
+def test_buyer_classifier_ignores_listing_title_tuv_false_positive():
+    result = parse_kleinanzeigen_email(
+        "AUDI A3 1.6 MPI TÜV bis 03/27",
+        "Thomas über Kleinanzeigen replied to your ad 3394403772:\n\nDann hätten sie das besser kommunizieren müssen",
+    )
+
+    assert result.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE
+    assert result.parse_status == MarketplaceAlert.ParseStatus.SUCCESS
+    assert result.buyer_name == "Thomas"
+    assert result.listing_title == "AUDI A3 1.6 MPI TÜV bis 03/27"
+    assert result.listing_id == "3394403772"
+    assert result.message_text == "Dann hätten sie das besser kommunizieren müssen"
+    assert result.priority == MarketplaceAlert.Priority.NORMAL
+    assert result.flag_codes == ()
+
+
+def test_buyer_classifier_still_uses_buyer_message_text_for_tuv_question():
+    result = parse_kleinanzeigen_email(
+        "AUDI A3 1.6 MPI",
+        "Thomas über Kleinanzeigen replied to your ad 3394403772: Ist der TÜV neu?",
+    )
+
+    assert result.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE
+    assert result.parse_status == MarketplaceAlert.ParseStatus.SUCCESS
+    assert result.message_text == "Ist der TÜV neu?"
+    assert result.priority == MarketplaceAlert.Priority.NORMAL
+    assert "tuv_question" in result.flag_codes
+
+
 def test_parse_german_interested_buyer_request_from_real_mailbox_format():
     result = parse_kleinanzeigen_email(
         "AUDI A3 1.6 MPI TÜV bis 03/27",
@@ -124,6 +153,7 @@ def test_html_body_is_normalized_and_parsed():
 
     assert result.parse_status == MarketplaceAlert.ParseStatus.SUCCESS
     assert "Hallo & guten Tag" in result.message_text
+    assert "tuv_question" in result.flag_codes
     assert "<p>" not in result.normalized_body
     assert result.listing_id == "555777999"
 
