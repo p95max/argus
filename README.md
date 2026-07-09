@@ -1,7 +1,8 @@
 # Argus
 
 [![CI](https://github.com/p95max/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/p95max/argus/actions/workflows/ci.yml)
-![Coverage](https://img.shields.io/badge/coverage-80%25%2B-brightgreen)
+[![Coverage](https://codecov.io/gh/p95max/argus/branch/master/graph/badge.svg)](https://codecov.io/gh/p95max/argus)
+[![CodeQL](https://github.com/p95max/argus/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/p95max/argus/actions/workflows/codeql-analysis.yml)
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue)
 ![Django](https://img.shields.io/badge/django-6.0-092E20)
 ![Deploy](https://img.shields.io/badge/deploy-VPS%20%2B%20systemd-informational)
@@ -24,7 +25,9 @@ Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads
 - Telegram bot with inline alert actions, status commands, health/doctor commands, and mobile links.
 - PostgreSQL/Neon support through `DATABASE_URL`.
 - Tests use `config.test_settings` and in-memory SQLite, even when `.env.local` points to PostgreSQL.
-- GitHub Actions CI runs tests, migration checks, and linting on every push to `master` and every pull request.
+- GitHub Actions CI runs tests, migration checks, linting, and coverage enforcement on every push to `master` and every pull request.
+- Coverage reports are uploaded to Codecov after CI test runs.
+- CodeQL security analysis runs on pushes, pull requests, and a weekly schedule.
 - Production systemd operation scripts under `deploy/`. Detailed production operations documentation is in [`docs/production-operations.md`](docs/production-operations.md).
 
 ## Main URLs
@@ -164,10 +167,12 @@ The workflow enforces:
 python -m poetry check --lock
 python -m poetry run ruff check alerts config tests
 python -m poetry run python manage.py makemigrations --check --dry-run
-python -m poetry run pytest --cov=alerts --cov=config --cov-report=term-missing --cov-fail-under=80
+python -m poetry run pytest --cov=alerts --cov=config --cov-report=term-missing --cov-report=xml --cov-fail-under=80
 ```
 
 A change should not be merged or deployed unless the GitHub Actions `CI` check is green.
+
+CodeQL runs separately as a lightweight security analysis workflow on pushes, pull requests, and a weekly schedule.
 
 ## Deploy Checks
 
