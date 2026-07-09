@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Tests, migrations, lint
+    runs-on: ubuntu-latest
+
+    env:
+      DJANGO_SETTINGS_MODULE: config.test_settings
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: ci-only-secret-key
+      DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
+      ARGUS_PUBLIC_BASE_URL: http://127.0.0.1:8000
+      ARGUS_HEALTH_TOKEN: ci-health-token
+      DJANGO_TIME_ZONE: Europe/Berlin
+      GMAIL_OAUTH_TOKEN_FERNET_KEY: ""
+      TELEGRAM_BOT_TOKEN: ""
+      TELEGRAM_DEFAULT_CHAT_ID: ""
+      TELEGRAM_ALLOWED_CHAT_IDS: ""
+      TELEGRAM_ALLOWED_USER_IDS: ""
+      OAUTHLIB_INSECURE_TRANSPORT: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: python -m pip install poetry==2.2.1
+
+      - name: Validate Poetry files
+        run: poetry check --lock
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --with dev
+
+      - name: Check formatting and lint
+        run: poetry run ruff check alerts config tests
+
+      - name: Check migrations are committed
+        run: poetry run python manage.py makemigrations --check --dry-run
+
+      - name: Run tests with coverage
+        run: poetry run pytest --cov=alerts --cov=config --cov-report=term-missing
