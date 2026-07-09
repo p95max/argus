@@ -20,6 +20,12 @@ Systemd service and timer templates live in:
 deploy/systemd/
 ```
 
+Sudoers templates live in:
+
+```text
+deploy/sudoers/
+```
+
 Installed helper scripts live in:
 
 ```text
@@ -30,6 +36,12 @@ Systemd units are installed into:
 
 ```text
 /etc/systemd/system/
+```
+
+The auto-deploy sudoers policy is installed into:
+
+```text
+/etc/sudoers.d/argus-auto-deploy
 ```
 
 ## Install Or Update Ops Files
@@ -45,6 +57,8 @@ The installer:
 
 - installs `deploy/systemd/argus-*.service` and `deploy/systemd/argus-*.timer`;
 - installs `deploy/scripts/argus-*` to `/usr/local/bin` with group `argus` and mode `0750`;
+- installs `deploy/sudoers/argus-auto-deploy` to `/etc/sudoers.d/argus-auto-deploy` with mode `0440`;
+- validates the installed sudoers policy with `visudo -cf`;
 - reloads systemd;
 - enables and starts the web and Telegram bot services;
 - enables and starts all Argus timers.
@@ -54,6 +68,41 @@ Check production state:
 ```bash
 /usr/local/bin/argus-doctor.sh
 systemctl list-timers --all | grep argus
+```
+
+## Sudoers Policy
+
+Auto-deploy runs as the `argus` Linux user. The deploy script must restart the web and Telegram bot services after a successful pull, migration, collectstatic, and Django deploy check.
+
+To avoid storing or prompting for an interactive sudo password, production uses a narrow sudoers rule that allows only this command:
+
+```text
+/usr/bin/systemctl restart argus-web.service argus-telegram-bot.service
+```
+
+The repository template is:
+
+```text
+deploy/sudoers/argus-auto-deploy
+```
+
+Installed target:
+
+```text
+/etc/sudoers.d/argus-auto-deploy
+```
+
+Manual validation:
+
+```bash
+sudo visudo -cf /etc/sudoers.d/argus-auto-deploy
+sudo -n systemctl restart argus-web.service argus-telegram-bot.service
+```
+
+Expected result for the restart check:
+
+```text
+0
 ```
 
 ## Services
@@ -136,7 +185,7 @@ Default behavior:
 - restarts `argus-web.service` and `argus-telegram-bot.service`;
 - runs doctor unless ops files changed and were not auto-installed.
 
-Operational files are intentionally not auto-installed by default. If files under `deploy/systemd/`, `deploy/scripts/`, or `deploy/install-ops.sh` changed, the script logs that manual install is required:
+Operational files are intentionally not auto-installed by default. If files under `deploy/systemd/`, `deploy/scripts/`, `deploy/sudoers/`, or `deploy/install-ops.sh` changed, the script logs that manual install is required:
 
 ```bash
 cd /opt/argus
