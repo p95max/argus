@@ -56,7 +56,7 @@ def test_build_git_deploy_status_text_contains_successful_git_metadata(monkeypat
 
     text = git_status.build_git_deploy_status_text()
 
-    assert "Repo: /repo" in text
+    assert f"Repo: {git_root}" in text
     assert "Branch: master" in text
     assert "Local HEAD: abc1234" in text
     assert "Commit: fix: deploy" in text
@@ -66,13 +66,14 @@ def test_build_git_deploy_status_text_contains_successful_git_metadata(monkeypat
 
 
 def test_build_git_deploy_status_text_reports_command_failure(monkeypatch):
-    monkeypatch.setattr(git_status, "find_git_root", lambda: Path("/repo"))
+    git_root = Path("/repo")
+    monkeypatch.setattr(git_status, "find_git_root", lambda: git_root)
     monkeypatch.setattr(git_status, "run_git", lambda args, root: "")
     monkeypatch.setattr(git_status, "build_git_relation_text", lambda root: "")
 
     text = git_status.build_git_deploy_status_text()
 
-    assert "Repo: /repo" in text
+    assert f"Repo: {git_root}" in text
     assert "Status: git command failed" in text
 
 
@@ -87,31 +88,32 @@ def test_run_git_injects_safe_directory(monkeypatch):
 
     monkeypatch.setattr(git_status, "run_raw_git", fake_run_raw_git)
 
-    result = git_status.run_git(["status", "--short"], Path("/repo"), timeout=9)
+    git_root = Path("/repo")
+    result = git_status.run_git(["status", "--short"], git_root, timeout=9)
 
     assert result == "ok"
     assert captured == {
         "args": [
             "-c",
-            "safe.directory=/repo",
+            f"safe.directory={git_root}",
             "-C",
-            "/repo",
+            str(git_root),
             "status",
             "--short",
         ],
-        "cwd": Path("/repo"),
+        "cwd": git_root,
         "timeout": 9,
     }
 
 
-def test_run_raw_git_reports_missing_binary(monkeypatch, tmp_path):
+def test_run_raw_git_reports_missing_binary(monkeypatch):
     monkeypatch.setattr(git_status, "find_git_binary", lambda: "")
 
-    assert git_status.run_raw_git(["status"], cwd=tmp_path) == ""
+    assert git_status.run_raw_git(["status"], cwd=Path("repo")) == ""
     assert git_status.last_git_error == "git binary not found in /usr/bin/git, /bin/git or PATH"
 
 
-def test_run_raw_git_reports_timeout(monkeypatch, tmp_path):
+def test_run_raw_git_reports_timeout(monkeypatch):
     monkeypatch.setattr(git_status, "find_git_binary", lambda: "git")
 
     def fake_run(*args, **kwargs):
@@ -119,11 +121,11 @@ def test_run_raw_git_reports_timeout(monkeypatch, tmp_path):
 
     monkeypatch.setattr(git_status.subprocess, "run", fake_run)
 
-    assert git_status.run_raw_git(["status"], cwd=tmp_path) == ""
+    assert git_status.run_raw_git(["status"], cwd=Path("repo")) == ""
     assert git_status.last_git_error == "git command timed out"
 
 
-def test_run_raw_git_reports_nonzero_exit(monkeypatch, tmp_path):
+def test_run_raw_git_reports_nonzero_exit(monkeypatch):
     monkeypatch.setattr(git_status, "find_git_binary", lambda: "git")
     monkeypatch.setattr(
         git_status.subprocess,
@@ -135,11 +137,11 @@ def test_run_raw_git_reports_nonzero_exit(monkeypatch, tmp_path):
         ),
     )
 
-    assert git_status.run_raw_git(["status"], cwd=tmp_path) == ""
+    assert git_status.run_raw_git(["status"], cwd=Path("repo")) == ""
     assert git_status.last_git_error == "fatal: not a git repository"
 
 
-def test_run_raw_git_returns_stdout_and_clears_error(monkeypatch, tmp_path):
+def test_run_raw_git_returns_stdout_and_clears_error(monkeypatch):
     git_status.last_git_error = "old error"
     monkeypatch.setattr(git_status, "find_git_binary", lambda: "git")
     monkeypatch.setattr(
@@ -152,5 +154,5 @@ def test_run_raw_git_returns_stdout_and_clears_error(monkeypatch, tmp_path):
         ),
     )
 
-    assert git_status.run_raw_git(["branch", "--show-current"], cwd=tmp_path) == "master"
+    assert git_status.run_raw_git(["branch", "--show-current"], cwd=Path("repo")) == "master"
     assert git_status.last_git_error == ""
