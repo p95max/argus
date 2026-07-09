@@ -272,7 +272,11 @@ def test_safe_edit_alert_message_sends_new_text(monkeypatch):
 def test_safe_edit_alert_message_ignores_not_modified(monkeypatch):
     query = BrokenCallbackQuery(edit_error="Message is not modified")
     alert = SimpleNamespace(id=7)
-    monkeypatch.setattr(handlers, "_run_db_sync", lambda *args, **kwargs: "<b>Alert</b>")
+
+    async def fake_run_db_sync(*args, **kwargs):
+        return "<b>Alert</b>"
+
+    monkeypatch.setattr(handlers, "_run_db_sync", fake_run_db_sync)
 
     asyncio.run(handlers._safe_edit_alert_message(query, alert))
 
@@ -282,7 +286,11 @@ def test_safe_edit_alert_message_ignores_not_modified(monkeypatch):
 def test_safe_edit_alert_message_ignores_old_query(monkeypatch):
     query = BrokenCallbackQuery(edit_error="Query is too old")
     alert = SimpleNamespace(id=7)
-    monkeypatch.setattr(handlers, "_run_db_sync", lambda *args, **kwargs: "<b>Alert</b>")
+
+    async def fake_run_db_sync(*args, **kwargs):
+        return "<b>Alert</b>"
+
+    monkeypatch.setattr(handlers, "_run_db_sync", fake_run_db_sync)
 
     asyncio.run(handlers._safe_edit_alert_message(query, alert))
 
