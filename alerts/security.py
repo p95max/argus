@@ -1,4 +1,5 @@
 import hashlib
+import ipaddress
 
 from django.conf import settings
 from django.core.cache import cache
@@ -53,5 +54,43 @@ class AdminLoginRateLimitMiddleware:
 
 
 def _client_ip(request):
-    ip = request.META.get("HTTP_X_FORWARDED_FOR") or request.META.get("REMOTE_ADDR", "")
-    return ip.strip()
+    remote_addr = _clean_ip_value(request.META.get("REMOTE_ADDR", ""))
+    trusted_proxies = getattr(settings, "ADMIN_LOGIN_TRUSTED_PROXY_IPS", [])
+    if not _is_trusted_proxy(remote_addr, trusted_proxies):
+        return remote_addr
+
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    forwarded_chain = [
+        _clean_ip_value(item)
+        for item in forwarded_for.split(",")
+        if _clean_ip_value(item)
+    ]
+    for ip_address in reversed(forwarded_chain):
+        if not _is_trusted_proxy(ip_address, trusted_proxies):
+            return ip_address
+
+    return remote_addr
+
+
+def _clean_ip_value(value):
+    return str(value or "").strip()
+
+
+def _is_trusted_proxy(ip_address, trusted_proxies):
+    if not ip_address or not trusted_proxies:
+        return False
+
+    try:
+        parsed_ip = ipaddress.ip_address(ip_address)
+    except ValueError:
+        return False
+
+    for proxy in trusted_proxies:
+        try:
+            trusted_network = ipaddress.ip_network(str(proxy).strip(), strict=False)
+        except ValueError:
+            continue
+        if parsed_ip in trusted_network:
+            return True
+
+    return False
