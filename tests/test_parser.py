@@ -128,6 +128,34 @@ def test_listing_expiration_with_real_umlaut_is_operational_event():
     assert result.buyer_name == ""
 
 
+def test_published_listing_system_notice_keeps_listing_metadata():
+    result = parse_kleinanzeigen_email(
+        "Anzeige „AUDI A3 1.6 MPI TÜV bis 03/27‟ erfolgreich veröffentlicht.",
+        "Vielen Dank, Privater! Deine Anzeige wurde erfolgreich veröffentlicht. 🎉 AUDI A3 1.6 MPI TÜV bis 03/27",
+    )
+
+    assert result.event_type == MarketplaceAlert.EventType.SYSTEM_NOTICE
+    assert result.parse_status == MarketplaceAlert.ParseStatus.SUCCESS
+    assert result.listing_title == "AUDI A3 1.6 MPI TÜV bis 03/27"
+    assert result.listing_id == ""
+    assert result.buyer_name == ""
+    assert "erfolgreich veröffentlicht" in result.message_text
+
+
+def test_deleted_listing_system_notice_keeps_listing_metadata():
+    result = parse_kleinanzeigen_email(
+        "Deine Anfrage zu Anzeige „Samsung A55 256 gab‟",
+        "Anzeige gelöscht: „Samsung A55 256 gab“ die Anzeige „Samsung A55 256 gab“ (Anzeigennummer: 3385637108) wurde vom Nutzer entfernt.",
+    )
+
+    assert result.event_type == MarketplaceAlert.EventType.SYSTEM_NOTICE
+    assert result.parse_status == MarketplaceAlert.ParseStatus.SUCCESS
+    assert result.listing_title == "Samsung A55 256 gab"
+    assert result.listing_id == "3385637108"
+    assert result.buyer_name == ""
+    assert "wurde vom Nutzer entfernt" in result.message_text
+
+
 def test_missing_listing_id_is_partial_not_error():
     result = parse_kleinanzeigen_email(
         'Neue Nachricht von Anna zu "Audi A4 Avant"',
