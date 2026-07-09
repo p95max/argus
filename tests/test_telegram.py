@@ -15,6 +15,7 @@ from alerts.telegram.messages import (
 )
 
 from alerts.telegram.handlers import (
+    build_unread_command_message,
     handle_alert_callback_action,
     update_alert_status_from_callback,
 )
@@ -250,3 +251,34 @@ def test_build_daily_summary_message_contains_today_counters(alert):
     assert "Новые" in message
     assert "В работе" in message
     assert "Активные ящики" in message
+
+
+@pytest.mark.django_db
+def test_build_unread_command_message_reports_unread_without_marking_reminded(alert):
+    second = MarketplaceAlert.objects.create(
+        mailbox=alert.mailbox,
+        buyer_name="Anna",
+        listing_id="unread-command-case-2",
+        listing_title="VW Golf",
+        message_text="Noch da?",
+        alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+        priority=MarketplaceAlert.Priority.NORMAL,
+    )
+    MarketplaceAlert.objects.create(
+        mailbox=alert.mailbox,
+        listing_title="Noise",
+        alert_status=MarketplaceAlert.AlertStatus.UNREAD,
+        event_type=MarketplaceAlert.EventType.NOISE,
+    )
+
+    message = build_unread_command_message()
+
+    alert.refresh_from_db()
+    second.refresh_from_db()
+    assert "⏰ <b>Argus: непрочитанные обращения</b>" in message
+    assert "🆕 <b>Непрочитано:</b> 2" in message
+    assert "BMW 320d Touring" in message
+    assert "VW Golf" in message
+    assert "Noise" not in message
+    assert alert.last_reminded_at is None
+    assert second.last_reminded_at is None

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.utils import timezone
 
 from alerts.models import MailboxAccount, MarketplaceAlert
@@ -62,6 +64,17 @@ def test_build_unread_reminder_report_uses_telegram_alert_style():
     assert "📂 <b>Кейсов:</b> 2" in message
     assert "🔥 <b>High/Urgent:</b> 1" in message
     assert "📱 <a" in message
+
+
+def test_build_unread_reminder_report_rounds_oldest_age():
+    alert = _make_alert(message_text="Noch da?")
+    alert.created_at = timezone.now() - timedelta(minutes=1199)
+
+    message = build_unread_reminder_report_message([alert])
+
+    assert "⏳ <b>Самое старое:</b> 20 ч" in message
+    assert "⏳ 20 ч" in message
+    assert "1199 мин" not in message
 
 
 def test_truncate_html_message_drops_incomplete_entity_before_suffix():

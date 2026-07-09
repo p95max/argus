@@ -99,7 +99,7 @@ def build_unread_reminder_report_message(alerts) -> str:
         f"🆕 <b>Непрочитано:</b> {len(alerts)}",
         f"📂 <b>Кейсов:</b> {len(cases)}",
         f"🔥 <b>High/Urgent:</b> {high_total}",
-        f"⏳ <b>Самое старое:</b> {oldest_minutes} мин",
+        f"⏳ <b>Самое старое:</b> {_format_age_minutes(oldest_minutes)}",
         "",
     ]
 
@@ -126,7 +126,7 @@ def build_unread_reminder_report_message(alerts) -> str:
                 (
                     f"🆕 {case['count']} unread · "
                     f"🔥 {case['high_count']} high · "
-                    f"⏳ {age_minutes} мин"
+                    f"⏳ {_format_age_minutes(age_minutes)}"
                 ),
                 f"👤 <b>Последний:</b> {html.escape(buyer)}",
                 f"📬 <b>Ящик:</b> {html.escape(mailbox_label)}",
@@ -523,6 +523,20 @@ def _format_dt(value) -> str:
         return "—"
 
     return timezone.localtime(value).strftime("%d.%m.%Y %H:%M")
+
+
+def _format_age_minutes(minutes: int) -> str:
+    minutes = max(int(minutes), 0)
+
+    if minutes < 60:
+        return f"{minutes} мин"
+
+    hours = round(minutes / 60)
+    if hours < 24:
+        return f"{hours} ч"
+
+    days = round(hours / 24)
+    return f"{days} д"
 
 
 def _priority_emoji(alert: MarketplaceAlert) -> str:

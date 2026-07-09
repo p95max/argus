@@ -287,6 +287,7 @@ Bot commands:
 /summary     Daily alerts summary
 /health      Health summary
 /doctor      Runs /usr/local/bin/argus-doctor.sh and appends git deploy status
+/unread      Aggregated unread alerts report without updating reminder timestamps
 ```
 
 Inline alert actions:

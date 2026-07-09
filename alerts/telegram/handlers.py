@@ -22,6 +22,7 @@ from .messages import (
     build_daily_summary_message,
     build_health_message,
     build_mailbox_status_message,
+    build_unread_reminder_report_message,
     _build_status_answer,
     _truncate,
 )
@@ -221,6 +222,44 @@ async def handle_health_command(update, context):
     )
 
     logger.info("Telegram health command handled. chat_id=%s user_id=%s", chat_id, user_id)
+
+
+async def handle_unread_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    logger.info("Telegram unread command received. chat_id=%s user_id=%s", chat_id, user_id)
+
+    if not is_allowed_update(update):
+        logger.warning(
+            "Telegram unread command rejected by permission. chat_id=%s user_id=%s",
+            chat_id,
+            user_id,
+        )
+        await update.effective_message.reply_text(
+            "Этот пользователь или чат не имеет доступа к Argus.",
+        )
+        return
+
+    text = await sync_to_async(build_unread_command_message)()
+
+    await update.effective_message.reply_text(
+        text,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+    logger.info("Telegram unread command handled. chat_id=%s user_id=%s", chat_id, user_id)
+
+
+def build_unread_command_message(limit: int = 25) -> str:
+    alerts = list(
+        MarketplaceAlert.objects.select_related("mailbox")
+        .filter(alert_status=MarketplaceAlert.AlertStatus.UNREAD)
+        .exclude(event_type=MarketplaceAlert.EventType.NOISE)
+        .order_by("created_at", "id")[:limit]
+    )
+    return build_unread_reminder_report_message(alerts)
 
 
 def handle_alert_callback_action(
