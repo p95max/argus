@@ -7,6 +7,7 @@ from alerts.telegram.messages import (
     build_alert_message,
     build_alert_reminder_message,
     build_system_message,
+    build_unread_reminder_report_message,
 )
 
 
@@ -36,6 +37,31 @@ def test_build_system_message_caps_escaped_details():
     assert len(message) <= TELEGRAM_SAFE_MESSAGE_LIMIT
     assert message.endswith("...")
     assert _does_not_end_inside_html_entity(message)
+
+
+def test_build_unread_reminder_report_uses_telegram_alert_style():
+    first = _make_alert(message_text="Noch da?")
+    first.id = 201
+    first.listing_id = "case-1"
+    first.listing_title = "BMW 320d"
+    first.buyer_name = "Max"
+    first.priority = MarketplaceAlert.Priority.HIGH
+    second = _make_alert(message_text="Kann ich kommen?")
+    second.id = 202
+    second.listing_id = "case-2"
+    second.listing_title = "VW Golf"
+    second.buyer_name = "Anna"
+    second.priority = MarketplaceAlert.Priority.NORMAL
+
+    message = build_unread_reminder_report_message([first, second])
+
+    assert len(message) <= TELEGRAM_SAFE_MESSAGE_LIMIT
+    assert message.startswith("⏰ <b>Argus: непрочитанные обращения</b>")
+    assert "🔴 <b>Статус:</b> требуется внимание" in message
+    assert "🆕 <b>Непрочитано:</b> 2" in message
+    assert "📂 <b>Кейсов:</b> 2" in message
+    assert "🔥 <b>High/Urgent:</b> 1" in message
+    assert "📱 <a" in message
 
 
 def test_truncate_html_message_drops_incomplete_entity_before_suffix():

@@ -83,53 +83,65 @@ def build_unread_reminder_report_message(alerts) -> str:
     now = timezone.now()
     cases = _group_unread_reminder_cases(alerts)
     mobile_url = _build_mobile_url()
+    high_total = sum(case["high_count"] for case in cases)
+    oldest_minutes = 0
+    if cases:
+        oldest = min(case["oldest"].created_at for case in cases)
+        oldest_minutes = max(int((now - oldest).total_seconds() // 60), 0)
+    report_icon = "🔴" if high_total else "🟠" if alerts else "🟢"
 
     lines = [
-        "<b>Argus: unread reminder report</b>",
-        f"<b>Due alerts:</b> {len(alerts)}",
-        f"<b>Cases:</b> {len(cases)}",
-        f"<b>Time:</b> {_format_time(now)}",
+        "⏰ <b>Argus: непрочитанные обращения</b>",
+        f"📅 <b>Дата:</b> {_format_date(timezone.localdate())}",
+        f"🕒 <b>Время:</b> {_format_time(now)}",
+        "",
+        f"{report_icon} <b>Статус:</b> требуется внимание",
+        f"🆕 <b>Непрочитано:</b> {len(alerts)}",
+        f"📂 <b>Кейсов:</b> {len(cases)}",
+        f"🔥 <b>High/Urgent:</b> {high_total}",
+        f"⏳ <b>Самое старое:</b> {oldest_minutes} мин",
         "",
     ]
 
     if not alerts:
-        lines.append("No unread alerts are due for reminder.")
+        lines.append("🟢 Непрочитанных обращений для напоминания нет.")
         return _fit_telegram_message(lines)
 
     for index, case in enumerate(cases[:REMINDER_REPORT_CASE_LIMIT], start=1):
         latest = case["latest"]
         oldest = case["oldest"]
         age_minutes = max(int((now - oldest.created_at).total_seconds() // 60), 0)
+        led = "🔴" if case["high_count"] else "🟠" if age_minutes >= 60 else "🔵"
         title = _truncate(
             latest.listing_title or latest.subject or latest.get_event_type_display(),
             REMINDER_REPORT_TITLE_LIMIT,
         )
-        buyer = latest.buyer_name or "unknown"
+        buyer = latest.buyer_name or "неизвестно"
         mailbox_label = _alert_mailbox_label(latest)
         link = _mobile_alert_url(latest)
 
         lines.extend(
             [
-                f"{index}. <b>{html.escape(title)}</b>",
+                f"{led} <b>{index}. {html.escape(title)}</b>",
                 (
-                    f"Unread: {case['count']} | "
-                    f"High: {case['high_count']} | "
-                    f"Oldest: {age_minutes}m"
+                    f"🆕 {case['count']} unread · "
+                    f"🔥 {case['high_count']} high · "
+                    f"⏳ {age_minutes} мин"
                 ),
-                f"Buyer: {html.escape(buyer)}",
-                f"Mailbox: {html.escape(mailbox_label)}",
-                f'<a href="{html.escape(link)}">Open latest</a>',
+                f"👤 <b>Последний:</b> {html.escape(buyer)}",
+                f"📬 <b>Ящик:</b> {html.escape(mailbox_label)}",
+                f'📱 <a href="{html.escape(link)}">Открыть последнее</a>',
                 "",
             ]
         )
 
     hidden_cases = len(cases) - REMINDER_REPORT_CASE_LIMIT
     if hidden_cases > 0:
-        lines.append(f"...and {hidden_cases} more cases.")
+        lines.append(f"…и ещё {hidden_cases} кейсов.")
         lines.append("")
 
     if mobile_url:
-        lines.append(f'<a href="{html.escape(mobile_url)}">Open mobile dashboard</a>')
+        lines.append(f'📱 <a href="{html.escape(mobile_url)}">Перейти в мобильную админку</a>')
 
     return _fit_telegram_message(lines)
 
