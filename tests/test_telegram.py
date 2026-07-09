@@ -15,6 +15,8 @@ from alerts.telegram.messages import (
 )
 
 from alerts.telegram.handlers import (
+    ACTIVE_BOT_COMMANDS,
+    build_help_message,
     build_unread_command_message,
     handle_alert_callback_action,
     update_alert_status_from_callback,
@@ -88,6 +90,16 @@ def test_build_system_message_escapes_html():
 
     assert "Argus: системное уведомление" in message
     assert "&lt;bad&gt;" in message
+
+
+def test_build_help_message_lists_active_bot_commands():
+    message = build_help_message()
+
+    assert "🤖 <b>Argus: что умеет бот</b>" in message
+    assert "мобильную админку" in message
+    for command, description in ACTIVE_BOT_COMMANDS:
+        assert f"/{command} — {description}" in message
+    assert "Open Mobile" in message
 
 
 @pytest.mark.django_db

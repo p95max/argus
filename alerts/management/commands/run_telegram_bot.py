@@ -9,6 +9,7 @@ from alerts.telegram.handlers import (
     handle_alert_callback,
     handle_daily_summary_command,
     handle_health_command,
+    handle_help_command,
     handle_mailbox_status_command,
     handle_doctor_command,
     handle_unread_command,
@@ -60,6 +61,12 @@ class Command(BaseCommand):
             CallbackQueryHandler(
                 handle_alert_callback,
                 pattern=r"^alert:\d+:(status|in_work|unread|ignored)$",
+            )
+        )
+        application.add_handler(
+            CommandHandler(
+                "help",
+                handle_help_command,
             )
         )
         application.add_handler(

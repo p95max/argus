@@ -32,6 +32,17 @@ from .permissions import is_allowed_telegram_actor, is_allowed_update
 logger = logging.getLogger(__name__)
 
 
+ACTIVE_BOT_COMMANDS = (
+    ("help", "что умеет бот и список команд"),
+    ("status", "статус Gmail-ящиков и последние проверки"),
+    ("mailboxes", "то же, что /status"),
+    ("summary", "сводка по обращениям за сегодня"),
+    ("unread", "общий отчёт по непрочитанным обращениям"),
+    ("health", "здоровье сервиса: DB, Gmail, Telegram, ошибки"),
+    ("doctor", "production doctor: systemd, git, health и deploy status"),
+)
+
+
 @dataclass(frozen=True)
 class AlertCallbackResult:
     alert: MarketplaceAlert
@@ -159,6 +170,32 @@ async def handle_mailbox_status_command(update, context):
     )
 
 
+async def handle_help_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    logger.info("Telegram help command received. chat_id=%s user_id=%s", chat_id, user_id)
+
+    if not is_allowed_update(update):
+        logger.warning(
+            "Telegram help command rejected by permission. chat_id=%s user_id=%s",
+            chat_id,
+            user_id,
+        )
+        await update.effective_message.reply_text(
+            "Этот пользователь или чат не имеет доступа к Argus.",
+        )
+        return
+
+    await update.effective_message.reply_text(
+        build_help_message(),
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+    logger.info("Telegram help command handled. chat_id=%s user_id=%s", chat_id, user_id)
+
+
 async def handle_daily_summary_command(update, context):
     chat_id = str(update.effective_chat.id) if update.effective_chat else ""
     user_id = str(update.effective_user.id) if update.effective_user else ""
@@ -260,6 +297,29 @@ def build_unread_command_message(limit: int = 25) -> str:
         .order_by("created_at", "id")[:limit]
     )
     return build_unread_reminder_report_message(alerts)
+
+
+def build_help_message() -> str:
+    lines = [
+        "🤖 <b>Argus: что умеет бот</b>",
+        "",
+        "Бот присылает новые обращения из Gmail, даёт быстрые кнопки статуса и ведёт в мобильную админку.",
+        "Ещё он показывает здоровье сервиса, непрочитанные обращения и краткую операционную сводку.",
+        "",
+        "⚡ <b>Активные команды</b>",
+    ]
+    lines.extend(
+        f"/{command} — {html.escape(description)}"
+        for command, description in ACTIVE_BOT_COMMANDS
+    )
+    lines.extend(
+        [
+            "",
+            "🔘 <b>Кнопки в alert-ах</b>",
+            "В работу · Новое · Игнор · Статус · Open Mobile",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def handle_alert_callback_action(

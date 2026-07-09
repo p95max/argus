@@ -282,13 +282,16 @@ python -m poetry run python manage.py send_unread_reminders --dry-run
 Bot commands:
 
 ```text
-/status      Mailbox status
+/help        What the bot can do and the active command list
+/status      Gmail mailbox status and latest checks
 /mailboxes   Alias for /status
 /summary     Daily alerts summary
-/health      Health summary
-/doctor      Runs /usr/local/bin/argus-doctor.sh and appends git deploy status
 /unread      Aggregated unread alerts report without updating reminder timestamps
+/health      Service health: DB, Gmail, Telegram, open errors
+/doctor      Runs /usr/local/bin/argus-doctor.sh and appends git deploy status
 ```
+
+The Telegram bot is the fast operational interface: it sends new buyer alerts, exposes inline status actions, links each alert to the mobile admin, shows unread reports, mailbox health, deploy/doctor status, and service health.
 
 Inline alert actions:
 
