@@ -104,6 +104,7 @@ GENERIC_SYSTEM_PATTERNS = (
     "\\banzeige gel(?:\u00f6|oe)scht\\b",
 )
 QUOTED_VALUE = r"[\"„“”‟«]([^\"„“”‟«»\n]{3,120})[\"“”‟»]"
+INVISIBLE_CHARS_RE = re.compile("[\u200b\u200c\u200d\ufeff]")
 
 
 def normalize_body(body: str) -> str:
@@ -114,6 +115,7 @@ def normalize_body(body: str) -> str:
         text = parser.text()
 
     text = unescape(text)
+    text = INVISIBLE_CHARS_RE.sub("", text)
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = re.sub(r"[\t ]+", " ", text)
     text = re.sub(r"\n[ \t]+", "\n", text)
@@ -231,7 +233,7 @@ def _normalize_matching_text(text: str) -> str:
         "ÃƒÂ¶": "ö",
         "ÃƒÂ¼": "ü",
     }
-    normalized = text or ""
+    normalized = INVISIBLE_CHARS_RE.sub("", text or "")
     for broken, fixed in replacements.items():
         normalized = normalized.replace(broken, fixed)
     return normalized
@@ -363,6 +365,6 @@ def _parse_operational_message(body: str) -> str:
 
 
 def _clean_value(value: str) -> str:
-    value = unescape(value or "")
+    value = INVISIBLE_CHARS_RE.sub("", unescape(value or ""))
     value = re.sub(r"\s+", " ", value)
     return value.strip(" \t\n\r\"'„“”‟«»")
