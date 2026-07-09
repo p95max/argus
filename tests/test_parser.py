@@ -246,3 +246,24 @@ def test_normalize_body_ignores_html_head_style_and_title():
     )
 
     assert normalized == "Hallo Welt"
+
+
+def test_normalize_body_removes_invisible_format_chars():
+    normalized = normalize_body("\ufeff\u200b\u200c\u200d Vielen Dank")
+
+    assert normalized == "Vielen Dank"
+    assert "\ufeff" not in normalized
+    assert "\u200b" not in normalized
+    assert "\u200c" not in normalized
+    assert "\u200d" not in normalized
+
+
+def test_parsed_system_message_text_removes_invisible_format_chars():
+    result = parse_kleinanzeigen_email(
+        "Anzeige „AUDI A3 1.6 MPI TÜV bis 03/27‟ erfolgreich veröffentlicht.",
+        "\u200c Vielen Dank, Privater! Deine Anzeige wurde erfolgreich veröffentlicht.",
+    )
+
+    assert result.message_text.startswith("Vielen Dank")
+    assert "\u200c" not in result.normalized_body
+    assert "\u200c" not in result.message_text
