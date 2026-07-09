@@ -55,7 +55,7 @@ urlpatterns = [
     ),
     path(
         "m/gmail/check-now/",
-        mobile.mobile_check_mailbox_now,
+        mobile.mobile_check_gmail_now,
         name="mobile_check_gmail_now",
     ),
     path(
