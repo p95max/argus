@@ -53,7 +53,7 @@ def test_parse_gmail_api_message_prefers_plain_text():
     assert message.received_at is not None
 
 
-def test_fetch_gmail_messages_uses_batch_api_when_available():
+def test_fetch_gmail_messages_fetches_payloads_sequentially():
     class FakeRequest:
         def __init__(self, payload):
             self.payload = payload
@@ -66,10 +66,12 @@ def test_fetch_gmail_messages_uses_batch_api_when_available():
             self.service = service
 
         def list(self, **kwargs):
+            self.service.list_kwargs = kwargs
             return FakeRequest({"messages": [{"id": "msg-1"}, {"id": "msg-2"}]})
 
         def get(self, **kwargs):
             message_id = kwargs["id"]
+            self.service.get_message_ids.append(message_id)
             self.service.single_get_execute_count += 1
             return FakeRequest(
                 {
@@ -86,38 +88,25 @@ def test_fetch_gmail_messages_uses_batch_api_when_available():
         def messages(self):
             return FakeMessagesApi(self.service)
 
-    class FakeBatch:
-        def __init__(self, callback):
-            self.callback = callback
-            self.requests = []
-
-        def add(self, request, request_id):
-            self.requests.append((request_id, request))
-
-        def execute(self):
-            for request_id, request in self.requests:
-                self.callback(request_id, request.payload, None)
-
     class FakeService:
         def __init__(self):
-            self.batch_requests = []
+            self.list_kwargs = {}
+            self.get_message_ids = []
             self.single_get_execute_count = 0
 
         def users(self):
             return FakeUsersApi(self)
 
-        def new_batch_http_request(self, callback):
-            batch = FakeBatch(callback)
-            self.batch_requests.append(batch)
-            return batch
-
     service = FakeService()
 
     messages = fetch_gmail_messages(service, "from:(kleinanzeigen.de)", max_results=2)
 
+    assert service.list_kwargs["userId"] == "me"
+    assert service.list_kwargs["q"] == "from:(kleinanzeigen.de)"
+    assert service.list_kwargs["maxResults"] == 2
     assert [message.message_id for message in messages] == ["msg-1", "msg-2"]
-    assert len(service.batch_requests) == 1
-    assert len(service.batch_requests[0].requests) == 2
+    assert service.get_message_ids == ["msg-1", "msg-2"]
+    assert service.single_get_execute_count == 2
 
 
 @pytest.mark.django_db
