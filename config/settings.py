@@ -3,7 +3,10 @@ from pathlib import Path
 import environ
 from django.core.exceptions import ImproperlyConfigured
 
-from .jazzmin import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS
+from . import jazzmin as jazzmin_config
+
+JAZZMIN_SETTINGS = jazzmin_config.JAZZMIN_SETTINGS
+JAZZMIN_UI_TWEAKS = jazzmin_config.JAZZMIN_UI_TWEAKS
 
 
 # =============================================================================
