@@ -1,6 +1,7 @@
 import base64
 
 import pytest
+from googleapiclient.errors import HttpError
 
 from alerts.crypto import encrypt_text
 from alerts.gmail.gmail import (
@@ -107,6 +108,52 @@ def test_fetch_gmail_messages_fetches_payloads_sequentially():
     assert [message.message_id for message in messages] == ["msg-1", "msg-2"]
     assert service.get_message_ids == ["msg-1", "msg-2"]
     assert service.single_get_execute_count == 2
+
+
+def test_fetch_gmail_messages_retries_retryable_list_error(monkeypatch):
+    class Response(dict):
+        status = 429
+        reason = "Too Many Requests"
+
+    class FlakyRequest:
+        def __init__(self, payload):
+            self.payload = payload
+            self.calls = 0
+
+        def execute(self):
+            self.calls += 1
+            if self.calls == 1:
+                raise HttpError(Response(), b"{}")
+            return self.payload
+
+    class FakeMessagesApi:
+        def __init__(self, service):
+            self.service = service
+
+        def list(self, **kwargs):
+            self.service.list_request = FlakyRequest({"messages": []})
+            return self.service.list_request
+
+    class FakeUsersApi:
+        def __init__(self, service):
+            self.service = service
+
+        def messages(self):
+            return FakeMessagesApi(self.service)
+
+    class FakeService:
+        def users(self):
+            return FakeUsersApi(self)
+
+    sleep_calls = []
+    monkeypatch.setattr("alerts.gmail.gmail.time.sleep", lambda seconds: sleep_calls.append(seconds))
+    service = FakeService()
+
+    messages = fetch_gmail_messages(service, "from:(kleinanzeigen.de)", max_results=2)
+
+    assert messages == []
+    assert service.list_request.calls == 2
+    assert sleep_calls == [1.0]
 
 
 @pytest.mark.django_db
@@ -309,3 +356,50 @@ def test_load_mailbox_credentials_decrypts_encrypted_token(monkeypatch, mailbox)
 
     assert credentials.valid is True
     assert calls == [{"token": "encrypted-access-token"}]
+
+
+@pytest.mark.django_db
+def test_load_mailbox_credentials_marks_invalid_stored_token_as_error(mailbox):
+    mailbox.gmail_oauth_token = encrypt_text("not-json")
+    mailbox.save(update_fields=["gmail_oauth_token", "updated_at"])
+
+    with pytest.raises(RuntimeError, match="cannot be decrypted or is not valid JSON"):
+        load_or_refresh_mailbox_credentials(mailbox)
+
+    mailbox.refresh_from_db()
+    assert mailbox.connection_status == MailboxAccount.ConnectionStatus.ERROR
+    assert mailbox.gmail_oauth_error == "Stored Gmail OAuth token cannot be decrypted or is not valid JSON."
+    assert mailbox.last_error == mailbox.gmail_oauth_error
+
+
+@pytest.mark.django_db
+def test_load_mailbox_credentials_refreshes_expired_token(monkeypatch, mailbox):
+    class FakeCredentials:
+        valid = False
+        expired = True
+        refresh_token = "refresh-token"
+
+        @classmethod
+        def from_authorized_user_info(cls, token_info, scopes):
+            return cls()
+
+        def refresh(self, request):
+            self.valid = True
+
+        def to_json(self):
+            return '{"token": "new-access-token"}'
+
+    monkeypatch.setattr("alerts.gmail.gmail.Credentials", FakeCredentials)
+    mailbox.gmail_oauth_token = encrypt_text('{"token": "old-access-token", "refresh_token": "refresh-token"}')
+    mailbox.gmail_oauth_error = "old error"
+    mailbox.last_error = "old error"
+    mailbox.save(update_fields=["gmail_oauth_token", "gmail_oauth_error", "last_error", "updated_at"])
+
+    credentials = load_or_refresh_mailbox_credentials(mailbox)
+
+    mailbox.refresh_from_db()
+    assert credentials.valid is True
+    assert mailbox.gmail_oauth_last_refresh_at is not None
+    assert mailbox.gmail_oauth_error == ""
+    assert mailbox.last_error == ""
+    assert "fernet:" in mailbox.gmail_oauth_token

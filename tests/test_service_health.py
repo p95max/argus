@@ -2,7 +2,12 @@ import pytest
 
 from alerts.gmail.gmail import GmailMessage, check_mailbox, process_gmail_message
 from alerts.models import MailboxAccount, MarketplaceAlert, ServiceEvent
-from alerts.service_health import record_telegram_send_error
+from alerts.service_health import (
+    record_mailbox_recovery,
+    record_parser_error,
+    record_service_event,
+    record_telegram_send_error,
+)
 
 
 class BrokenGmailService:
@@ -110,3 +115,74 @@ def test_telegram_send_error_records_service_event(mailbox):
     assert event.severity == ServiceEvent.Severity.ERROR
     assert event.telegram_sent_at is None
     assert event.details == "telegram is down"
+
+
+@pytest.mark.django_db
+def test_record_service_event_deduplicates_open_event(mailbox):
+    first = record_service_event(
+        event_type=ServiceEvent.EventType.MAILBOX_ERROR,
+        severity=ServiceEvent.Severity.WARNING,
+        title="Gmail slow",
+        details="first",
+        source="gmail",
+        fingerprint="gmail:slow",
+        mailbox=mailbox,
+        notify=False,
+    )
+
+    second = record_service_event(
+        event_type=ServiceEvent.EventType.MAILBOX_ERROR,
+        severity=ServiceEvent.Severity.ERROR,
+        title="Gmail down",
+        details="second",
+        source="gmail",
+        fingerprint="gmail:slow",
+        mailbox=mailbox,
+        notify=False,
+    )
+
+    first.refresh_from_db()
+    assert second.id == first.id
+    assert ServiceEvent.objects.count() == 1
+    assert first.occurrences == 2
+    assert first.severity == ServiceEvent.Severity.ERROR
+    assert first.title == "Gmail down"
+    assert first.details == "second"
+
+
+@pytest.mark.django_db
+def test_record_parser_error_ignores_successful_alert(mailbox):
+    alert = MarketplaceAlert.objects.create(
+        mailbox=mailbox,
+        parse_status=MarketplaceAlert.ParseStatus.SUCCESS,
+        listing_title="BMW 320d",
+    )
+
+    assert record_parser_error(alert) is None
+    assert ServiceEvent.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_telegram_send_error_deduplicates_by_alert(mailbox):
+    alert = MarketplaceAlert.objects.create(
+        mailbox=mailbox,
+        buyer_name="Max",
+        listing_title="BMW 320d",
+        message_text="Noch da?",
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+    )
+
+    first = record_telegram_send_error(alert, RuntimeError("first failure"))
+    second = record_telegram_send_error(alert, RuntimeError("second failure"))
+
+    first.refresh_from_db()
+    assert second.id == first.id
+    assert ServiceEvent.objects.count() == 1
+    assert first.occurrences == 2
+    assert first.details == "second failure"
+
+
+@pytest.mark.django_db
+def test_record_mailbox_recovery_without_open_error_is_noop(mailbox):
+    assert record_mailbox_recovery(mailbox, previous_error="old") is None
+    assert ServiceEvent.objects.count() == 0

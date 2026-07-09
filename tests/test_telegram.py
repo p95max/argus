@@ -5,6 +5,8 @@ import pytest
 from alerts.models import MailboxAccount, MarketplaceAlert
 from alerts.telegram.sender import (
     async_send_telegram_alert,
+    async_send_telegram_reminder_report,
+    send_system_telegram_message,
 )
 
 from alerts.telegram.messages import (
@@ -234,6 +236,101 @@ def test_async_send_telegram_alert_saves_error(monkeypatch, alert):
     alert.refresh_from_db()
 
     assert alert.telegram_error == "telegram is down"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_send_telegram_alert_rejects_disallowed_chat(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+
+    with pytest.raises(PermissionError, match="Telegram chat is not allowed"):
+        asyncio.run(
+            async_send_telegram_alert(
+                alert,
+                chat_id="99",
+                bot=FakeTelegramBot(),
+            )
+        )
+
+    alert.refresh_from_db()
+    assert alert.telegram_sent_at is None
+    assert alert.telegram_error == ""
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_send_telegram_reminder_report_saves_error_for_all_alerts(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    second = MarketplaceAlert.objects.create(
+        mailbox=alert.mailbox,
+        buyer_name="Anna",
+        listing_title="VW Golf",
+        message_text="Noch da?",
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+    )
+
+    with pytest.raises(RuntimeError, match="telegram is down"):
+        asyncio.run(
+            async_send_telegram_reminder_report(
+                [alert, second],
+                chat_id="42",
+                bot=BrokenTelegramBot(),
+            )
+        )
+
+    alert.refresh_from_db()
+    second.refresh_from_db()
+    assert alert.telegram_error == "telegram is down"
+    assert second.telegram_error == "telegram is down"
+    assert alert.last_reminded_at is None
+    assert second.last_reminded_at is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_send_telegram_reminder_report_rejects_disallowed_chat(monkeypatch, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+
+    with pytest.raises(PermissionError, match="Telegram chat is not allowed"):
+        asyncio.run(
+            async_send_telegram_reminder_report(
+                [alert],
+                chat_id="99",
+                bot=FakeTelegramBot(),
+            )
+        )
+
+    alert.refresh_from_db()
+    assert alert.last_reminded_at is None
+    assert alert.telegram_error == ""
+
+
+def test_send_system_telegram_message_requires_bot_token_when_bot_is_not_injected(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.setenv("TELEGRAM_DEFAULT_CHAT_ID", "42")
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+
+    with pytest.raises(ValueError, match="TELEGRAM_BOT_TOKEN"):
+        asyncio.run(send_system_telegram_message("Deploy failed"))
+
+
+def test_send_system_telegram_message_sends_html(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    bot = FakeTelegramBot()
+
+    message = asyncio.run(
+        send_system_telegram_message(
+            "Health",
+            details="<bad>",
+            chat_id="42",
+            bot=bot,
+        )
+    )
+
+    assert message.message_id == 987
+    assert bot.calls[0]["chat_id"] == "42"
+    assert bot.calls[0]["parse_mode"] == "HTML"
+    assert bot.calls[0]["disable_web_page_preview"] is True
+    assert "⚙️ <b>Argus: системное уведомление</b>" in bot.calls[0]["text"]
+    assert "📌 Health" in bot.calls[0]["text"]
+    assert "🧾 &lt;bad&gt;" in bot.calls[0]["text"]
 
 
 @pytest.mark.django_db
