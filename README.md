@@ -2,6 +2,8 @@
 
 Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads Gmail messages through per-mailbox OAuth, classifies marketplace emails into buyer leads, noise/system messages, and operational service events, sends Telegram notifications, and gives operators both a full Django Admin UI and a compact mobile control panel.
 
+The project was built as a commissioned internal operations tool. Because the target operators are Russian-speaking, the runtime Admin and Mobile UI intentionally use Russian-language labels. This README is kept in English for repository review and technical documentation.
+
 ## Current Production Shape
 
 - Deployed on a VPS as an internal production service. No public project URL is documented here.
@@ -37,14 +39,14 @@ python -m poetry run python manage.py init_dev
 python -m poetry run python manage.py runserver
 ```
 
-Open:
+Open locally:
 
 ```text
 http://127.0.0.1:8000/control/
 http://127.0.0.1:8000/m/
 ```
 
-Health check:
+Simple health check:
 
 ```powershell
 curl http://127.0.0.1:8000/health/
@@ -339,31 +341,33 @@ It sends Telegram only when a new problem appears or when the system recovers. T
 Current Telegram monitor style:
 
 ```text
-🔴 [PROD] Argus problem detected
-🔴 CRITICAL
+[PROD] Argus problem detected
+CRITICAL
 Status: FAIL
 
 Problems:
-• ...
+- ...
 
 Time: 2026-07-08 21:03:38 CEST
 ```
 
 ```text
-🟢 [PROD] Argus recovered
-🟢 OK
+[PROD] Argus recovered
+OK
 Status: RECOVERED
 
 All monitored services and checks are OK.
 ```
 
 ```text
-🟢 [PROD] Argus monitor test
-🟢 OK
+[PROD] Argus monitor test
+OK
 Status: TEST
 
 Telegram notifications are working.
 ```
+
+The real Telegram messages include colored status emojis. The examples above keep the README text English-only.
 
 Run manually:
 
@@ -451,7 +455,7 @@ GOOGLE_OAUTH_REDIRECT_URI=http://127.0.0.1:8000/control/alerts/mailboxaccount/oa
 
 Add the same URL in Google Cloud Console under "Authorized redirect URIs". Keep the browser host identical: `localhost` and `127.0.0.1` are different OAuth redirect URIs.
 
-If a mailbox is not connected yet, Admin shows `Email ещё не подключен. Подключите Gmail через OAuth.` instead of an empty email. When reconnecting an existing mailbox, Argus rejects a different Google account and also rejects a Gmail address already used by another mailbox.
+When a mailbox is not connected yet, Admin shows a localized message that asks the operator to connect Gmail through OAuth. When reconnecting an existing mailbox, Argus rejects a different Google account and also rejects a Gmail address already used by another mailbox.
 
 Manual Gmail checks:
 
@@ -480,15 +484,9 @@ python manage.py check_gmail --max-results 25
 mailbox + listing_id
 ```
 
-Admin action:
+The Admin has a close-case action that deletes alerts for a selected `listing_id` branch but keeps `ProcessedEmail`, so old Gmail messages do not recreate alerts after the branch was removed.
 
-```text
-Кейс закрыт: удалить обращения по listing_id
-```
-
-It deletes alerts for the selected branch but keeps `ProcessedEmail`, so old Gmail messages do not recreate alerts after the branch was removed.
-
-Alerts are treated as "Требует внимания" when they are unread, high/urgent, parser-problematic, linked to a mailbox error, or have Telegram delivery errors.
+Alerts are treated as requiring attention when they are unread, high/urgent priority, parser-problematic, linked to a mailbox error, or have Telegram delivery errors.
 
 ## Cleanup
 
@@ -503,8 +501,8 @@ Rules:
 
 - deletes only branches grouped by `mailbox + listing_id`;
 - deletes only old inactive branches;
-- a branch is inactive only when all its alerts are `ignored`;
-- branches with any `unread` or `in_work` alert are never deleted automatically;
+- a branch is inactive only when all its alerts are ignored;
+- branches with any unread or in-work alert are never deleted automatically;
 - `ProcessedEmail` is kept for dedupe.
 
 ## Anti-Spam And Events
@@ -516,7 +514,7 @@ Argus separates:
 - operational listing events, for example listing expiration;
 - service health events.
 
-Noise is stored separately through the "Спам и рассылки" Admin section and is not sent to Telegram as a normal buyer lead. Useful noise can be promoted back to a buyer message from Admin.
+Noise is stored separately through the localized spam/noise Admin section and is not sent to Telegram as a normal buyer lead. Useful noise can be promoted back to a buyer message from Admin.
 
 Operational events are kept separate from buyer messages and can still be sent as service/operational notifications where appropriate.
 
@@ -579,22 +577,22 @@ python -m poetry run python manage.py send_unread_reminders --dry-run
 python -m poetry run python manage.py send_unread_reminders --min-age-minutes 30 --reminder-interval-minutes 60 --limit 25
 ```
 
-Quiet hours are configured in Admin through "Настройки Telegram". Normal alerts and reminders are skipped during quiet hours unless urgent alerts are explicitly allowed. Noise alerts are never sent.
+Quiet hours are configured in Admin through the localized Telegram settings section. Normal alerts and reminders are skipped during quiet hours unless urgent alerts are explicitly allowed. Noise alerts are never sent.
 
 ## Admin
 
 Main sections:
 
-- `Обзор`: dashboard;
-- `Почтовые ящики`: mailbox config, Gmail OAuth, health, manual check;
-- `Обращения`: buyer leads and operational events;
-- `Спам и рассылки`: promotional/system/noise messages;
-- `Проверенные письма`: dedupe log, read-only for normal users;
-- `Приоритеты обращений`: priority/risk classification rules;
-- `Системный журнал`: service events and errors;
-- `Настройки Telegram`: quiet hours.
+- overview dashboard;
+- mailbox configuration, Gmail OAuth, health, and manual checks;
+- buyer leads and operational events;
+- spam, promotional, and noise messages;
+- processed email dedupe log, read-only for normal users;
+- lead priority and risk classification rules;
+- service journal with errors and recovery events;
+- Telegram settings and quiet hours.
 
-Admin includes status/priority/risk badges, a "Требует внимания" filter, explanation text for priority/flags, visible operator ownership for alerts in work, and a test Telegram alert action.
+Admin includes status/priority/risk badges, an attention-required filter, explanation text for priority/flags, visible operator ownership for alerts in work, and a test Telegram alert action.
 
 Mailbox management requires superuser access or explicit add/change/delete permissions for `MailboxAccount`. Staff users can view mailbox operational profile data.
 
@@ -606,13 +604,13 @@ Admin code is split under `alerts/admin_site/`; `alerts/admin.py` only re-export
 
 It includes:
 
-- operational Gmail card with status, last check, last success, today's new alerts, and "Проверить сейчас";
-- "Требует внимания" default view;
-- "Сегодня";
-- "Мои в работе";
-- "Спам и рассылки";
-- "Кейсы" grouped by `mailbox + listing_id` with basic listing analytics;
-- "Системный журнал";
+- operational Gmail card with status, last check, last success, today's new alerts, and a check-now action;
+- attention-required default view;
+- today view;
+- my in-work view;
+- spam and noise view;
+- cases grouped by `mailbox + listing_id` with basic listing analytics;
+- service journal;
 - quiet-hours toggle with a link to full Admin settings;
 - manual mailbox check button for users with mailbox management permissions;
 - alert detail page;
@@ -624,9 +622,9 @@ It includes:
 
 The mobile system journal supports operational actions on open service events:
 
-- `Mark recovered`;
-- `Ignore this error`;
-- `Open related mailbox`.
+- mark recovered;
+- ignore this error;
+- open related mailbox.
 
 ## Templates And Static
 
