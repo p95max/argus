@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from django.db import close_old_connections
 from django.utils import timezone
 from telegram.error import BadRequest
 
@@ -50,6 +51,22 @@ class AlertCallbackResult:
     status_changed: bool
 
 
+def _run_with_fresh_db_connection(func, *args, **kwargs):
+    close_old_connections()
+    try:
+        return func(*args, **kwargs)
+    finally:
+        close_old_connections()
+
+
+async def _run_db_sync(func, *args, **kwargs):
+    return await sync_to_async(_run_with_fresh_db_connection, thread_sensitive=True)(
+        func,
+        *args,
+        **kwargs,
+    )
+
+
 async def handle_alert_callback(update, context):
     query = update.callback_query
 
@@ -68,7 +85,8 @@ async def handle_alert_callback(update, context):
     )
 
     try:
-        result = await sync_to_async(handle_alert_callback_action)(
+        result = await _run_db_sync(
+            handle_alert_callback_action,
             query.data,
             chat_id=chat_id,
             user_id=user_id,
@@ -155,7 +173,7 @@ async def handle_mailbox_status_command(update, context):
         )
         return
 
-    text = await sync_to_async(build_mailbox_status_message)()
+    text = await _run_db_sync(build_mailbox_status_message)
 
     await update.effective_message.reply_text(
         text,
@@ -217,7 +235,7 @@ async def handle_daily_summary_command(update, context):
         )
         return
 
-    text = await sync_to_async(build_daily_summary_message)()
+    text = await _run_db_sync(build_daily_summary_message)
 
     await update.effective_message.reply_text(
         text,
@@ -250,7 +268,7 @@ async def handle_health_command(update, context):
         return
 
     bot_started_at = context.application.bot_data.get("argus_started_at")
-    text = await sync_to_async(build_health_message)(bot_started_at=bot_started_at)
+    text = await _run_db_sync(build_health_message, bot_started_at=bot_started_at)
 
     await update.effective_message.reply_text(
         text,
@@ -278,7 +296,7 @@ async def handle_unread_command(update, context):
         )
         return
 
-    text = await sync_to_async(build_unread_command_message)()
+    text = await _run_db_sync(build_unread_command_message)
 
     await update.effective_message.reply_text(
         text,
@@ -501,7 +519,7 @@ async def _safe_answer_callback(query, text: str, show_alert: bool = False) -> N
 
 async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
     try:
-        text = await sync_to_async(build_alert_message)(alert)
+        text = await _run_db_sync(build_alert_message, alert)
 
         await query.edit_message_text(
             text=text,
@@ -518,7 +536,6 @@ async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
                 alert.id,
             )
             return
-
         if "query is too old" in message or "query id is invalid" in message:
             logger.warning(
                 "Telegram alert message edit skipped because query is too old or invalid. alert_id=%s",
