@@ -1,6 +1,10 @@
 # Argus
 
 [![CI](https://github.com/p95max/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/p95max/argus/actions/workflows/ci.yml)
+![Coverage](https://img.shields.io/badge/coverage-80%25%2B-brightgreen)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+![Django](https://img.shields.io/badge/django-6.0-092E20)
+![Deploy](https://img.shields.io/badge/deploy-VPS%20%2B%20systemd-informational)
 
 Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads Gmail messages through per-mailbox OAuth, classifies marketplace emails into buyer leads, noise/system messages, and operational service events, sends Telegram notifications, and gives operators both a full Django Admin UI and a compact mobile control panel.
 
@@ -160,7 +164,7 @@ The workflow enforces:
 python -m poetry check --lock
 python -m poetry run ruff check alerts config tests
 python -m poetry run python manage.py makemigrations --check --dry-run
-python -m poetry run pytest --cov=alerts --cov=config --cov-report=term-missing
+python -m poetry run pytest --cov=alerts --cov=config --cov-report=term-missing --cov-fail-under=80
 ```
 
 A change should not be merged or deployed unless the GitHub Actions `CI` check is green.
