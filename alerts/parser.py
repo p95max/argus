@@ -174,7 +174,9 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
     flag_codes = ()
     classification_reason = "Operational/system event; buyer lead classifier was not applied."
     if event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
-        classification = classify_marketplace_message(f"{raw_subject}\n{normalized_body}")
+        # Classify only the buyer-authored message, not subject/listing metadata.
+        # Otherwise listing titles like "... TÜV bis ..." create false risk flags.
+        classification = classify_marketplace_message(message_text)
         priority = classification.priority
         flag_codes = classification.flag_codes
         classification_reason = classification.reason
