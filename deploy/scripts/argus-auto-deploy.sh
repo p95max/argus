@@ -48,7 +48,7 @@ old_rev="$($GIT_BIN rev-parse HEAD)"
 log "Checking $REMOTE_NAME/$DEPLOY_BRANCH for updates from $old_rev"
 
 "$GIT_BIN" fetch --prune "$REMOTE_NAME" "$DEPLOY_BRANCH"
-new_rev="$($GIT_BIN rev-parse "$REMOTE_NAME/$DEPLOY_BRANCH")"
+new_rev="$($GIT_BIN" rev-parse "$REMOTE_NAME/$DEPLOY_BRANCH")"
 
 if [ "$old_rev" = "$new_rev" ]; then
     log "Already up to date: $new_rev"
@@ -57,7 +57,7 @@ fi
 
 changed_files="$($GIT_BIN diff --name-only "$old_rev" "$new_rev")"
 ops_changed=0
-if printf '%s\n' "$changed_files" | grep -Eq '^(deploy/systemd/|deploy/scripts/|deploy/install-ops\.sh$)'; then
+if printf '%s\n' "$changed_files" | grep -Eq '^(deploy/systemd/|deploy/scripts/|deploy/sudoers/|deploy/install-ops\.sh$)'; then
     ops_changed=1
 fi
 
@@ -67,7 +67,7 @@ log "Deploying $new_rev"
 
 if [ "$ops_changed" = "1" ]; then
     if [ "$AUTO_INSTALL_OPS" = "1" ]; then
-        log "Operational files changed; reinstalling systemd units and helper scripts"
+        log "Operational files changed; reinstalling systemd units, sudoers policy, and helper scripts"
         bash deploy/install-ops.sh
     else
         log "Operational files changed; manual install required: bash deploy/install-ops.sh"
