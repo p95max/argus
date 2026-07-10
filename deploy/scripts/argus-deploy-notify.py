@@ -12,6 +12,7 @@ PROJECT_DIR = Path("/opt/argus")
 ENV_FILE = PROJECT_DIR / ".env.local"
 PENDING_REQUEST_FILE = Path("/var/tmp/argus-telegram-deploy-request.json")
 ACTIVE_REQUEST_FILE = Path("/var/tmp/argus-telegram-deploy-active.json")
+DEPLOY_RESULTS = ("success", "updated", "up_to_date")
 
 
 def load_env() -> dict[str, str]:
@@ -139,7 +140,7 @@ def handle_start() -> int:
     return 0
 
 
-def handle_finish(status: int) -> int:
+def handle_finish(status: int, result: str = "success") -> int:
     if not ACTIVE_REQUEST_FILE.exists():
         return 0
 
@@ -153,10 +154,20 @@ def handle_finish(status: int) -> int:
 
     env = load_env()
     label = env.get("ARGUS_ENV_LABEL", "PROD")
-    if status == 0:
+    if status == 0 and result == "up_to_date":
+        text = (
+            f"✅ [{label}] Argus deploy check finished\n"
+            "Status: UP TO DATE\n"
+            f"HEAD: {current_head()}\n"
+            "No new commit was available; services were not redeployed.\n"
+            f"Duration: {duration_seconds}s\n"
+            f"Finished: {format_time(finished_at)}"
+        )
+    elif status == 0:
+        result_label = "UPDATED" if result == "updated" else "SUCCESS"
         text = (
             f"✅ [{label}] Argus deploy finished\n"
-            "Status: SUCCESS\n"
+            f"Status: {result_label}\n"
             f"HEAD: {current_head()}\n"
             f"Duration: {duration_seconds}s\n"
             f"Finished: {format_time(finished_at)}"
@@ -185,11 +196,16 @@ def main() -> int:
     subparsers.add_parser("start")
     finish_parser = subparsers.add_parser("finish")
     finish_parser.add_argument("--status", type=int, required=True)
+    finish_parser.add_argument(
+        "--result",
+        choices=DEPLOY_RESULTS,
+        default="success",
+    )
     args = parser.parse_args()
 
     if args.event == "start":
         return handle_start()
-    return handle_finish(args.status)
+    return handle_finish(args.status, args.result)
 
 
 if __name__ == "__main__":
