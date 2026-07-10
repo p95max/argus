@@ -32,6 +32,7 @@ async def configure_bot_commands(application):
     try:
         commands = await sync_to_async(build_bot_commands, thread_sensitive=True)()
         await application.bot.set_my_commands(commands)
+        logger.info("Published %s Telegram bot command descriptions.", len(commands))
     except Exception:
         logger.exception("Could not publish Telegram bot command descriptions.")
 
