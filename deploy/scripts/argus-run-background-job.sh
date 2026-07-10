@@ -1,5 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -Eeuo pipefail
+
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
 QUEUE_LOCK_FILE="${ARGUS_BACKGROUND_QUEUE_LOCK_FILE:-/tmp/argus-background-jobs.lock}"
 QUEUE_WAIT_SECONDS="${ARGUS_BACKGROUND_QUEUE_WAIT_SECONDS:-900}"
