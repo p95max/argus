@@ -1,0 +1,55 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Argus\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-10 00:00+0000\n"
+"PO-Revision-Date: 2026-07-10 00:00+0000\n"
+"Last-Translator: Argus\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "English"
+msgstr "Englisch"
+
+msgid "German"
+msgstr "Deutsch"
+
+msgid "Russian"
+msgstr "Russisch"
+
+msgid "Mail and leads"
+msgstr "Post und Anfragen"
+
+msgid "Argus control panel"
+msgstr "Argus Kontrollbereich"
+
+msgid "Overview"
+msgstr "Übersicht"
+
+msgid "Mobile version"
+msgstr "Mobile Version"
+
+msgid "Service health"
+msgstr "Servicezustand"
+
+msgid "Quick access"
+msgstr "Schnellzugriff"
+
+msgid "Interface language"
+msgstr "Oberflächensprache"
+
+msgid "Global language for Admin, mobile panel, and operational UI."
+msgstr "Globale Sprache für Admin, mobiles Panel und operative Oberfläche."
+
+msgid "Global language for Argus. Only superusers can change it. There is no public language switcher."
+msgstr "Globale Sprache für Argus. Nur Superuser können sie ändern. Es gibt keinen öffentlichen Sprachumschalter."
+
+msgid "Argus settings"
+msgstr "Argus Einstellungen"
+
+msgid "Audit"
+msgstr "Audit"

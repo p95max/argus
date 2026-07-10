@@ -1,6 +1,47 @@
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 
-from ..models import LeadFlag, ProcessedEmail, ServiceEvent, TelegramSettings
+from ..models import ArgusSettings, LeadFlag, ProcessedEmail, ServiceEvent, TelegramSettings
+
+
+@admin.register(ArgusSettings)
+class ArgusSettingsAdmin(admin.ModelAdmin):
+    list_display = ("id", "language_code", "updated_at")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (
+            _("Interface language"),
+            {
+                "description": _(
+                    "Global language for Argus. Only superusers can change it. "
+                    "There is no public language switcher."
+                ),
+                "fields": ("language_code",),
+            },
+        ),
+        (
+            _("Audit"),
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser and not ArgusSettings.objects.exists()
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(TelegramSettings)

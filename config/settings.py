@@ -2,6 +2,7 @@ from pathlib import Path
 
 import environ
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.translation import gettext_lazy as _
 
 from . import jazzmin as jazzmin_config
 
@@ -167,6 +168,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "alerts.middleware.AdminSelectedLocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -259,7 +261,15 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # =============================================================================
 
-LANGUAGE_CODE = "ru"
+LANGUAGE_CODE = "en"
+LANGUAGES = [
+    ("en", _("English")),
+    ("de", _("German")),
+    ("ru", _("Russian")),
+]
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]
 TIME_ZONE = env.str("DJANGO_TIME_ZONE")
 
 USE_I18N = True

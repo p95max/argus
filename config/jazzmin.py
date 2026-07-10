@@ -1,3 +1,6 @@
+from django.utils.translation import gettext_lazy as _
+
+
 HEALTH_CHECK_URL = "/health/full/"
 MOBILE_DASHBOARD_URL = "/m/"
 
@@ -6,12 +9,12 @@ JAZZMIN_SETTINGS = {
     "site_title": "Argus",
     "site_header": "Argus",
     "site_brand": "Argus",
-    "welcome_sign": "Панель управления Argus",
+    "welcome_sign": _("Argus control panel"),
     "copyright": "Argus",
     "search_model": ["auth.User", "auth.Group"],
     "topmenu_links": [
         {
-            "name": "Обзор",
+            "name": _("Overview"),
             "url": "admin:index",
             "permissions": ["auth.view_user"],
         },
@@ -21,11 +24,11 @@ JAZZMIN_SETTINGS = {
     ],
     "usermenu_links": [
         {
-            "name": "Мобильная версия",
+            "name": _("Mobile version"),
             "url": MOBILE_DASHBOARD_URL,
         },
         {
-            "name": "Состояние сервиса",
+            "name": _("Service health"),
             "url": HEALTH_CHECK_URL,
         },
     ],
@@ -35,9 +38,9 @@ JAZZMIN_SETTINGS = {
     "hide_models": [],
     "order_with_respect_to": ["alerts", "auth"],
     "custom_links": {
-        "Быстрый доступ": [
+        "Quick access": [
             {
-                "name": "Мобильная версия",
+                "name": _("Mobile version"),
                 "url": MOBILE_DASHBOARD_URL,
                 "icon": "fas fa-mobile-alt",
             },
@@ -45,6 +48,7 @@ JAZZMIN_SETTINGS = {
     },
     "icons": {
         "alerts": "fas fa-inbox",
+        "alerts.argussettings": "fas fa-language",
         "alerts.mailboxaccount": "fas fa-envelope-open-text",
         "alerts.marketplacealert": "fas fa-bell",
         "alerts.noisealert": "fas fa-volume-mute",

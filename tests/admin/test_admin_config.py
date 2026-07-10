@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.admin.sites import AdminSite
 from django.test import RequestFactory
+from django.utils import translation
 
 from alerts.admin import (
     MailboxAccountAdmin,
@@ -25,14 +26,15 @@ def test_marketplace_alert_admin_has_event_type_filter():
 
 
 def test_admin_section_names_are_human_friendly():
-    assert AlertsConfig.verbose_name == "Почта и обращения"
-    assert MailboxAccount._meta.verbose_name_plural == "Почтовые ящики"
-    assert MarketplaceAlert._meta.verbose_name_plural == "Обращения"
-    assert NoiseAlert._meta.verbose_name_plural == "Спам и рассылки"
-    assert ProcessedEmail._meta.verbose_name_plural == "Проверенные письма"
-    assert LeadFlag._meta.verbose_name_plural == "Приоритеты обращений"
-    assert ServiceEvent._meta.verbose_name_plural == "Системный журнал"
-    assert TelegramSettings._meta.verbose_name_plural == "Настройки Telegram"
+    with translation.override("en"):
+        assert AlertsConfig.verbose_name == "Mail and leads"
+        assert MailboxAccount._meta.verbose_name_plural == "Почтовые ящики"
+        assert MarketplaceAlert._meta.verbose_name_plural == "Обращения"
+        assert NoiseAlert._meta.verbose_name_plural == "Спам и рассылки"
+        assert ProcessedEmail._meta.verbose_name_plural == "Проверенные письма"
+        assert LeadFlag._meta.verbose_name_plural == "Приоритеты обращений"
+        assert ServiceEvent._meta.verbose_name_plural == "Системный журнал"
+        assert TelegramSettings._meta.verbose_name_plural == "Настройки Telegram"
 
 
 def test_mailbox_admin_add_form_hides_email_until_oauth():

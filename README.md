@@ -120,6 +120,18 @@ With `DJANGO_DEBUG=True`, Argus uses SQLite only when `DATABASE_URL` is empty. I
 
 Tests are different on purpose: `pytest.ini` points to `config.test_settings`, which overrides the database to in-memory SQLite. This keeps `python -m poetry run pytest` away from Neon.
 
+## Language
+
+Argus uses English as the source/default interface language and enables Django i18n for English (`en`), German (`de`), and Russian (`ru`).
+
+The language is global for the service. There is no public language switcher in `/m/` or the operator UI. A superuser can change it in Django Admin:
+
+```text
+/control/ -> Mail and leads -> Argus settings -> Interface language
+```
+
+Only superusers can view or edit `Argus settings`.
+
 ## Database
 
 Fresh PostgreSQL/Neon setup:

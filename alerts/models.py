@@ -2,7 +2,14 @@ from datetime import time
 
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+
+
+class LanguageCode(models.TextChoices):
+    ENGLISH = "en", _("English")
+    GERMAN = "de", _("German")
+    RUSSIAN = "ru", _("Russian")
 
 
 class TimestampedModel(models.Model):
@@ -301,6 +308,30 @@ class TelegramSettings(TimestampedModel):
     def __str__(self):
         status = "включены" if self.quiet_hours_enabled else "выключены"
         return f"Telegram settings: quiet hours {status}"
+
+    @classmethod
+    def load(cls):
+        settings = cls.objects.order_by("id").first()
+        if settings:
+            return settings
+        return cls.objects.create()
+
+
+class ArgusSettings(TimestampedModel):
+    language_code = models.CharField(
+        _("Interface language"),
+        max_length=8,
+        choices=LanguageCode.choices,
+        default=LanguageCode.ENGLISH,
+        help_text=_("Global language for Admin, mobile panel, and operational UI."),
+    )
+
+    class Meta:
+        verbose_name = _("Argus settings")
+        verbose_name_plural = _("Argus settings")
+
+    def __str__(self):
+        return f"Argus settings: {self.get_language_code_display()}"
 
     @classmethod
     def load(cls):
