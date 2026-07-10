@@ -52,9 +52,15 @@ def test_admin_section_names_translate_to_russian():
         assert TelegramSettings._meta.verbose_name_plural == "Настройки Telegram"
 
 
-def test_mailbox_admin_add_form_hides_email_until_oauth():
+@pytest.mark.django_db
+def test_mailbox_admin_add_form_hides_email_until_oauth(django_user_model):
     model_admin = MailboxAccountAdmin(MailboxAccount, AdminSite())
     request = RequestFactory().get("/control/alerts/mailboxaccount/add/")
+    request.user = django_user_model.objects.create_superuser(
+        username="mailbox-admin",
+        email="mailbox-admin@example.local",
+        password="pass",
+    )
 
     add_fields = {
         field

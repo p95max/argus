@@ -85,6 +85,7 @@ def test_local_mvp_flow_end_to_end(monkeypatch):
         reverse("admin:alerts_mailboxaccount_add"),
         {
             "name": "QA inbox",
+            "fetch_period": MailboxAccount.FetchPeriod.TODAY,
             "is_active": "on",
             "_save": "Save",
         },
