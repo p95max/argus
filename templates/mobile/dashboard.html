@@ -6,6 +6,8 @@
 
 {% block content %}
     {% trans "not yet" as not_yet %}
+    {% trans "Delete all resolved and ignored system log entries?" as confirm_clear_resolved %}
+    {% trans "Delete the entire system log, including open errors?" as confirm_clear_all %}
 
     <section>
         <article class="card">
@@ -78,6 +80,30 @@
     {% if view_mode == 'system' %}
         <section>
             <h2>{% trans "System log" %}</h2>
+            {% if request.user.is_superuser %}
+                <div class="actions compact-actions">
+                    <form
+                        method="post"
+                        action="{% url 'mobile_dashboard' %}"
+                        onsubmit="return confirm('{{ confirm_clear_resolved|escapejs }}')"
+                    >
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="action" value="clear_resolved_service_events">
+                        <button class="small-action" type="submit">🧹 {% trans "Clear resolved" %}</button>
+                    </form>
+                    <form
+                        method="post"
+                        action="{% url 'mobile_dashboard' %}"
+                        onsubmit="return confirm('{{ confirm_clear_all|escapejs }}')"
+                    >
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="action" value="clear_all_service_events">
+                        <button class="small-action" type="submit">⚠️ {% trans "Clear all" %}</button>
+                    </form>
+                </div>
+            {% endif %}
             {% for event in service_events %}
                 <article class="card">
                     <div class="title">{{ event.title }}</div>
