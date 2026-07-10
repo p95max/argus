@@ -1,0 +1,26 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Argus\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Clear resolved"
+msgstr "Erledigte löschen"
+
+msgid "Clear all"
+msgstr "Alles löschen"
+
+msgid "Delete all resolved and ignored system log entries?"
+msgstr "Alle erledigten und ignorierten Einträge im Systemjournal löschen?"
+
+msgid "Delete the entire system log, including open errors?"
+msgstr "Das gesamte Systemjournal einschließlich offener Fehler löschen?"
+
+msgid "The system log is already empty."
+msgstr "Das Systemjournal ist bereits leer."
+
+msgid "System log cleared. Deleted records: %(count)s."
+msgstr "Systemjournal bereinigt. Gelöschte Einträge: %(count)s."
