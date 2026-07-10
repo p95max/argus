@@ -36,3 +36,21 @@ msgstr "Архив обращений уже пуст."
 
 msgid "Lead archive cleared. Deleted records: %(count)s."
 msgstr "Архив обращений очищен. Удалено записей: %(count)s."
+
+msgid "Email fetch period"
+msgstr "Период загрузки писем"
+
+msgid "Today"
+msgstr "Сегодня"
+
+msgid "Last 7 days"
+msgstr "Последние 7 дней"
+
+msgid "No date limit"
+msgstr "Без ограничения по дате"
+
+msgid "Limits how far back Gmail messages are loaded."
+msgstr "Ограничивает период, за который загружаются письма Gmail."
+
+msgid "Controls how far back Gmail is searched. Only superusers can change this setting."
+msgstr "Определяет период поиска в Gmail. Изменять эту настройку могут только суперпользователи."
