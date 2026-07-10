@@ -9,6 +9,7 @@ GIT_BIN="${GIT_BIN:-/usr/bin/git}"
 RUN_DOCTOR="${RUN_DOCTOR:-1}"
 RESTART_SERVICES="${RESTART_SERVICES:-argus-web.service argus-telegram-bot.service}"
 AUTO_INSTALL_OPS="${AUTO_INSTALL_OPS:-0}"
+DEPLOY_NOTIFY_BIN="${DEPLOY_NOTIFY_BIN:-/usr/local/bin/argus-deploy-notify.py}"
 
 log() {
     printf '[%s] %s\n' "$(date -Is)" "$*"
@@ -27,7 +28,21 @@ run_systemctl() {
     fi
 }
 
+notify_deploy_finish() {
+    local status=$?
+    trap - EXIT
+    if [ -x "$DEPLOY_NOTIFY_BIN" ]; then
+        "$DEPLOY_NOTIFY_BIN" finish --status "$status" || true
+    fi
+    exit "$status"
+}
+
 cd "$PROJECT_DIR"
+
+if [ -x "$DEPLOY_NOTIFY_BIN" ]; then
+    "$DEPLOY_NOTIFY_BIN" start || true
+fi
+trap notify_deploy_finish EXIT
 
 [ -x "$GIT_BIN" ] || fail "git binary not found: $GIT_BIN"
 [ -x "$PYTHON_BIN" ] || fail "project Python not found or not executable: $PYTHON_BIN"
