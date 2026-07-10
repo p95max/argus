@@ -247,7 +247,7 @@ sudo journalctl \
   -u argus-cleanup-old-leads.service \
   -u argus-auto-deploy.service \
   -u argus-backup-db.service \
-  --since today --no-pager | grep 'Queue\['
+  --since today --no-pager | grep 'Queue['
 ```
 
 ### Telegram Bot Commands
@@ -268,8 +268,6 @@ sudo journalctl \
 - `UPDATED` — a new commit was deployed.
 - `UP TO DATE` — `origin/master` and the local `HEAD` were already equal; services were not redeployed.
 - `FAILED` — the deploy command exited with an error.
-
-Only actors allowed by `TELEGRAM_ALLOWED_CHAT_IDS` and `TELEGRAM_ALLOWED_USER_IDS` can use operational commands.
 
 ## Gmail Flow
 
@@ -309,3 +307,176 @@ python manage.py check_gmail --max-results 25
 `check_gmail` is protected by an atomic file lock in `tmp/command_locks` (`ARGUS_COMMAND_LOCK_TIMEOUT_SECONDS`) so overlapping timers do not run the same command concurrently. `cleanup_old_leads` uses the same lock pattern.
 
 ## Alerts And Cases
+
+`MarketplaceAlert` is the central operational record. It stores the mailbox, event classification, alert status, priority, parsing result, listing and buyer data, Gmail identifiers, Telegram delivery state, and operator ownership.
+
+A listing case is grouped by:
+
+```text
+mailbox + listing_id
+```
+
+Alert event types are:
+
+- `buyer_message`
+- `listing_expiring`
+- `system_notice`
+- `noise`
+
+Operational statuses are:
+
+- `unread`
+- `in_work`
+- `ignored`
+- `archived`
+
+Taking an alert into work records the assigned Django user, a display label, and the assignment time. The Admin close-case action deletes all alerts for the selected `mailbox + listing_id` branch but keeps `ProcessedEmail`, so previously processed Gmail messages do not recreate the deleted case.
+
+Alerts require attention when they are unread, high or urgent priority, parser-problematic, connected to mailbox/service failures, or have Telegram delivery errors.
+
+## Cleanup
+
+Old inactive listing branches can be inspected and deleted with:
+
+```powershell
+python -m poetry run python manage.py cleanup_old_leads --days 30 --limit 100 --dry-run
+python -m poetry run python manage.py cleanup_old_leads --days 30 --limit 100
+```
+
+Cleanup rules:
+
+- cases are grouped by `mailbox + listing_id`;
+- branches without a `listing_id` are not selected;
+- every alert in the branch must have status `ignored`;
+- branches containing `unread`, `in_work`, `archived`, or any other status are not deleted automatically;
+- the newest alert update in the branch must be older than the configured cutoff;
+- `ProcessedEmail` records remain in the database for Gmail deduplication.
+
+## Anti-Spam And Service Events
+
+Argus separates buyer leads, listing lifecycle events, system/noise mail, and operational service failures.
+
+Noise is exposed through the separate spam/noise Admin view and is not sent to Telegram as a normal buyer lead. An operator can promote a useful noise record back to a buyer message.
+
+`ServiceEvent` records mailbox errors, parser errors, Telegram delivery errors, and recovery events. Repeated failures use a fingerprint and occurrence counter instead of creating unlimited duplicate incidents. Events can be open, recovered, or ignored.
+
+## Telegram Access And Notifications
+
+Telegram configuration is loaded from:
+
+```env
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_DEFAULT_CHAT_ID=
+TELEGRAM_ALLOWED_CHAT_IDS=
+TELEGRAM_ALLOWED_USER_IDS=
+TELEGRAM_SEND_ON_GMAIL_CHECK=False
+```
+
+Access behavior:
+
+- `TELEGRAM_DEFAULT_CHAT_ID` is automatically added to the allowed-chat set.
+- `TELEGRAM_ALLOWED_CHAT_IDS` adds more permitted private chats or groups.
+- If there is no default chat and the allowed-chat list is empty, all commands are denied.
+- If `TELEGRAM_ALLOWED_USER_IDS` is empty, any user inside an allowed chat can run commands.
+- If `TELEGRAM_ALLOWED_USER_IDS` is populated, both the chat ID and user ID must be allowed.
+- All current bot commands use the same allowlist; there is no separate manager/admin command role.
+
+For two private Telegram users, configure both IDs in both lists:
+
+```env
+TELEGRAM_DEFAULT_CHAT_ID=330297984
+TELEGRAM_ALLOWED_CHAT_IDS=330297984,123456789
+TELEGRAM_ALLOWED_USER_IDS=330297984,123456789
+```
+
+In a one-to-one Telegram conversation, the private `chat_id` normally matches that user's Telegram `user_id`. Group chats are different: when the user allowlist is empty, every member of an allowed group can use the bot commands.
+
+Useful management commands:
+
+```powershell
+python -m poetry run python manage.py send_telegram_alert 1
+python -m poetry run python manage.py send_telegram_system "Argus is running"
+python -m poetry run python manage.py run_telegram_bot
+python -m poetry run python manage.py send_unread_reminders --dry-run
+```
+
+Inline alert actions update lead status to `in_work`, `unread`, or `ignored`, and the mobile button opens `/m/alerts/<id>/` using `ARGUS_PUBLIC_BASE_URL`.
+
+Quiet hours are configured through `TelegramSettings` in Admin. Normal alerts and reminders are skipped during quiet hours unless urgent alerts are explicitly allowed. Noise alerts are never sent as buyer notifications.
+
+## Admin
+
+Main Admin areas include:
+
+- overview dashboard;
+- mailbox configuration, Gmail OAuth, health, and manual checks;
+- buyer leads and operational listing events;
+- spam and noise messages;
+- processed-email deduplication log;
+- lead priority and risk rules;
+- system/service journal;
+- Telegram quiet-hours settings;
+- global Argus language settings for superusers.
+
+Admin includes status, priority, and risk badges; an attention-required filter; priority/classification explanations; visible operator ownership; close-case actions; and test Telegram actions.
+
+Mailbox management requires superuser access or explicit add/change/delete permissions for `MailboxAccount`. Staff users can view mailbox operational information according to their Django permissions.
+
+## Mobile Control Panel
+
+`/m/` is a compact staff-only interface using the same Django authentication session and mailbox permission checks as Admin.
+
+It includes:
+
+- mailbox health and manual Gmail checks;
+- attention-required, today, and my-in-work views;
+- spam/noise view;
+- cases grouped by `mailbox + listing_id`;
+- service journal;
+- alert detail pages and quick status actions;
+- operator ownership and priority explanations;
+- links to full Admin configuration.
+
+The mobile service journal supports recovering or ignoring open service events and opening the related mailbox.
+
+## Security
+
+- Gmail OAuth refresh tokens are encrypted before storage.
+- `GMAIL_OAUTH_TOKEN_FERNET_KEY` must remain stable across deploys, backups, and restores.
+- When the Fernet key is empty, local development derives a key from `DJANGO_SECRET_KEY`.
+- Admin login uses cache-backed lockout protection.
+- Mobile POST redirects validate destination hosts.
+- Telegram commands are denied unless the chat passes the configured allowlist.
+- `/deploy` can only start the predefined `argus-auto-deploy.service` through a restricted sudoers rule; it cannot execute arbitrary root commands.
+- Production credentials and `.env.local` must never be committed.
+
+## Tests
+
+Run the full suite:
+
+```powershell
+python -m poetry run pytest
+```
+
+Current test behavior:
+
+- `pytest.ini` uses `DJANGO_SETTINGS_MODULE = config.test_settings`.
+- Tests force in-memory SQLite and do not use the production Neon database.
+- Linux-specific queue tests are skipped on Windows because they require `bash` and `flock`.
+
+Useful focused checks:
+
+```powershell
+python -m poetry run ruff check alerts config tests
+python -m poetry run python manage.py makemigrations --check --dry-run
+python -m poetry run pytest -q tests/test_background_job_queue.py
+python -m poetry run pytest -q tests/test_deploy_notifications.py tests/test_telegram_deploy_ops.py tests/test_telegram_help_command.py
+```
+
+## Contacts
+
+Author: Maksym Petrykin
+
+Email: [m.petrykin@gmx.de](mailto:m.petrykin@gmx.de)
+
+Telegram: [@max_p95](https://t.me/max_p95)
