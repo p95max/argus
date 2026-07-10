@@ -159,3 +159,6 @@ msgstr "Отправлено в Telegram"
 
 msgid "Telegram error"
 msgstr "Ошибка Telegram"
+
+msgid "queue an immediate production deploy and report queue, start, and result"
+msgstr "поставить production deploy в очередь и сообщить о старте и результате"
