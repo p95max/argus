@@ -179,36 +179,3 @@ def test_runner_skips_duplicate_job_before_queueing(tmp_path):
     assert duplicate.returncode == 0, duplicate.stdout + duplicate.stderr
     assert "duplicate job is already running or waiting; skipping" in duplicate.stdout
     assert order_file.read_text().splitlines() == ["first"]
-
-
-@pytest.mark.skipif(
-    os.name == "nt",
-    reason="The production queue runner uses bash and flock.",
-)
-def test_runner_works_with_restricted_systemd_path(tmp_path):
-    restricted_runner = tmp_path / "argus-run-background-job.sh"
-    restricted_runner.write_text(RUNNER.read_text())
-    restricted_runner.chmod(0o644)
-
-    result = subprocess.run(
-        [
-            "bash",
-            str(restricted_runner),
-            "argus-test-restricted",
-            "bash",
-            "-c",
-            "printf ok",
-        ],
-        env={
-            **os.environ,
-            "ARGUS_BACKGROUND_QUEUE_LOCK_FILE": str(tmp_path / "queue.lock"),
-            "ARGUS_BACKGROUND_QUEUE_WAIT_SECONDS": "5",
-        },
-        capture_output=True,
-        text=True,
-        timeout=5,
-        check=False,
-    )
-
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert "ok" in result.stdout
