@@ -21,7 +21,8 @@ Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads
 - Multiple Gmail mailboxes with per-mailbox OAuth.
 - Encrypted Gmail refresh tokens in `MailboxAccount.gmail_oauth_token`.
 - Buyer alerts, noise/system alerts, service events, unread reminders, cleanup, and mailbox health tracking.
-- Telegram bot with inline alert actions, status commands, health/doctor commands, and mobile links.
+- Telegram bot with inline alert actions, status commands, health/doctor commands, queued `/deploy`, and mobile links.
+- Shared systemd background-job queue serializes Gmail checks, reminders, cleanup, backups, and auto-deploy.
 - PostgreSQL/Neon support through `DATABASE_URL`.
 - Tests use `config.test_settings` and in-memory SQLite, even when `.env.local` points to PostgreSQL.
 - GitHub Actions CI runs tests, migration checks, linting, and coverage enforcement on every push to `master` and every pull request.
@@ -223,6 +224,52 @@ Install or update production ops files on the VPS:
 cd /opt/argus
 ./deploy/install-ops.sh
 ```
+
+### Background Job Queue
+
+The following systemd jobs share `/tmp/argus-background-jobs.lock` and execute one at a time:
+
+- `argus-check-gmail.service`
+- `argus-unread-reminders.service`
+- `argus-cleanup-old-leads.service`
+- `argus-backup-db.service`
+- `argus-auto-deploy.service`
+
+Each job waits for the shared lock for up to 15 minutes. A separate per-job lock prevents duplicate instances of the same task. The web service, Telegram polling service, and health monitor remain independent from this queue.
+
+Inspect queue activity:
+
+```bash
+sudo lslocks -o COMMAND,PID,TYPE,MODE,PATH --notruncate | grep argus
+sudo journalctl \
+  -u argus-check-gmail.service \
+  -u argus-unread-reminders.service \
+  -u argus-cleanup-old-leads.service \
+  -u argus-auto-deploy.service \
+  -u argus-backup-db.service \
+  --since today --no-pager | grep 'Queue\['
+```
+
+### Telegram Bot Commands
+
+| Command | Purpose |
+| --- | --- |
+| `/help` | Show bot capabilities and the current command list. |
+| `/status` | Show Gmail mailbox status and latest checks. |
+| `/mailboxes` | Alias for `/status`. |
+| `/summary` | Show today's lead summary. |
+| `/unread` | Show one report with unread leads. |
+| `/health` | Show DB, Gmail, Telegram, and service-error health. |
+| `/doctor` | Run the production doctor and show systemd, Git, health, and deploy status. |
+| `/deploy` | Queue an immediate production auto-deploy and report queue state, actual start, and final result. |
+
+`/deploy` does not run `git add`, `git commit`, or `git push`. It starts the existing `argus-auto-deploy.service` through the shared queue. The bot immediately reports whether the queue is free or busy, then sends a start notification and one of these final states:
+
+- `UPDATED` — a new commit was deployed.
+- `UP TO DATE` — `origin/master` and the local `HEAD` were already equal; services were not redeployed.
+- `FAILED` — the deploy command exited with an error.
+
+Only actors allowed by `TELEGRAM_ALLOWED_CHAT_IDS` and `TELEGRAM_ALLOWED_USER_IDS` can use operational commands.
 
 ## Gmail Flow
 
