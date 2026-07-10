@@ -8,4 +8,5 @@ Type=oneshot
 User=argus
 Group=argus
 WorkingDirectory=/opt/argus
-ExecStart=/usr/bin/flock -n /tmp/argus-auto-deploy.lock /usr/local/bin/argus-auto-deploy.sh
+TimeoutStartSec=30min
+ExecStart=/usr/local/bin/argus-run-background-job.sh argus-auto-deploy /usr/local/bin/argus-auto-deploy.sh
