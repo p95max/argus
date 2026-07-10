@@ -2,4 +2,4 @@
 argus ALL=(root) NOPASSWD: /usr/bin/systemctl restart argus-web.service argus-telegram-bot.service
 
 # Allow the Telegram bot to enqueue only the existing Argus auto-deploy service.
-argus ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block argus-auto-deploy.service
+argus ALL=(root) NOPASSWD: /usr/bin/systemctl --no-block start argus-auto-deploy.service
