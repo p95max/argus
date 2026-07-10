@@ -31,9 +31,9 @@ def test_build_health_message_contains_operational_state(monkeypatch, alert):
     assert "🩺 <b>Argus: health</b>" in message
     assert "🟢 <b>DB:</b> OK" in message
     assert "🟢 <b>Gmail:</b> OK" in message
-    assert "🟢 <b>Ящики:</b> активных 1 / ошибок 0" in message
-    assert "🔴 <b>Открытые ошибки:</b> 0" in message
-    assert "🆕 <b>Новые обращения:</b> 1" in message
-    assert "🤖 <b>Бот работает:</b>" in message
+    assert "🟢 <b>Mailboxes:</b> active 1 / errors 0" in message
+    assert "🔴 <b>Open errors:</b> 0" in message
+    assert "🆕 <b>New leads:</b> 1" in message
+    assert "🤖 <b>Bot uptime:</b>" in message
     assert 'href="http://127.0.0.1:8000/m/"' in message
-    assert "Перейти в мобильную админку" in message
+    assert "Open mobile admin" in message

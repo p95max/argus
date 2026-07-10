@@ -58,10 +58,10 @@ def test_build_unread_reminder_report_uses_telegram_alert_style():
     message = build_unread_reminder_report_message([first, second])
 
     assert len(message) <= TELEGRAM_SAFE_MESSAGE_LIMIT
-    assert message.startswith("⏰ <b>Argus: непрочитанные обращения</b>")
-    assert "🔴 <b>Статус:</b> требуется внимание" in message
-    assert "🆕 <b>Непрочитано:</b> 2" in message
-    assert "📂 <b>Кейсов:</b> 2" in message
+    assert message.startswith("⏰ <b>Argus: unread leads</b>")
+    assert "🔴 <b>Status:</b> needs attention" in message
+    assert "🆕 <b>Unread:</b> 2" in message
+    assert "📂 <b>Cases:</b> 2" in message
     assert "🔥 <b>High/Urgent:</b> 1" in message
     assert "📱 <a" in message
 
@@ -72,9 +72,9 @@ def test_build_unread_reminder_report_rounds_oldest_age():
 
     message = build_unread_reminder_report_message([alert])
 
-    assert "⏳ <b>Самое старое:</b> 20 ч" in message
-    assert "⏳ 20 ч" in message
-    assert "1199 мин" not in message
+    assert "⏳ <b>Oldest:</b> 20 h" in message
+    assert "⏳ 20 h" in message
+    assert "1199 min" not in message
 
 
 def test_build_unread_reminder_report_uses_latest_known_buyer_in_case():
@@ -91,8 +91,8 @@ def test_build_unread_reminder_report_uses_latest_known_buyer_in_case():
 
     message = build_unread_reminder_report_message([older, newer])
 
-    assert "👤 <b>Последний:</b> Max" in message
-    assert "неизвестно" not in message
+    assert "👤 <b>Latest:</b> Max" in message
+    assert "unknown" not in message
 
 
 def test_build_unread_reminder_report_infers_interested_buyer_from_subject():
@@ -102,7 +102,7 @@ def test_build_unread_reminder_report_infers_interested_buyer_from_subject():
 
     message = build_unread_reminder_report_message([alert])
 
-    assert "👤 <b>Последний:</b> Interessent" in message
+    assert "👤 <b>Latest:</b> Interessent" in message
 
 
 def test_truncate_html_message_drops_incomplete_entity_before_suffix():

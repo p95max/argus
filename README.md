@@ -127,11 +127,18 @@ With `DJANGO_DEBUG=True`, Argus uses SQLite only when `DATABASE_URL` is empty. I
 
 Tests are different on purpose: `pytest.ini` points to `config.test_settings`, which overrides the database to in-memory SQLite. This keeps `python -m poetry run pytest` away from Neon.
 
-## Language
+## Language And Localization
 
-Argus uses English as the source/default interface language and enables Django i18n for English (`en`), German (`de`), and Russian (`ru`).
+Argus is an internal operations service, so it intentionally uses one global language for the whole installation instead of per-user language switching. English is the source/default interface language, and Django i18n is enabled for English (`en`), German (`de`), and Russian (`ru`).
 
-The language is global for the service. There is no public language switcher in `/m/` or the operator UI. A superuser can change it in Django Admin:
+The global language applies to:
+
+- Django/Jazzmin Admin at `/control/`.
+- Mobile staff panel at `/m/`.
+- Telegram bot messages, command replies, inline buttons, health reports, and unread reminder reports.
+- Operational labels such as statuses, priorities, mailbox state, and service events.
+
+There is no public language switcher in `/m/`, Telegram, or the operator UI. The superuser-owner chooses the service language in Django Admin:
 
 ```text
 /control/ -> Mail and leads -> Argus settings -> Interface language

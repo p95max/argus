@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.urls import reverse
+from django.utils.translation import gettext as _
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from ..models import MarketplaceAlert
+from .i18n import use_argus_telegram_language
 
 
 CALLBACK_PREFIX = "alert"
@@ -15,34 +17,35 @@ CALLBACK_STATUS_UPDATES = {
 }
 
 
+@use_argus_telegram_language
 def build_alert_keyboard(alert: MarketplaceAlert) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [
                 InlineKeyboardButton(
-                    "Статус",
+                    _("Status"),
                     callback_data=_callback_data(alert.id, CALLBACK_STATUS_ACTION),
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    "В работу",
+                    _("Take to work"),
                     callback_data=_callback_data(alert.id, "in_work"),
                 ),
                 InlineKeyboardButton(
-                    "Снять / не в работе",
+                    _("Release"),
                     callback_data=_callback_data(alert.id, "unread"),
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    "Игнор",
+                    _("Ignore"),
                     callback_data=_callback_data(alert.id, "ignored"),
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    "Open Mobile",
+                    _("Open mobile"),
                     url=_mobile_alert_url(alert),
                 ),
             ],

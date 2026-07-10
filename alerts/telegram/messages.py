@@ -6,9 +6,11 @@ from django.conf import settings
 from django.db.models import Count, Q
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from ..health import build_health_report
 from ..models import MailboxAccount, MarketplaceAlert
+from .i18n import use_argus_telegram_language
 from .quiet_hours import quiet_hours_allows_alert
 
 TELEGRAM_HARD_MESSAGE_LIMIT = 4096
@@ -27,10 +29,11 @@ def should_send_telegram_for_alert(alert: MarketplaceAlert, at_time=None) -> boo
     return quiet_hours_allows_alert(alert, at_time=at_time)
 
 
+@use_argus_telegram_language
 def build_alert_message(alert: MarketplaceAlert) -> str:
     title = alert.listing_title or alert.subject or alert.get_event_type_display()
-    buyer = alert.buyer_name or "Неизвестно"
-    message = alert.message_text or alert.normalized_body or alert.raw_body or "Текст не найден"
+    buyer = alert.buyer_name or _("Unknown")
+    message = alert.message_text or alert.normalized_body or alert.raw_body or _("Text not found")
     flags = _alert_flag_names(alert)
     event_time = alert.received_at or alert.created_at
     mailbox_label = _alert_mailbox_label(alert)
@@ -38,27 +41,27 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
 
     lines = [
         _build_alert_header(alert),
-        f"📬 <b>Ящик:</b> {html.escape(mailbox_label)}",
-        f"📅 <b>Дата:</b> {_format_date_from_datetime(event_time)}",
-        f"🕒 <b>Время:</b> {_format_time(event_time)}",
+        f"📬 <b>{_('Mailbox')}:</b> {html.escape(mailbox_label)}",
+        f"📅 <b>{_('Date')}:</b> {_format_date_from_datetime(event_time)}",
+        f"🕒 <b>{_('Time')}:</b> {_format_time(event_time)}",
         f"🆔 <b>ID:</b> {alert.id}",
-        f"📌 <b>Статус:</b> {html.escape(alert.get_alert_status_display())}",
+        f"📌 <b>{_('Status')}:</b> {html.escape(alert.get_alert_status_display())}",
     ]
     if taken_by:
-        lines.append(f"👷 <b>В работе у:</b> {html.escape(taken_by)}")
+        lines.append(f"👷 <b>{_('In work by')}:</b> {html.escape(taken_by)}")
     if alert.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
-        lines.append(f"👤 <b>Покупатель:</b> {html.escape(buyer)}")
+        lines.append(f"👤 <b>{_('Buyer')}:</b> {html.escape(buyer)}")
     lines.extend(
         [
-            f"🚗 <b>Объявление:</b> {html.escape(title)}",
-            f"{_priority_emoji(alert)} <b>Приоритет:</b> {html.escape(alert.get_priority_display())}",
-            f"🏷️ <b>Тип:</b> {html.escape(alert.get_event_type_display())}",
-            f"🚩 <b>Флаги:</b> {html.escape(flags)}",
+            f"🚗 <b>{_('Listing')}:</b> {html.escape(title)}",
+            f"{_priority_emoji(alert)} <b>{_('Priority')}:</b> {html.escape(alert.get_priority_display())}",
+            f"🏷️ <b>{_('Type')}:</b> {html.escape(alert.get_event_type_display())}",
+            f"🚩 <b>{_('Flags')}:</b> {html.escape(flags)}",
         ]
     )
     if alert.classification_reason:
         reason = html.escape(_truncate(alert.classification_reason, ALERT_REASON_LIMIT))
-        lines.append(f"🧾 <b>Почему:</b> {reason}")
+        lines.append(f"🧾 <b>{_('Reason')}:</b> {reason}")
     lines.extend(
         [
             "",
@@ -68,16 +71,18 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
     return _fit_telegram_message(lines)
 
 
+@use_argus_telegram_language
 def build_alert_reminder_message(alert: MarketplaceAlert) -> str:
     return _fit_telegram_message(
         [
-            "⏰ <b>Reminder: alert всё ещё unread</b>",
+            _("⏰ <b>Reminder: alert is still unread</b>"),
             "",
             build_alert_message(alert),
         ]
     )
 
 
+@use_argus_telegram_language
 def build_unread_reminder_report_message(alerts) -> str:
     alerts = list(alerts)
     now = timezone.now()
@@ -91,20 +96,20 @@ def build_unread_reminder_report_message(alerts) -> str:
     report_icon = "🔴" if high_total else "🟠" if alerts else "🟢"
 
     lines = [
-        "⏰ <b>Argus: непрочитанные обращения</b>",
-        f"📅 <b>Дата:</b> {_format_date(timezone.localdate())}",
-        f"🕒 <b>Время:</b> {_format_time(now)}",
+        _("⏰ <b>Argus: unread leads</b>"),
+        f"📅 <b>{_('Date')}:</b> {_format_date(timezone.localdate())}",
+        f"🕒 <b>{_('Time')}:</b> {_format_time(now)}",
         "",
-        f"{report_icon} <b>Статус:</b> требуется внимание",
-        f"🆕 <b>Непрочитано:</b> {len(alerts)}",
-        f"📂 <b>Кейсов:</b> {len(cases)}",
+        f"{report_icon} <b>{_('Status')}:</b> {_('needs attention')}",
+        f"🆕 <b>{_('Unread')}:</b> {len(alerts)}",
+        f"📂 <b>{_('Cases')}:</b> {len(cases)}",
         f"🔥 <b>High/Urgent:</b> {high_total}",
-        f"⏳ <b>Самое старое:</b> {_format_age_minutes(oldest_minutes)}",
+        f"⏳ <b>{_('Oldest')}:</b> {_format_age_minutes(oldest_minutes)}",
         "",
     ]
 
     if not alerts:
-        lines.append("🟢 Непрочитанных обращений для напоминания нет.")
+        lines.append(_("🟢 There are no unread leads for reminder."))
         return _fit_telegram_message(lines)
 
     for index, case in enumerate(cases[:REMINDER_REPORT_CASE_LIMIT], start=1):
@@ -124,24 +129,24 @@ def build_unread_reminder_report_message(alerts) -> str:
             [
                 f"{led} <b>{index}. {html.escape(title)}</b>",
                 (
-                    f"🆕 {case['count']} unread · "
+                    f"🆕 {case['count']} {_('unread')} · "
                     f"🔥 {case['high_count']} high · "
                     f"⏳ {_format_age_minutes(age_minutes)}"
                 ),
-                f"👤 <b>Последний:</b> {html.escape(buyer)}",
-                f"📬 <b>Ящик:</b> {html.escape(mailbox_label)}",
-                f'📱 <a href="{html.escape(link)}">Открыть последнее</a>',
+                f"👤 <b>{_('Latest')}:</b> {html.escape(buyer)}",
+                f"📬 <b>{_('Mailbox')}:</b> {html.escape(mailbox_label)}",
+                f'📱 <a href="{html.escape(link)}">{_("Open latest")}</a>',
                 "",
             ]
         )
 
     hidden_cases = len(cases) - REMINDER_REPORT_CASE_LIMIT
     if hidden_cases > 0:
-        lines.append(f"…и ещё {hidden_cases} кейсов.")
+        lines.append(_("…and %(count)s more cases.") % {"count": hidden_cases})
         lines.append("")
 
     if mobile_url:
-        lines.append(f'📱 <a href="{html.escape(mobile_url)}">Перейти в мобильную админку</a>')
+        lines.append(f'📱 <a href="{html.escape(mobile_url)}">{_("Open mobile admin")}</a>')
 
     return _fit_telegram_message(lines)
 
@@ -191,7 +196,7 @@ def _latest_known_buyer_name(alerts: list[MarketplaceAlert]) -> str:
         if inferred_name:
             return inferred_name
 
-    return "неизвестно"
+    return _("unknown")
 
 
 def _infer_buyer_name_for_reminder(alert: MarketplaceAlert) -> str:
@@ -212,16 +217,16 @@ def _infer_buyer_name_for_reminder(alert: MarketplaceAlert) -> str:
 
 def _build_alert_header(alert: MarketplaceAlert) -> str:
     if alert.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
-        return "🚨 <b>Новое обращение</b>"
+        return _("🚨 <b>New lead</b>")
 
     if alert.event_type == MarketplaceAlert.EventType.LISTING_EXPIRING:
-        return "⏳ <b>Kleinanzeigen: объявление истекает</b>"
+        return _("⏳ <b>Kleinanzeigen: listing is expiring</b>")
 
     if alert.event_type == MarketplaceAlert.EventType.SYSTEM_NOTICE:
-        return "⚙️ <b>Kleinanzeigen: системное уведомление</b>"
+        return _("⚙️ <b>Kleinanzeigen: system notice</b>")
 
     if alert.event_type == MarketplaceAlert.EventType.NOISE:
-        return "🧹 <b>Kleinanzeigen: noise / промо</b>"
+        return _("🧹 <b>Kleinanzeigen: noise / promo</b>")
 
     return "📣 <b>Argus alert</b>"
 
@@ -229,32 +234,32 @@ def _build_alert_header(alert: MarketplaceAlert) -> str:
 def _alert_flag_names(alert: MarketplaceAlert) -> str:
     preloaded = getattr(alert, "_telegram_flag_names", None)
     if preloaded is not None:
-        return preloaded or "нет"
+        return preloaded or _("none")
 
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        return ", ".join(alert.flags.values_list("name", flat=True)) or "нет"
+        return ", ".join(alert.flags.values_list("name", flat=True)) or _("none")
 
-    return "нет"
+    return _("none")
 
 
 def _alert_mailbox_label(alert: MarketplaceAlert) -> str:
     preloaded = getattr(alert, "_telegram_mailbox_label", None)
     if preloaded is not None:
-        return preloaded or "Неизвестно"
+        return preloaded or _("Unknown")
 
     try:
         asyncio.get_running_loop()
     except RuntimeError:
         pass
     else:
-        return "Неизвестно"
+        return _("Unknown")
 
     mailbox = alert.mailbox
     if mailbox.name and mailbox.email:
         return f"{mailbox.name} ({mailbox.email})"
-    return mailbox.name or mailbox.email or "Неизвестно"
+    return mailbox.name or mailbox.email or _("Unknown")
 
 
 def _alert_taken_by_label(alert: MarketplaceAlert) -> str:
@@ -263,11 +268,12 @@ def _alert_taken_by_label(alert: MarketplaceAlert) -> str:
     return alert.taken_by_label
 
 
+@use_argus_telegram_language
 def build_system_message(title: str, details: str = "") -> str:
     icon = _system_message_icon(title, details)
 
     lines = [
-        f"{icon} <b>Argus: системное уведомление</b>",
+        f"{icon} <b>{_('Argus: system notice')}</b>",
         f"📌 {html.escape(title)}",
     ]
 
@@ -297,6 +303,7 @@ def _system_message_icon(title: str, details: str = "") -> str:
     return "⚙️"
 
 
+@use_argus_telegram_language
 def build_mailbox_status_message() -> str:
     today = timezone.localdate()
     day_start = timezone.make_aware(
@@ -307,14 +314,14 @@ def build_mailbox_status_message() -> str:
     mailboxes = MailboxAccount.objects.filter(is_active=True).order_by("email")
 
     lines = [
-        "📡 <b>Argus: статус ящиков</b>",
-        f"📅 <b>Дата:</b> {_format_date(today)}",
-        f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
+        _("📡 <b>Argus: mailbox status</b>"),
+        f"📅 <b>{_('Date')}:</b> {_format_date(today)}",
+        f"🕒 <b>{_('Time')}:</b> {_format_time(timezone.now())}",
         "",
     ]
 
     if not mailboxes.exists():
-        lines.append("⚠️ Активных ящиков нет.")
+        lines.append(_("⚠️ There are no active mailboxes."))
         return _fit_telegram_message(lines)
 
     for mailbox in mailboxes:
@@ -333,23 +340,23 @@ def build_mailbox_status_message() -> str:
             alert_status=MarketplaceAlert.AlertStatus.IN_WORK,
         ).count()
 
-        last_error = mailbox.last_error or "нет"
+        last_error = mailbox.last_error or _("none")
 
         lines.extend(
             [
                 f"📬 <b>{html.escape(mailbox.name)}</b>",
                 f"✉️ Email: <code>{html.escape(mailbox.email)}</code>",
                 f"🩺 Health: {_build_mailbox_health_label(mailbox)}",
-                f"🔌 Активен: {'да' if mailbox.is_active else 'нет'}",
-                f"🔐 Подключение: {html.escape(mailbox.get_connection_status_display())}",
-                f"🕒 Последняя проверка: {_format_dt(mailbox.last_checked_at)}",
-                f"✅ Последний успех: {_format_dt(mailbox.last_success_at)}",
-                f"⚠️ Ошибка: {html.escape(_truncate(last_error, 220))}",
+                f"🔌 {_('Active')}: {_('yes') if mailbox.is_active else _('no')}",
+                f"🔐 {_('Connection')}: {html.escape(mailbox.get_connection_status_display())}",
+                f"🕒 {_('Last check')}: {_format_dt(mailbox.last_checked_at)}",
+                f"✅ {_('Last success')}: {_format_dt(mailbox.last_success_at)}",
+                f"⚠️ {_('Error')}: {html.escape(_truncate(last_error, 220))}",
                 (
                     "📊 Alerts: "
-                    f"сегодня {today_alerts}, "
-                    f"🆕 новые {unread_alerts}, "
-                    f"🛠️ в работе {in_work_alerts}"
+                    f"{_('today')} {today_alerts}, "
+                    f"🆕 {_('new')} {unread_alerts}, "
+                    f"🛠️ {_('in work')} {in_work_alerts}"
                 ),
                 "",
             ]
@@ -358,6 +365,7 @@ def build_mailbox_status_message() -> str:
     return _fit_telegram_message(lines)
 
 
+@use_argus_telegram_language
 def build_daily_summary_message() -> str:
     today = timezone.localdate()
 
@@ -429,29 +437,30 @@ def build_daily_summary_message() -> str:
 
     return _fit_telegram_message(
         [
-            "<b>Argus: дневная сводка</b>",
-            f"📅 <b>Дата:</b> {_format_date(today)}",
-            f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
+            _("<b>Argus: daily summary</b>"),
+            f"📅 <b>{_('Date')}:</b> {_format_date(today)}",
+            f"🕒 <b>{_('Time')}:</b> {_format_time(timezone.now())}",
             "",
-            f"Всего событий сегодня: {counts['total']}",
-            f"Сообщения покупателей: {counts['buyer_messages']}",
-            f"Истекающие объявления: {counts['listing_expiring']}",
-            f"Системные уведомления: {counts['system_notice']}",
-            f"Шум/noise: {counts['noise']}",
+            f"{_('Total events today')}: {counts['total']}",
+            f"{_('Buyer messages')}: {counts['buyer_messages']}",
+            f"{_('Expiring listings')}: {counts['listing_expiring']}",
+            f"{_('System notices')}: {counts['system_notice']}",
+            f"{_('Noise')}: {counts['noise']}",
             "",
-            f"Новые: {counts['unread']}",
-            f"В работе: {counts['in_work']}",
-            f"Игнор: {counts['ignored']}",
-            f"Высокий приоритет: {counts['high_priority']}",
+            f"{_('New')}: {counts['unread']}",
+            f"{_('In work')}: {counts['in_work']}",
+            f"{_('Ignored')}: {counts['ignored']}",
+            f"{_('High priority')}: {counts['high_priority']}",
             f"Parser attention: {counts['parser_attention']}",
             f"Telegram send errors: {counts['telegram_errors']}",
             "",
-            f"Активные ящики: {mailbox_counts['active']}",
-            f"Ящики с ошибкой: {mailbox_counts['errors']}",
+            f"{_('Active mailboxes')}: {mailbox_counts['active']}",
+            f"{_('Mailbox errors')}: {mailbox_counts['errors']}",
         ]
     )
 
 
+@use_argus_telegram_language
 def build_health_message(bot_started_at=None) -> str:
     report = build_health_report()
     summary = report["summary"]
@@ -462,7 +471,7 @@ def build_health_message(bot_started_at=None) -> str:
     today = summary["alerts"]["today"]
     telegram_errors_recent = summary["alerts"].get("telegram_errors_recent", 0)
     open_errors = summary["open_service_errors"]
-    uptime = "unknown"
+    uptime = _("unknown")
     if bot_started_at:
         delta = timezone.now() - bot_started_at
         hours, remainder = divmod(int(delta.total_seconds()), 3600)
@@ -478,32 +487,33 @@ def build_health_message(bot_started_at=None) -> str:
 
     lines = [
         "🩺 <b>Argus: health</b>",
-        f"📅 <b>Дата:</b> {_format_date(timezone.localdate())}",
-        f"🕒 <b>Время:</b> {_format_time(timezone.now())}",
+        f"📅 <b>{_('Date')}:</b> {_format_date(timezone.localdate())}",
+        f"🕒 <b>{_('Time')}:</b> {_format_time(timezone.now())}",
         "",
         f"{icon('database')} <b>DB:</b> {html.escape(label('database'))}",
-        f"{icon('active_mailbox')} <b>Ящики:</b> активных {summary['mailboxes']['active']} / ошибок {summary['mailboxes']['errors']}",
+        f"{icon('active_mailbox')} <b>{_('Mailboxes')}:</b> {_('active')} {summary['mailboxes']['active']} / {_('errors')} {summary['mailboxes']['errors']}",
         f"{icon('telegram')} <b>Telegram:</b> {html.escape(label('telegram'))}",
-        f"{icon('telegram_delivery')} <b>Telegram delivery:</b> {telegram_errors_recent} ошибок за 24ч",
+        f"{icon('telegram_delivery')} <b>Telegram delivery:</b> {telegram_errors_recent} {_('errors in 24h')}",
         f"{icon('gmail_recent_check')} <b>Gmail:</b> {html.escape(label('gmail_recent_check'))}",
-        f"🕒 <b>Последний check:</b> {_format_dt(last_check)}",
-        f"✅ <b>Последний успех:</b> {_format_dt(last_success)}",
+        f"🕒 <b>{_('Last check')}:</b> {_format_dt(last_check)}",
+        f"✅ <b>{_('Last success')}:</b> {_format_dt(last_success)}",
         "",
-        f"🔴 <b>Открытые ошибки:</b> {open_errors}",
-        f"🆕 <b>Новые обращения:</b> {unread}",
-        f"📨 <b>Сегодня:</b> {today}",
-        f"🤖 <b>Бот работает:</b> {html.escape(uptime)}",
+        f"🔴 <b>{_('Open errors')}:</b> {open_errors}",
+        f"🆕 <b>{_('New leads')}:</b> {unread}",
+        f"📨 <b>{_('Today')}:</b> {today}",
+        f"🤖 <b>{_('Bot uptime')}:</b> {html.escape(uptime)}",
     ]
     if mobile_url:
         lines.extend(
             [
                 "",
-                f'📱 <a href="{html.escape(mobile_url)}">Перейти в мобильную админку</a>',
+                f'📱 <a href="{html.escape(mobile_url)}">{_("Open mobile admin")}</a>',
             ]
         )
     return _fit_telegram_message(lines)
 
 
+@use_argus_telegram_language
 def _build_status_answer(alert: MarketplaceAlert) -> str:
     title = alert.listing_title or alert.subject or alert.get_event_type_display()
 
@@ -562,14 +572,14 @@ def _format_age_minutes(minutes: int) -> str:
     minutes = max(int(minutes), 0)
 
     if minutes < 60:
-        return f"{minutes} мин"
+        return _("%(count)s min") % {"count": minutes}
 
     hours = round(minutes / 60)
     if hours < 24:
-        return f"{hours} ч"
+        return _("%(count)s h") % {"count": hours}
 
     days = round(hours / 24)
-    return f"{days} д"
+    return _("%(count)s d") % {"count": days}
 
 
 def _priority_emoji(alert: MarketplaceAlert) -> str:

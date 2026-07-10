@@ -1,8 +1,9 @@
 import asyncio
+import html
 
 import pytest
 
-from alerts.models import MailboxAccount, MarketplaceAlert
+from alerts.models import ArgusSettings, LanguageCode, MailboxAccount, MarketplaceAlert
 from alerts.telegram.sender import (
     async_send_telegram_alert,
     async_send_telegram_reminder_report,
@@ -64,8 +65,8 @@ def alert(db):
 def test_build_alert_message_contains_main_details(alert):
     message = build_alert_message(alert)
 
-    assert "<b>Новое обращение</b>" in message
-    assert "Ящик" in message
+    assert "<b>New lead</b>" in message
+    assert "Mailbox" in message
     assert "Inbox (inbox@example.local)" in message
     assert "Max" in message
     assert "BMW 320d Touring" in message
@@ -90,17 +91,17 @@ def test_build_alert_message_keeps_operational_event_separate_from_buyer_lead(al
 def test_build_system_message_escapes_html():
     message = build_system_message("Gmail error", "<bad>")
 
-    assert "Argus: системное уведомление" in message
+    assert "Argus: system notice" in message
     assert "&lt;bad&gt;" in message
 
 
 def test_build_help_message_lists_active_bot_commands():
     message = build_help_message()
 
-    assert "🤖 <b>Argus: что умеет бот</b>" in message
-    assert "мобильную админку" in message
+    assert "🤖 <b>Argus: what the bot can do</b>" in message
+    assert "mobile admin" in message
     for command, description in ACTIVE_BOT_COMMANDS:
-        assert f"/{command} — {description}" in message
+        assert f"/{command} — {html.escape(description)}" in message
     assert "Open Mobile" in message
 
 
@@ -177,7 +178,7 @@ def test_build_alert_message_contains_status(alert):
 
     message = build_alert_message(alert)
 
-    assert "Статус" in message
+    assert "Status" in message
     assert alert.get_alert_status_display() in message
     assert "Telegram user 100" in message
     assert "Есть признаки" in message
@@ -189,7 +190,7 @@ def test_alert_keyboard_contains_open_mobile_link(settings, alert):
 
     keyboard = build_alert_keyboard(alert)
 
-    assert keyboard.inline_keyboard[-1][0].text == "Open Mobile"
+    assert keyboard.inline_keyboard[-1][0].text == "Open mobile"
     url = keyboard.inline_keyboard[-1][0].url
     assert url == f"http://localhost:8000/m/alerts/{alert.id}/"
 
@@ -328,7 +329,7 @@ def test_send_system_telegram_message_sends_html(monkeypatch):
     assert bot.calls[0]["chat_id"] == "42"
     assert bot.calls[0]["parse_mode"] == "HTML"
     assert bot.calls[0]["disable_web_page_preview"] is True
-    assert "⚙️ <b>Argus: системное уведомление</b>" in bot.calls[0]["text"]
+    assert "⚙️ <b>Argus: system notice</b>" in bot.calls[0]["text"]
     assert "📌 Health" in bot.calls[0]["text"]
     assert "🧾 &lt;bad&gt;" in bot.calls[0]["text"]
 
@@ -341,25 +342,25 @@ def test_build_mailbox_status_message_contains_mailbox_health(alert):
 
     message = build_mailbox_status_message()
 
-    assert "Argus: статус ящиков" in message
+    assert "Argus: mailbox status" in message
     assert mailbox.email in message
-    assert "Последняя проверка" in message
-    assert "Последний успех" in message
+    assert "Last check" in message
+    assert "Last success" in message
     assert "old gmail error" in message
-    assert "новые" in message
-    assert "в работе" in message
+    assert "new" in message
+    assert "in work" in message
 
 
 @pytest.mark.django_db
 def test_build_daily_summary_message_contains_today_counters(alert):
     message = build_daily_summary_message()
 
-    assert "Argus: дневная сводка" in message
-    assert "Всего событий сегодня" in message
-    assert "Сообщения покупателей" in message
-    assert "Новые" in message
-    assert "В работе" in message
-    assert "Активные ящики" in message
+    assert "Argus: daily summary" in message
+    assert "Total events today" in message
+    assert "Buyer messages" in message
+    assert "New" in message
+    assert "In work" in message
+    assert "Active mailboxes" in message
 
 
 @pytest.mark.django_db
@@ -384,10 +385,22 @@ def test_build_unread_command_message_reports_unread_without_marking_reminded(al
 
     alert.refresh_from_db()
     second.refresh_from_db()
-    assert "⏰ <b>Argus: непрочитанные обращения</b>" in message
-    assert "🆕 <b>Непрочитано:</b> 2" in message
+    assert "⏰ <b>Argus: unread leads</b>" in message
+    assert "🆕 <b>Unread:</b> 2" in message
     assert "BMW 320d Touring" in message
     assert "VW Golf" in message
     assert "Noise" not in message
     assert alert.last_reminded_at is None
     assert second.last_reminded_at is None
+
+
+@pytest.mark.django_db
+def test_telegram_messages_follow_argus_russian_language(alert):
+    ArgusSettings.objects.create(language_code=LanguageCode.RUSSIAN)
+
+    message = build_alert_message(alert)
+    keyboard = build_alert_keyboard(alert)
+
+    assert "<b>Новое обращение</b>" in message
+    assert "Ящик" in message
+    assert keyboard.inline_keyboard[0][0].text == "Статус"

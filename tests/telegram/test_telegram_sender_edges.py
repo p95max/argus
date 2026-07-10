@@ -151,7 +151,7 @@ def test_async_send_telegram_reminder_report_saves_success_for_all_alerts(monkey
     second.refresh_from_db()
     assert message.message_id == 654
     assert bot.calls[0]["chat_id"] == "42"
-    assert "Argus: непрочитанные обращения" in bot.calls[0]["text"]
+    assert "Argus: unread leads" in bot.calls[0]["text"]
     assert alert.last_reminded_at is not None
     assert second.last_reminded_at is not None
     assert alert.telegram_error == ""

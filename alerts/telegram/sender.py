@@ -15,6 +15,11 @@ from .messages import (
     build_unread_reminder_report_message,
     should_send_telegram_for_alert,
 )
+from .i18n import (
+    get_argus_telegram_language,
+    override_argus_telegram_language,
+    telegram_gettext,
+)
 from .permissions import is_allowed_chat
 
 
@@ -67,11 +72,17 @@ def send_telegram_reminder_report(
     )
 
 
+def _build_alert_reminder_message_for_language(alert: MarketplaceAlert, language: str) -> str:
+    with override_argus_telegram_language(language):
+        return build_alert_reminder_message(alert)
+
+
 async def async_send_telegram_alert(
     alert: MarketplaceAlert,
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
+    language = await sync_to_async(get_argus_telegram_language, thread_sensitive=True)()
     should_send = await sync_to_async(should_send_telegram_for_alert, thread_sensitive=True)(alert)
     if not should_send:
         logger.info("Telegram alert send skipped by filters. alert_id=%s", alert.id)
@@ -111,8 +122,9 @@ async def async_send_telegram_alert(
 
         bot = Bot(token=config.bot_token)
 
-    text = build_alert_message(alert)
-    reply_markup = build_alert_keyboard(alert)
+    with override_argus_telegram_language(language):
+        text = build_alert_message(alert)
+        reply_markup = build_alert_keyboard(alert)
 
     try:
         message = await bot.send_message(
@@ -172,6 +184,7 @@ async def async_send_telegram_reminder(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
+    language = await sync_to_async(get_argus_telegram_language, thread_sensitive=True)()
     should_send = await sync_to_async(should_send_telegram_for_alert, thread_sensitive=True)(alert)
     if not should_send:
         logger.info("Telegram reminder send skipped by filters. alert_id=%s", alert.id)
@@ -179,10 +192,11 @@ async def async_send_telegram_reminder(
 
     return await _async_send_alert_message(
         alert,
-        text=build_alert_reminder_message(alert),
+        text=_build_alert_reminder_message_for_language(alert, language),
         chat_id=chat_id,
         bot=bot,
         save_fields=("last_reminded_at", "telegram_error"),
+        language=language,
     )
 
 
@@ -191,6 +205,7 @@ async def async_send_telegram_reminder_report(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
+    language = await sync_to_async(get_argus_telegram_language, thread_sensitive=True)()
     if not alerts:
         logger.info("Telegram unread reminder report skipped: no alerts.")
         return None
@@ -224,9 +239,11 @@ async def async_send_telegram_reminder_report(
         bot = Bot(token=config.bot_token)
 
     try:
+        with override_argus_telegram_language(language):
+            text = build_unread_reminder_report_message(alerts)
         message = await bot.send_message(
             chat_id=target_chat_id,
-            text=build_unread_reminder_report_message(alerts),
+            text=text,
             parse_mode="HTML",
             disable_web_page_preview=True,
         )
@@ -266,6 +283,7 @@ async def send_system_telegram_message(
     chat_id: str | None = None,
     bot: Bot | None = None,
 ):
+    language = await sync_to_async(get_argus_telegram_language, thread_sensitive=True)()
     config = get_telegram_config()
     target_chat_id = str(chat_id or config.default_chat_id).strip()
 
@@ -301,9 +319,11 @@ async def send_system_telegram_message(
         bot = Bot(token=config.bot_token)
 
     try:
+        with override_argus_telegram_language(language):
+            text = build_system_message(title, details)
         message = await bot.send_message(
             chat_id=target_chat_id,
-            text=build_system_message(title, details),
+            text=text,
             parse_mode="HTML",
             disable_web_page_preview=True,
         )
@@ -348,6 +368,7 @@ async def _async_send_alert_message(
     chat_id: str | None = None,
     bot: Bot | None = None,
     save_fields: tuple[str, ...],
+    language: str,
 ):
     config = get_telegram_config()
     target_chat_id = str(chat_id or config.default_chat_id).strip()
@@ -384,11 +405,13 @@ async def _async_send_alert_message(
         bot = Bot(token=config.bot_token)
 
     try:
+        with override_argus_telegram_language(language):
+            reply_markup = build_alert_keyboard(alert)
         message = await bot.send_message(
             chat_id=target_chat_id,
             text=text,
             parse_mode="HTML",
-            reply_markup=build_alert_keyboard(alert),
+            reply_markup=reply_markup,
             disable_web_page_preview=True,
         )
     except Exception as exc:
@@ -435,5 +458,7 @@ def _preload_alert_message_fields(alert: MarketplaceAlert) -> None:
     if mailbox.name and mailbox.email:
         alert._telegram_mailbox_label = f"{mailbox.name} ({mailbox.email})"
     else:
-        alert._telegram_mailbox_label = mailbox.name or mailbox.email or "Неизвестно"
+        alert._telegram_mailbox_label = (
+            mailbox.name or mailbox.email or telegram_gettext("Unknown")
+        )
 

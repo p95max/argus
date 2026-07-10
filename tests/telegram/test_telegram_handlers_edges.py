@@ -71,7 +71,7 @@ def test_daily_summary_command_rejects_unknown_chat(monkeypatch):
     asyncio.run(handlers.handle_daily_summary_command(update, context=object()))
 
     assert update.effective_message.replies == [
-        {"text": "Этот пользователь или чат не имеет доступа к Argus."}
+        {"text": "This user or chat does not have access to Argus."}
     ]
 
 
@@ -137,7 +137,7 @@ def test_doctor_command_rejects_unknown_chat(monkeypatch):
     asyncio.run(handlers.handle_doctor_command(update, context=object()))
 
     assert update.effective_message.replies == [
-        {"text": "Этот пользователь или чат не имеет доступа к Argus."}
+        {"text": "This user or chat does not have access to Argus."}
     ]
 
 
@@ -173,7 +173,7 @@ def test_alert_callback_answers_permission_error(monkeypatch):
 
     assert query.answers == [
         {
-            "text": "Этот пользователь или чат не имеет доступа к Argus.",
+            "text": "This user or chat does not have access to Argus.",
             "show_alert": True,
         }
     ]

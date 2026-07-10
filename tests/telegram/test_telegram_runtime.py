@@ -119,7 +119,7 @@ def test_help_command_rejects_unknown_chat(monkeypatch):
     asyncio.run(handle_help_command(update, context=object()))
 
     assert len(update.effective_message.replies) == 1
-    assert "не имеет доступа" in update.effective_message.replies[0]["text"]
+    assert "does not have access" in update.effective_message.replies[0]["text"]
 
 
 @pytest.mark.django_db

@@ -491,3 +491,183 @@ msgstr "Wiederhergestellt"
 
 msgid "%(name)s <Gmail not connected>"
 msgstr "%(name)s <Gmail nicht verbunden>"
+
+msgid "Unknown"
+msgstr "Unbekannt"
+
+msgid "Text not found"
+msgstr "Text nicht gefunden"
+
+msgid "Listing"
+msgstr "Anzeige"
+
+msgid "Flags"
+msgstr "Flags"
+
+msgid "Reason"
+msgstr "Grund"
+
+msgid "⏰ <b>Reminder: alert is still unread</b>"
+msgstr "⏰ <b>Reminder: Anfrage ist noch ungelesen</b>"
+
+msgid "⏰ <b>Argus: unread leads</b>"
+msgstr "⏰ <b>Argus: ungelesene Anfragen</b>"
+
+msgid "needs attention"
+msgstr "benötigt Aufmerksamkeit"
+
+msgid "Unread"
+msgstr "Ungelesen"
+
+msgid "Cases"
+msgstr "Fälle"
+
+msgid "Oldest"
+msgstr "Älteste"
+
+msgid "🟢 There are no unread leads for reminder."
+msgstr "🟢 Es gibt keine ungelesenen Anfragen für eine Erinnerung."
+
+msgid "unread"
+msgstr "ungelesen"
+
+msgid "Latest"
+msgstr "Letzte"
+
+msgid "Open latest"
+msgstr "Letzte öffnen"
+
+msgid "…and %(count)s more cases."
+msgstr "…und %(count)s weitere Fälle."
+
+msgid "Open mobile admin"
+msgstr "Mobile Admin öffnen"
+
+msgid "unknown"
+msgstr "unbekannt"
+
+msgid "🚨 <b>New lead</b>"
+msgstr "🚨 <b>Neue Anfrage</b>"
+
+msgid "⏳ <b>Kleinanzeigen: listing is expiring</b>"
+msgstr "⏳ <b>Kleinanzeigen: Anzeige läuft ab</b>"
+
+msgid "⚙️ <b>Kleinanzeigen: system notice</b>"
+msgstr "⚙️ <b>Kleinanzeigen: Systemhinweis</b>"
+
+msgid "🧹 <b>Kleinanzeigen: noise / promo</b>"
+msgstr "🧹 <b>Kleinanzeigen: Noise / Promo</b>"
+
+msgid "Argus: system notice"
+msgstr "Argus: Systemhinweis"
+
+msgid "📡 <b>Argus: mailbox status</b>"
+msgstr "📡 <b>Argus: Postfachstatus</b>"
+
+msgid "⚠️ There are no active mailboxes."
+msgstr "⚠️ Es gibt keine aktiven Postfächer."
+
+msgid "yes"
+msgstr "ja"
+
+msgid "no"
+msgstr "nein"
+
+msgid "today"
+msgstr "heute"
+
+msgid "new"
+msgstr "neu"
+
+msgid "in work"
+msgstr "in Bearbeitung"
+
+msgid "<b>Argus: daily summary</b>"
+msgstr "<b>Argus: Tagesübersicht</b>"
+
+msgid "Total events today"
+msgstr "Ereignisse heute gesamt"
+
+msgid "Buyer messages"
+msgstr "Käufernachrichten"
+
+msgid "Expiring listings"
+msgstr "Ablaufende Anzeigen"
+
+msgid "System notices"
+msgstr "Systemhinweise"
+
+msgid "errors"
+msgstr "Fehler"
+
+msgid "errors in 24h"
+msgstr "Fehler in 24h"
+
+msgid "Open errors"
+msgstr "Offene Fehler"
+
+msgid "New leads"
+msgstr "Neue Anfragen"
+
+msgid "Bot uptime"
+msgstr "Bot läuft"
+
+msgid "%(count)s min"
+msgstr "%(count)s Min."
+
+msgid "%(count)s h"
+msgstr "%(count)s Std."
+
+msgid "%(count)s d"
+msgstr "%(count)s T."
+
+msgid "Open mobile"
+msgstr "Mobile öffnen"
+
+msgid "This user or chat does not have access to Argus."
+msgstr "Dieser Benutzer oder Chat hat keinen Zugriff auf Argus."
+
+msgid "what the bot can do and the command list"
+msgstr "was der Bot kann und die Befehlsliste"
+
+msgid "Gmail mailbox status and latest checks"
+msgstr "Gmail-Postfachstatus und letzte Prüfungen"
+
+msgid "same as /status"
+msgstr "gleich wie /status"
+
+msgid "today's lead summary"
+msgstr "heutige Anfrageübersicht"
+
+msgid "single report for unread leads"
+msgstr "ein Bericht für ungelesene Anfragen"
+
+msgid "service health: DB, Gmail, Telegram, errors"
+msgstr "Servicezustand: DB, Gmail, Telegram, Fehler"
+
+msgid "production doctor: systemd, git, health and deploy status"
+msgstr "Production doctor: systemd, git, health und deploy status"
+
+msgid "🤖 <b>Argus: what the bot can do</b>"
+msgstr "🤖 <b>Argus: was der Bot kann</b>"
+
+msgid "The bot sends new Gmail leads, provides quick status buttons, and links to the mobile admin."
+msgstr "Der Bot sendet neue Gmail-Anfragen, bietet schnelle Statusbuttons und verlinkt zur mobilen Admin."
+
+msgid "It also shows service health, unread leads, and a short operational summary."
+msgstr "Er zeigt außerdem den Servicezustand, ungelesene Anfragen und eine kurze operative Übersicht."
+
+msgid "⚡ <b>Active commands</b>"
+msgstr "⚡ <b>Aktive Befehle</b>"
+
+msgid "🔘 <b>Alert buttons</b>"
+msgstr "🔘 <b>Alert-Buttons</b>"
+
+msgid "Take to work · New · Ignore · Status · Open Mobile"
+msgstr "Übernehmen · Neu · Ignorieren · Status · Mobile öffnen"
+
+msgid "Telegram actor is not allowed."
+msgstr "Telegram actor is not allowed."
+
+msgid "Telegram alert was not found."
+msgstr "Telegram alert was not found."

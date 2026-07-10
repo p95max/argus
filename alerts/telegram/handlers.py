@@ -8,10 +8,12 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db import close_old_connections
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from telegram.error import BadRequest
 
 from ..models import MarketplaceAlert
 from .git_status import build_git_deploy_status_text as build_git_deploy_status_text_v2
+from .i18n import telegram_gettext, use_argus_telegram_language
 from .keyboards import (
     CALLBACK_STATUS_ACTION,
     CALLBACK_STATUS_UPDATES,
@@ -34,14 +36,16 @@ logger = logging.getLogger(__name__)
 
 
 ACTIVE_BOT_COMMANDS = (
-    ("help", "что умеет бот и список команд"),
-    ("status", "статус Gmail-ящиков и последние проверки"),
-    ("mailboxes", "то же, что /status"),
-    ("summary", "сводка по обращениям за сегодня"),
-    ("unread", "общий отчёт по непрочитанным обращениям"),
-    ("health", "здоровье сервиса: DB, Gmail, Telegram, ошибки"),
-    ("doctor", "production doctor: systemd, git, health и deploy status"),
+    ("help", "what the bot can do and the command list"),
+    ("status", "Gmail mailbox status and latest checks"),
+    ("mailboxes", "same as /status"),
+    ("summary", "today's lead summary"),
+    ("unread", "single report for unread leads"),
+    ("health", "service health: DB, Gmail, Telegram, errors"),
+    ("doctor", "production doctor: systemd, git, health and deploy status"),
 )
+
+PERMISSION_DENIED_MESSAGE = "This user or chat does not have access to Argus."
 
 
 @dataclass(frozen=True)
@@ -100,7 +104,7 @@ async def handle_alert_callback(update, context):
         )
         await _safe_answer_callback(
             query,
-            "Этот пользователь или чат не имеет доступа к Argus.",
+            telegram_gettext(PERMISSION_DENIED_MESSAGE),
             show_alert=True,
         )
         return
@@ -169,7 +173,7 @@ async def handle_mailbox_status_command(update, context):
             user_id,
         )
         await update.effective_message.reply_text(
-            "Этот пользователь или чат не имеет доступа к Argus.",
+            telegram_gettext(PERMISSION_DENIED_MESSAGE),
         )
         return
 
@@ -201,7 +205,7 @@ async def handle_help_command(update, context):
             user_id,
         )
         await update.effective_message.reply_text(
-            "Этот пользователь или чат не имеет доступа к Argus.",
+            telegram_gettext(PERMISSION_DENIED_MESSAGE),
         )
         return
 
@@ -231,7 +235,7 @@ async def handle_daily_summary_command(update, context):
             user_id,
         )
         await update.effective_message.reply_text(
-            "Этот пользователь или чат не имеет доступа к Argus.",
+            telegram_gettext(PERMISSION_DENIED_MESSAGE),
         )
         return
 
@@ -263,7 +267,7 @@ async def handle_health_command(update, context):
             user_id,
         )
         await update.effective_message.reply_text(
-            "Этот пользователь или чат не имеет доступа к Argus.",
+            telegram_gettext(PERMISSION_DENIED_MESSAGE),
         )
         return
 
@@ -292,7 +296,7 @@ async def handle_unread_command(update, context):
             user_id,
         )
         await update.effective_message.reply_text(
-            "Этот пользователь или чат не имеет доступа к Argus.",
+            telegram_gettext(PERMISSION_DENIED_MESSAGE),
         )
         return
 
@@ -307,6 +311,7 @@ async def handle_unread_command(update, context):
     logger.info("Telegram unread command handled. chat_id=%s user_id=%s", chat_id, user_id)
 
 
+@use_argus_telegram_language
 def build_unread_command_message(limit: int = 25) -> str:
     alerts = list(
         MarketplaceAlert.objects.select_related("mailbox")
@@ -317,43 +322,50 @@ def build_unread_command_message(limit: int = 25) -> str:
     return build_unread_reminder_report_message(alerts)
 
 
+@use_argus_telegram_language
 def build_help_message() -> str:
     lines = [
-        "🤖 <b>Argus: что умеет бот</b>",
+        _("🤖 <b>Argus: what the bot can do</b>"),
         "",
-        "Бот присылает новые обращения из Gmail, даёт быстрые кнопки статуса и ведёт в мобильную админку.",
-        "Ещё он показывает здоровье сервиса, непрочитанные обращения и краткую операционную сводку.",
+        _(
+            "The bot sends new Gmail leads, provides quick status buttons, "
+            "and links to the mobile admin."
+        ),
+        _(
+            "It also shows service health, unread leads, and a short operational summary."
+        ),
         "",
-        "⚡ <b>Активные команды</b>",
+        _("⚡ <b>Active commands</b>"),
     ]
     lines.extend(
-        f"/{command} — {html.escape(description)}"
+        f"/{command} — {html.escape(_(description))}"
         for command, description in ACTIVE_BOT_COMMANDS
     )
     lines.extend(
         [
             "",
-            "🔘 <b>Кнопки в alert-ах</b>",
-            "В работу · Новое · Игнор · Статус · Open Mobile",
+            _("🔘 <b>Alert buttons</b>"),
+            _("Take to work · New · Ignore · Status · Open Mobile"),
         ]
     )
     return "\n".join(lines)
 
 
+@use_argus_telegram_language
 def handle_alert_callback_action(
     callback_data: str,
     chat_id: str,
     user_id: str = "",
 ) -> AlertCallbackResult:
     if not is_allowed_telegram_actor(chat_id=chat_id, user_id=user_id):
-        raise PermissionError("Telegram actor is not allowed.")
+        raise PermissionError(_("Telegram actor is not allowed."))
 
     alert_id, action = _parse_callback_data(callback_data)
 
     try:
         alert = MarketplaceAlert.objects.get(id=alert_id)
     except MarketplaceAlert.DoesNotExist as exc:
-        raise ValueError("Telegram alert was not found.") from exc
+        raise ValueError(_("Telegram alert was not found.")) from exc
 
     if action == CALLBACK_STATUS_ACTION:
         return AlertCallbackResult(
@@ -563,7 +575,7 @@ async def handle_doctor_command(update, context):
             user_id,
         )
         await update.effective_message.reply_text(
-            "Этот пользователь или чат не имеет доступа к Argus.",
+            telegram_gettext(PERMISSION_DENIED_MESSAGE),
         )
         return
 
