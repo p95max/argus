@@ -24,3 +24,15 @@ msgstr "Das Systemjournal ist bereits leer."
 
 msgid "System log cleared. Deleted records: %(count)s."
 msgstr "Systemjournal bereinigt. Gelöschte Einträge: %(count)s."
+
+msgid "Clear archive"
+msgstr "Archiv leeren"
+
+msgid "Delete all archived leads?"
+msgstr "Alle archivierten Anfragen löschen?"
+
+msgid "The lead archive is already empty."
+msgstr "Das Anfragearchiv ist bereits leer."
+
+msgid "Lead archive cleared. Deleted records: %(count)s."
+msgstr "Anfragearchiv geleert. Gelöschte Einträge: %(count)s."
