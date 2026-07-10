@@ -8,6 +8,7 @@ from django.views.generic import RedirectView
 from django.conf import settings
 from alerts import mobile
 from alerts.health import build_health_report
+from alerts.mobile_archive import mobile_clear_archived_alerts
 from alerts.mobile_service_log import mobile_clear_service_events, mobile_dashboard
 
 
@@ -43,6 +44,11 @@ urlpatterns = [
         "m/alerts/<int:alert_id>/status/",
         mobile.mobile_update_alert_status,
         name="mobile_update_alert_status",
+    ),
+    path(
+        "m/alerts/archive/clear/",
+        mobile_clear_archived_alerts,
+        name="mobile_clear_archived_alerts",
     ),
     path(
         "m/telegram/quiet-hours/toggle/",
