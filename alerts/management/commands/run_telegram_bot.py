@@ -1,12 +1,13 @@
 import logging
 
+from asgiref.sync import sync_to_async
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler
 
 from alerts.telegram.config import get_telegram_config
 from alerts.telegram.deploy_command import handle_deploy_command
-from alerts.telegram.help_command import handle_help_command
+from alerts.telegram.help_command import build_bot_commands, handle_help_command
 from alerts.telegram.handlers import (
     handle_alert_callback,
     handle_daily_summary_command,
@@ -25,6 +26,14 @@ async def log_telegram_error(update, context):
         update,
         exc_info=context.error,
     )
+
+
+async def configure_bot_commands(application):
+    try:
+        commands = await sync_to_async(build_bot_commands, thread_sensitive=True)()
+        await application.bot.set_my_commands(commands)
+    except Exception:
+        logger.exception("Could not publish Telegram bot command descriptions.")
 
 
 class Command(BaseCommand):
@@ -53,7 +62,12 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(message))
         logger.info(message)
 
-        application = ApplicationBuilder().token(config.bot_token).build()
+        application = (
+            ApplicationBuilder()
+            .token(config.bot_token)
+            .post_init(configure_bot_commands)
+            .build()
+        )
         application.bot_data["argus_started_at"] = timezone.now()
 
         application.add_error_handler(log_telegram_error)
