@@ -24,3 +24,15 @@ msgstr "Системный журнал уже пуст."
 
 msgid "System log cleared. Deleted records: %(count)s."
 msgstr "Системный журнал очищен. Удалено записей: %(count)s."
+
+msgid "Clear archive"
+msgstr "Очистить архив"
+
+msgid "Delete all archived leads?"
+msgstr "Удалить все архивные обращения?"
+
+msgid "The lead archive is already empty."
+msgstr "Архив обращений уже пуст."
+
+msgid "Lead archive cleared. Deleted records: %(count)s."
+msgstr "Архив обращений очищен. Удалено записей: %(count)s."
