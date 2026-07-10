@@ -16,11 +16,11 @@ class AdminSelectedLocaleMiddleware:
 
     def __call__(self, request):
         language_code = self._get_language_code()
-        translation.activate(language_code)
-        request.LANGUAGE_CODE = language_code
-        response = self.get_response(request)
-        response.headers.setdefault("Content-Language", language_code)
-        return response
+        with translation.override(language_code):
+            request.LANGUAGE_CODE = language_code
+            response = self.get_response(request)
+            response.headers.setdefault("Content-Language", language_code)
+            return response
 
     def _get_language_code(self) -> str:
         from .models import ArgusSettings

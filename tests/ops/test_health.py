@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from alerts.health import build_health_report
-from alerts.models import MailboxAccount
+from alerts.models import ArgusSettings, LanguageCode, MailboxAccount
 from alerts.seed_data import DEMO_MAILBOX_EMAIL
 
 
@@ -62,6 +62,37 @@ def test_health_report_marks_stale_gmail_check(healthy_env):
 
     assert report["checks"]["gmail_recent_check"]["ok"] is False
     assert report["checks"]["gmail_recent_check"]["status"] == "warning"
+
+
+@pytest.mark.django_db
+def test_full_health_uses_selected_russian_language(
+    client,
+    django_user_model,
+    healthy_env,
+):
+    ArgusSettings.objects.create(language_code=LanguageCode.RUSSIAN)
+    MailboxAccount.objects.create(
+        name="Ready",
+        email="ready-health@example.local",
+        is_active=True,
+        last_checked_at=timezone.now(),
+        last_success_at=timezone.now(),
+    )
+
+    user = django_user_model.objects.create_user(
+        username="health-staff",
+        password="pass",
+        is_staff=True,
+    )
+    client.force_login(user)
+    response = client.get(reverse("health_full"))
+
+    assert response.status_code == 200
+    report = response.json()
+    assert report["labels"]["modal_title"] == "Состояние сервиса Argus"
+    assert report["labels"]["checks"]["active_mailbox"] == "Активные почтовые ящики"
+    assert report["checks"]["active_mailbox"]["detail"] == "Активных почтовых ящиков: 1."
+    assert report["checks"]["telegram"]["detail"].startswith("Разрешённых чатов: ")
 
 
 @pytest.mark.django_db

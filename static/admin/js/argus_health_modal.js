@@ -4,17 +4,59 @@
     const HEALTH_PATH = "/health/full/";
     const MODAL_ID = "argus-health-modal";
 
-    const CHECK_LABELS = {
-        database: "База данных",
-        active_mailbox: "Активные почтовые ящики",
-        telegram: "Telegram",
-        telegram_delivery: "Доставка Telegram",
-        gmail_recent_check: "Последняя Gmail-проверка",
-        open_service_errors: "Открытые ошибки сервиса",
-        secrets: "Production-секреты",
-        debug: "Debug-режим",
-        demo_data: "Demo-данные",
+    const FALLBACK_LABELS = {
+        modal_title: "Argus service status",
+        loading: "Loading service diagnostics...",
+        open_json: "Open JSON",
+        close: "Close",
+        service_ok: "Service is running",
+        service_degraded: "There are issues",
+        checked_at: "Checked",
+        mailboxes: "Mailboxes",
+        mailbox_active_total: "%(active)s active / %(total)s total",
+        connection_errors: "Connection errors",
+        leads: "Leads",
+        new_leads: "%(count)s new",
+        today: "Today",
+        open_errors: "Open errors",
+        error_critical: "ERROR / CRITICAL",
+        component: "Component",
+        status: "Status",
+        details: "Details",
+        status_ok: "OK",
+        status_warning: "Needs attention",
+        status_error: "Problem",
+        load_error: "Could not load service status.",
+        empty: "—",
+        checks: {
+            database: "Database",
+            active_mailbox: "Active mailboxes",
+            telegram: "Telegram",
+            telegram_delivery: "Telegram delivery",
+            gmail_recent_check: "Latest Gmail check",
+            open_service_errors: "Open service errors",
+            secrets: "Production secrets",
+            debug: "Debug mode",
+            demo_data: "Demo data",
+        },
     };
+
+    function mergeLabels(labels) {
+        return {
+            ...FALLBACK_LABELS,
+            ...(labels || {}),
+            checks: {
+                ...FALLBACK_LABELS.checks,
+                ...((labels || {}).checks || {}),
+            },
+        };
+    }
+
+    function interpolate(template, values) {
+        return String(template || "").replace(/%\(([^)]+)\)s/g, function (_, key) {
+            return values[key] ?? "";
+        });
+    }
 
     function escapeHtml(value) {
         return String(value ?? "")
@@ -25,9 +67,13 @@
             .replace(/'/g, "&#039;");
     }
 
-    function formatDate(value) {
+    function localeCode() {
+        return document.documentElement.lang || navigator.language || "en";
+    }
+
+    function formatDate(value, labels) {
         if (!value) {
-            return "—";
+            return labels.empty;
         }
 
         const date = new Date(value);
@@ -35,7 +81,7 @@
             return escapeHtml(value);
         }
 
-        return date.toLocaleString("ru-RU", {
+        return date.toLocaleString(localeCode(), {
             dateStyle: "short",
             timeStyle: "medium",
         });
@@ -53,16 +99,16 @@
         return "badge badge-danger";
     }
 
-    function humanStatus(status, ok) {
+    function humanStatus(status, ok, labels) {
         if (ok) {
-            return "OK";
+            return labels.status_ok;
         }
 
         if (status === "warning") {
-            return "Требует внимания";
+            return labels.status_warning;
         }
 
-        return "Проблема";
+        return labels.status_error;
     }
 
     function ensureModal() {
@@ -71,6 +117,7 @@
             return modal;
         }
 
+        const labels = FALLBACK_LABELS;
         modal = document.createElement("div");
         modal.id = MODAL_ID;
         modal.className = "modal fade";
@@ -81,20 +128,20 @@
             <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Состояние сервиса Argus</h5>
+                        <h5 class="modal-title">${escapeHtml(labels.modal_title)}</h5>
                         <button
                             type="button"
                             class="close"
                             data-dismiss="modal"
                             data-bs-dismiss="modal"
                             data-argus-health-dismiss="true"
-                            aria-label="Закрыть"
+                            aria-label="${escapeHtml(labels.close)}"
                         >
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body">
-                        <div class="text-muted">Загружаю диагностику сервиса…</div>
+                        <div class="text-muted">${escapeHtml(labels.loading)}</div>
                     </div>
                     <div class="modal-footer">
                         <a
@@ -104,7 +151,7 @@
                             rel="noopener noreferrer"
                             data-argus-health-json="true"
                         >
-                            Открыть JSON
+                            ${escapeHtml(labels.open_json)}
                         </a>
                         <button
                             type="button"
@@ -113,7 +160,7 @@
                             data-bs-dismiss="modal"
                             data-argus-health-dismiss="true"
                         >
-                            Закрыть
+                            ${escapeHtml(labels.close)}
                         </button>
                     </div>
                 </div>
@@ -122,6 +169,20 @@
         document.body.appendChild(modal);
 
         return modal;
+    }
+
+    function updateModalLabels(modal, labels) {
+        modal.querySelector(".modal-title").textContent = labels.modal_title;
+        modal.querySelectorAll("[data-argus-health-dismiss]").forEach((button) => {
+            button.setAttribute("aria-label", labels.close);
+            if (button.classList.contains("btn")) {
+                button.textContent = labels.close;
+            }
+        });
+        const jsonLink = modal.querySelector(".argus-health-json-link");
+        if (jsonLink) {
+            jsonLink.textContent = labels.open_json;
+        }
     }
 
     function showModal() {
@@ -167,14 +228,14 @@
         });
     }
 
-    function renderSummary(summary) {
+    function renderSummary(summary, labels) {
         if (!summary) {
             return "";
         }
 
         const mailboxes = summary.mailboxes || {};
         const alerts = summary.alerts || {};
-        const openErrors = summary.open_service_errors ?? "—";
+        const openErrors = summary.open_service_errors ?? labels.empty;
 
         return `
             <div class="row">
@@ -182,12 +243,15 @@
                     <div class="info-box bg-gradient-info">
                         <span class="info-box-icon"><i class="fas fa-envelope"></i></span>
                         <div class="info-box-content">
-                            <span class="info-box-text">Почтовые ящики</span>
+                            <span class="info-box-text">${escapeHtml(labels.mailboxes)}</span>
                             <span class="info-box-number">
-                                ${escapeHtml(mailboxes.active ?? "—")} активных / ${escapeHtml(mailboxes.total ?? "—")} всего
+                                ${escapeHtml(interpolate(labels.mailbox_active_total, {
+                                    active: mailboxes.active ?? labels.empty,
+                                    total: mailboxes.total ?? labels.empty,
+                                }))}
                             </span>
                             <span class="progress-description">
-                                Ошибок подключения: ${escapeHtml(mailboxes.errors ?? "—")}
+                                ${escapeHtml(labels.connection_errors)}: ${escapeHtml(mailboxes.errors ?? labels.empty)}
                             </span>
                         </div>
                     </div>
@@ -196,12 +260,14 @@
                     <div class="info-box bg-gradient-secondary">
                         <span class="info-box-icon"><i class="fas fa-bell"></i></span>
                         <div class="info-box-content">
-                            <span class="info-box-text">Обращения</span>
+                            <span class="info-box-text">${escapeHtml(labels.leads)}</span>
                             <span class="info-box-number">
-                                ${escapeHtml(alerts.unread ?? "—")} новых
+                                ${escapeHtml(interpolate(labels.new_leads, {
+                                    count: alerts.unread ?? labels.empty,
+                                }))}
                             </span>
                             <span class="progress-description">
-                                Сегодня: ${escapeHtml(alerts.today ?? "—")}
+                                ${escapeHtml(labels.today)}: ${escapeHtml(alerts.today ?? labels.empty)}
                             </span>
                         </div>
                     </div>
@@ -210,9 +276,9 @@
                     <div class="info-box bg-gradient-warning">
                         <span class="info-box-icon"><i class="fas fa-exclamation-triangle"></i></span>
                         <div class="info-box-content">
-                            <span class="info-box-text">Открытые ошибки</span>
+                            <span class="info-box-text">${escapeHtml(labels.open_errors)}</span>
                             <span class="info-box-number">${escapeHtml(openErrors)}</span>
-                            <span class="progress-description">ERROR / CRITICAL</span>
+                            <span class="progress-description">${escapeHtml(labels.error_critical)}</span>
                         </div>
                     </div>
                 </div>
@@ -220,23 +286,23 @@
         `;
     }
 
-    function renderChecks(checks) {
+    function renderChecks(checks, labels) {
         if (!checks) {
             return "";
         }
 
         const rows = Object.entries(checks)
             .map(([key, check]) => {
-                const label = CHECK_LABELS[key] || key;
+                const label = labels.checks[key] || key;
                 return `
                     <tr>
                         <td>${escapeHtml(label)}</td>
                         <td>
                             <span class="${badgeClass(check.status, check.ok)}">
-                                ${escapeHtml(humanStatus(check.status, check.ok))}
+                                ${escapeHtml(humanStatus(check.status, check.ok, labels))}
                             </span>
                         </td>
-                        <td>${escapeHtml(check.detail || "—")}</td>
+                        <td>${escapeHtml(check.detail || labels.empty)}</td>
                     </tr>
                 `;
             })
@@ -247,9 +313,9 @@
                 <table class="table table-sm table-hover">
                     <thead>
                         <tr>
-                            <th>Компонент</th>
-                            <th>Статус</th>
-                            <th>Детали</th>
+                            <th>${escapeHtml(labels.component)}</th>
+                            <th>${escapeHtml(labels.status)}</th>
+                            <th>${escapeHtml(labels.details)}</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -259,9 +325,10 @@
     }
 
     function renderReport(report) {
+        const labels = mergeLabels(report.labels);
         const overallBadge = `
             <span class="${badgeClass(report.status, report.ok)}">
-                ${report.ok ? "Сервис работает" : "Есть проблемы"}
+                ${escapeHtml(report.ok ? labels.service_ok : labels.service_degraded)}
             </span>
         `;
 
@@ -269,18 +336,18 @@
             <div class="mb-3">
                 ${overallBadge}
                 <span class="text-muted ml-2">
-                    Проверено: ${formatDate(report.generated_at)}
+                    ${escapeHtml(labels.checked_at)}: ${formatDate(report.generated_at, labels)}
                 </span>
             </div>
-            ${renderSummary(report.summary)}
-            ${renderChecks(report.checks)}
+            ${renderSummary(report.summary, labels)}
+            ${renderChecks(report.checks, labels)}
         `;
     }
 
-    function renderError(error) {
+    function renderError(error, labels) {
         return `
             <div class="alert alert-danger mb-0">
-                Не удалось загрузить состояние сервиса.
+                ${escapeHtml(labels.load_error)}
                 <div class="small mt-2">${escapeHtml(error.message || error)}</div>
             </div>
         `;
@@ -290,9 +357,10 @@
         const modal = ensureModal();
         const body = modal.querySelector(".modal-body");
         const jsonLink = modal.querySelector(".argus-health-json-link");
+        let labels = FALLBACK_LABELS;
 
         jsonLink.href = url;
-        body.innerHTML = '<div class="text-muted">Загружаю диагностику сервиса…</div>';
+        body.innerHTML = `<div class="text-muted">${escapeHtml(labels.loading)}</div>`;
         showModal();
 
         try {
@@ -303,6 +371,8 @@
                 },
             });
             const payload = await response.json();
+            labels = mergeLabels(payload.labels);
+            updateModalLabels(modal, labels);
 
             if (!response.ok && !payload.checks) {
                 throw new Error(payload.detail || `HTTP ${response.status}`);
@@ -310,7 +380,7 @@
 
             body.innerHTML = renderReport(payload);
         } catch (error) {
-            body.innerHTML = renderError(error);
+            body.innerHTML = renderError(error, labels);
         }
     }
 

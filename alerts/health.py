@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db import connection
 from django.db.models import Count, Max, Q
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from .models import MailboxAccount, MarketplaceAlert, ServiceEvent
 from .seed_data import DEMO_MAILBOX_EMAIL
@@ -56,6 +57,7 @@ def build_health_report(*, include_deploy_checks: bool = False) -> dict:
             for key, check in checks.items()
         },
         "summary": _build_health_summary(now),
+        "labels": _build_health_labels(),
     }
 
 
@@ -72,17 +74,25 @@ def _check_database() -> HealthCheck:
 def _check_active_mailbox() -> HealthCheck:
     count = MailboxAccount.objects.filter(is_active=True).count()
     if count < 1:
-        return HealthCheck(False, "error", "No active mailboxes configured.")
-    return HealthCheck(True, "ok", f"Active mailboxes: {count}.")
+        return HealthCheck(False, "error", _("No active mailboxes configured."))
+    return HealthCheck(
+        True,
+        "ok",
+        _("Active mailboxes: %(count)s.") % {"count": count},
+    )
 
 
 def _check_telegram_config() -> HealthCheck:
     config = get_telegram_config()
     if not config.bot_token:
-        return HealthCheck(False, "error", "TELEGRAM_BOT_TOKEN is not configured.")
+        return HealthCheck(False, "error", _("TELEGRAM_BOT_TOKEN is not configured."))
     if not config.allowed_chat_ids:
-        return HealthCheck(False, "error", "No allowed Telegram chat is configured.")
-    return HealthCheck(True, "ok", f"Allowed chats: {len(config.allowed_chat_ids)}.")
+        return HealthCheck(False, "error", _("No allowed Telegram chat is configured."))
+    return HealthCheck(
+        True,
+        "ok",
+        _("Allowed chats: %(count)s.") % {"count": len(config.allowed_chat_ids)},
+    )
 
 
 def _check_recent_telegram_delivery_errors(now) -> HealthCheck:
@@ -95,10 +105,15 @@ def _check_recent_telegram_delivery_errors(now) -> HealthCheck:
         return HealthCheck(
             False,
             "warning",
-            f"Telegram send errors in the last 24 hours: {count}.",
+            _("Telegram send errors in the last 24 hours: %(count)s.")
+            % {"count": count},
         )
 
-    return HealthCheck(True, "ok", "No Telegram send errors in the last 24 hours.")
+    return HealthCheck(
+        True,
+        "ok",
+        _("No Telegram send errors in the last 24 hours."),
+    )
 
 
 def _check_recent_gmail_check(now) -> HealthCheck:
@@ -106,7 +121,7 @@ def _check_recent_gmail_check(now) -> HealthCheck:
         last_checked_at=Max("last_checked_at"),
     )["last_checked_at"]
     if newest_check is None:
-        return HealthCheck(False, "warning", "No Gmail check has run yet.")
+        return HealthCheck(False, "warning", _("No Gmail check has run yet."))
 
     stale_after = timedelta(minutes=settings.ARGUS_GMAIL_CHECK_STALE_MINUTES)
     age = now - newest_check
@@ -115,9 +130,15 @@ def _check_recent_gmail_check(now) -> HealthCheck:
         return HealthCheck(
             False,
             "warning",
-            f"Last Gmail check was {minutes} minutes ago.",
+            _("Last Gmail check was %(minutes)s minutes ago.")
+            % {"minutes": minutes},
         )
-    return HealthCheck(True, "ok", f"Last Gmail check: {newest_check.isoformat()}.")
+    return HealthCheck(
+        True,
+        "ok",
+        _("Last Gmail check: %(timestamp)s.")
+        % {"timestamp": newest_check.isoformat()},
+    )
 
 
 def _check_open_service_errors() -> HealthCheck:
@@ -126,8 +147,12 @@ def _check_open_service_errors() -> HealthCheck:
         severity__in=[ServiceEvent.Severity.ERROR, ServiceEvent.Severity.CRITICAL],
     ).count()
     if count:
-        return HealthCheck(False, "error", f"Open service errors: {count}.")
-    return HealthCheck(True, "ok", "No open service errors.")
+        return HealthCheck(
+            False,
+            "error",
+            _("Open service errors: %(count)s.") % {"count": count},
+        )
+    return HealthCheck(True, "ok", _("No open service errors."))
 
 
 def _check_deploy_secrets() -> HealthCheck:
@@ -136,7 +161,12 @@ def _check_deploy_secrets() -> HealthCheck:
         if not getattr(settings, name, ""):
             missing.append(name)
     if missing:
-        return HealthCheck(False, "error", f"Missing deploy settings: {', '.join(missing)}.")
+        return HealthCheck(
+            False,
+            "error",
+            _("Missing deploy settings: %(settings)s.")
+            % {"settings": ", ".join(missing)},
+        )
     return HealthCheck(True, "ok")
 
 
@@ -145,9 +175,10 @@ def _check_no_demo_mailbox() -> HealthCheck:
         return HealthCheck(
             False,
             "error",
-            f"Demo mailbox {DEMO_MAILBOX_EMAIL} must not exist on production deploys.",
+            _("Demo mailbox %(email)s must not exist on production deploys.")
+            % {"email": DEMO_MAILBOX_EMAIL},
         )
-    return HealthCheck(True, "ok", "No demo mailbox found.")
+    return HealthCheck(True, "ok", _("No demo mailbox found."))
 
 
 def _build_health_summary(now=None) -> dict:
@@ -183,4 +214,43 @@ def _build_health_summary(now=None) -> dict:
         "mailboxes": mailbox_counts,
         "alerts": alert_counts,
         "open_service_errors": open_errors,
+    }
+
+
+def _build_health_labels() -> dict:
+    return {
+        "modal_title": _("Argus service status"),
+        "loading": _("Loading service diagnostics..."),
+        "open_json": _("Open JSON"),
+        "close": _("Close"),
+        "service_ok": _("Service is running"),
+        "service_degraded": _("There are issues"),
+        "checked_at": _("Checked"),
+        "mailboxes": _("Mailboxes"),
+        "mailbox_active_total": _("%(active)s active / %(total)s total"),
+        "connection_errors": _("Connection errors"),
+        "leads": _("Leads"),
+        "new_leads": _("%(count)s new"),
+        "today": _("Today"),
+        "open_errors": _("Open errors"),
+        "error_critical": _("ERROR / CRITICAL"),
+        "component": _("Component"),
+        "status": _("Status"),
+        "details": _("Details"),
+        "status_ok": _("OK"),
+        "status_warning": _("Needs attention"),
+        "status_error": _("Problem"),
+        "load_error": _("Could not load service status."),
+        "empty": _("—"),
+        "checks": {
+            "database": _("Database"),
+            "active_mailbox": _("Active mailbox accounts"),
+            "telegram": _("Telegram"),
+            "telegram_delivery": _("Telegram delivery"),
+            "gmail_recent_check": _("Latest Gmail check"),
+            "open_service_errors": _("Open service errors"),
+            "secrets": _("Production secrets"),
+            "debug": _("Debug mode"),
+            "demo_data": _("Demo data"),
+        },
     }

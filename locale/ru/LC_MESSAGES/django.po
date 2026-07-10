@@ -680,3 +680,111 @@ msgstr "Telegram actor is not allowed."
 
 msgid "Telegram alert was not found."
 msgstr "Telegram alert was not found."
+
+msgid "No active mailboxes configured."
+msgstr "Активные почтовые ящики не настроены."
+
+msgid "Active mailboxes: %(count)s."
+msgstr "Активных почтовых ящиков: %(count)s."
+
+msgid "Active mailbox accounts"
+msgstr "Активные почтовые ящики"
+
+msgid "TELEGRAM_BOT_TOKEN is not configured."
+msgstr "TELEGRAM_BOT_TOKEN не настроен."
+
+msgid "No allowed Telegram chat is configured."
+msgstr "Разрешённый Telegram-чат не настроен."
+
+msgid "Allowed chats: %(count)s."
+msgstr "Разрешённых чатов: %(count)s."
+
+msgid "Telegram send errors in the last 24 hours: %(count)s."
+msgstr "Ошибок отправки Telegram за последние 24 часа: %(count)s."
+
+msgid "No Telegram send errors in the last 24 hours."
+msgstr "Ошибок отправки Telegram за последние 24 часа нет."
+
+msgid "No Gmail check has run yet."
+msgstr "Gmail-проверка ещё не запускалась."
+
+msgid "Last Gmail check was %(minutes)s minutes ago."
+msgstr "Последняя Gmail-проверка была %(minutes)s мин назад."
+
+msgid "Last Gmail check: %(timestamp)s."
+msgstr "Последняя Gmail-проверка: %(timestamp)s."
+
+msgid "Open service errors: %(count)s."
+msgstr "Открытых ошибок сервиса: %(count)s."
+
+msgid "No open service errors."
+msgstr "Открытых ошибок сервиса нет."
+
+msgid "Missing deploy settings: %(settings)s."
+msgstr "Не заполнены deploy-настройки: %(settings)s."
+
+msgid "Demo mailbox %(email)s must not exist on production deploys."
+msgstr "Demo-ящик %(email)s не должен существовать на production deploy."
+
+msgid "No demo mailbox found."
+msgstr "Demo-ящик не найден."
+
+msgid "Argus service status"
+msgstr "Состояние сервиса Argus"
+
+msgid "Loading service diagnostics..."
+msgstr "Загружаю диагностику сервиса..."
+
+msgid "Open JSON"
+msgstr "Открыть JSON"
+
+msgid "Service is running"
+msgstr "Сервис работает"
+
+msgid "There are issues"
+msgstr "Есть проблемы"
+
+msgid "Checked"
+msgstr "Проверено"
+
+msgid "%(active)s active / %(total)s total"
+msgstr "%(active)s активных / %(total)s всего"
+
+msgid "Connection errors"
+msgstr "Ошибок подключения"
+
+msgid "%(count)s new"
+msgstr "%(count)s новых"
+
+msgid "ERROR / CRITICAL"
+msgstr "ERROR / CRITICAL"
+
+msgid "Component"
+msgstr "Компонент"
+
+msgid "Details"
+msgstr "Детали"
+
+msgid "Problem"
+msgstr "Проблема"
+
+msgid "Could not load service status."
+msgstr "Не удалось загрузить состояние сервиса."
+
+msgid "Database"
+msgstr "База данных"
+
+msgid "Telegram delivery"
+msgstr "Доставка Telegram"
+
+msgid "Latest Gmail check"
+msgstr "Последняя Gmail-проверка"
+
+msgid "Production secrets"
+msgstr "Production-секреты"
+
+msgid "Debug mode"
+msgstr "Debug-режим"
+
+msgid "Demo data"
+msgstr "Demo-данные"
