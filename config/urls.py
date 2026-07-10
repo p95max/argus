@@ -8,6 +8,7 @@ from django.views.generic import RedirectView
 from django.conf import settings
 from alerts import mobile
 from alerts.health import build_health_report
+from alerts.mobile_service_log import mobile_clear_service_events
 
 
 def health_check(request):
@@ -17,7 +18,7 @@ def health_check(request):
 def full_health_check(request):
     token = getattr(settings, "ARGUS_HEALTH_TOKEN", "")
     auth_header = request.headers.get("Authorization", "")
-    
+
     has_token_access = bool(token) and hmac.compare_digest(auth_header, "Bearer " + token)
     has_staff_access = request.user.is_authenticated and request.user.is_staff
 
@@ -55,7 +56,7 @@ urlpatterns = [
     ),
     path(
         "m/service-events/clear/",
-        mobile.mobile_dashboard,
+        mobile_clear_service_events,
         name="mobile_clear_service_events",
     ),
     path(
