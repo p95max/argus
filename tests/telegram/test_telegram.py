@@ -108,6 +108,7 @@ def test_build_help_message_lists_active_bot_commands():
 @pytest.mark.django_db
 def test_update_alert_status_from_allowed_callback(monkeypatch, alert):
     monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
 
     updated = update_alert_status_from_callback(f"alert:{alert.id}:in_work", chat_id="42", user_id="100")
 
@@ -119,6 +120,7 @@ def test_update_alert_status_from_allowed_callback(monkeypatch, alert):
 @pytest.mark.django_db
 def test_update_alert_status_rejects_unknown_chat(monkeypatch, alert):
     monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
 
     with pytest.raises(PermissionError):
         update_alert_status_from_callback(f"alert:{alert.id}:ignored", chat_id="99")
@@ -154,6 +156,7 @@ def test_update_alert_status_rejects_unknown_user(monkeypatch, alert):
 @pytest.mark.django_db
 def test_status_callback_does_not_change_alert_status(monkeypatch, alert):
     monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
 
     alert.alert_status = MarketplaceAlert.AlertStatus.UNREAD
     alert.save(update_fields=["alert_status", "updated_at"])

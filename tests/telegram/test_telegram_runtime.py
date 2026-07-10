@@ -48,9 +48,14 @@ class FakeApplicationBuilder:
     def __init__(self, app):
         self.app = app
         self.token_value = ""
+        self.post_init_callback = None
 
     def token(self, value):
         self.token_value = value
+        return self
+
+    def post_init(self, callback):
+        self.post_init_callback = callback
         return self
 
     def build(self):
@@ -78,6 +83,7 @@ def test_run_telegram_bot_registers_handlers_and_polling_options(monkeypatch):
         if hasattr(handler, "commands")
     ]
     assert builder.token_value == "token"
+    assert builder.post_init_callback is not None
     assert app.bot_data["argus_started_at"] is not None
     assert len(app.error_handlers) == 1
     assert any(isinstance(handler, CallbackQueryHandler) for handler in app.handlers)
