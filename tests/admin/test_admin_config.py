@@ -1,6 +1,8 @@
 import pytest
+from django.contrib.auth import get_user_model
 from django.contrib.admin.sites import AdminSite
 from django.test import RequestFactory
+from django.urls import reverse
 from django.utils import translation
 
 from alerts.admin import (
@@ -83,6 +85,25 @@ def test_argus_settings_admin_language_field_is_radio_choice():
 
     assert form.fields["language_code"].widget.__class__.__name__ == "RadioSelect"
     assert "Django Admin" in form.fields["language_code"].help_text
+
+
+@pytest.mark.django_db
+def test_argus_settings_changelist_redirects_to_singleton_change(client):
+    user = get_user_model().objects.create_superuser(
+        username="root",
+        email="root@example.local",
+        password="pass",
+    )
+    settings = ArgusSettings.load()
+    client.force_login(user)
+
+    response = client.get(reverse("admin:alerts_argussettings_changelist"))
+
+    assert response.status_code == 302
+    assert response["Location"] == reverse(
+        "admin:alerts_argussettings_change",
+        args=[settings.id],
+    )
 
 
 @pytest.fixture

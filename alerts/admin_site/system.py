@@ -1,5 +1,7 @@
 from django import forms
 from django.contrib import admin
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from ..models import (
@@ -71,6 +73,12 @@ class ArgusSettingsAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def changelist_view(self, request, extra_context=None):
+        settings = ArgusSettings.load()
+        return redirect(
+            reverse("admin:alerts_argussettings_change", args=[settings.pk])
+        )
 
 
 @admin.register(TelegramSettings)
