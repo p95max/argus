@@ -69,3 +69,93 @@ msgstr "Исходные данные Gmail сохраняются для отл
 
 msgid "Gmail identifiers and timestamps for deduplication and processing audit."
 msgstr "Идентификаторы Gmail и временные метки для устранения дублей и аудита обработки."
+
+msgid "Quiet hours"
+msgstr "Тихие часы"
+
+msgid "When quiet hours are enabled, regular Telegram alerts are not sent during the configured window. The default window is 22:00-07:00, but the feature is disabled by default."
+msgstr "Когда тихие часы включены, обычные уведомления Telegram не отправляются в заданный период. По умолчанию установлен интервал 22:00-07:00, но функция изначально выключена."
+
+msgid "Audit"
+msgstr "Аудит"
+
+msgid "quiet hours enabled"
+msgstr "Тихие часы включены"
+
+msgid "quiet hours start"
+msgstr "Начало тихих часов"
+
+msgid "quiet hours end"
+msgstr "Окончание тихих часов"
+
+msgid "send urgent alerts during quiet hours"
+msgstr "Отправлять срочные уведомления в тихие часы"
+
+msgid "created at"
+msgstr "Создано"
+
+msgid "updated at"
+msgstr "Обновлено"
+
+msgid "buyer"
+msgstr "Покупатель"
+
+msgid "mailbox"
+msgstr "Почтовый ящик"
+
+msgid "event type"
+msgstr "Тип события"
+
+msgid "status"
+msgstr "Статус"
+
+msgid "taken by"
+msgstr "Исполнитель"
+
+msgid "priority"
+msgstr "Приоритет"
+
+msgid "parse status"
+msgstr "Статус парсинга"
+
+msgid "last reminder"
+msgstr "Последнее напоминание"
+
+msgid "received at"
+msgstr "Получено"
+
+msgid "processed at"
+msgstr "Обработано"
+
+msgid "flags"
+msgstr "Метки"
+
+msgid "classification explanation"
+msgstr "Обоснование классификации"
+
+msgid "listing ID"
+msgstr "ID объявления"
+
+msgid "listing title"
+msgstr "Название объявления"
+
+msgid "subject"
+msgstr "Тема письма"
+
+msgid "message"
+msgstr "Сообщение"
+
+msgid "raw subject"
+msgstr "Исходная тема"
+
+msgid "raw email body"
+msgstr "Исходный текст письма"
+
+msgid "normalized email body"
+msgstr "Нормализованный текст письма"
+
+msgid "sent to Telegram at"
+msgstr "Отправлено в Telegram"
+
+msgid "Telegram error"
+msgstr "Ошибка Telegram"
