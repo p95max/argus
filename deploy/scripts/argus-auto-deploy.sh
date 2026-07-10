@@ -10,6 +10,7 @@ RUN_DOCTOR="${RUN_DOCTOR:-1}"
 RESTART_SERVICES="${RESTART_SERVICES:-argus-web.service argus-telegram-bot.service}"
 AUTO_INSTALL_OPS="${AUTO_INSTALL_OPS:-0}"
 DEPLOY_NOTIFY_BIN="${DEPLOY_NOTIFY_BIN:-/usr/local/bin/argus-deploy-notify.py}"
+DEPLOY_RESULT="success"
 
 log() {
     printf '[%s] %s\n' "$(date -Is)" "$*"
@@ -32,7 +33,7 @@ notify_deploy_finish() {
     local status=$?
     trap - EXIT
     if [ -x "$DEPLOY_NOTIFY_BIN" ]; then
-        "$DEPLOY_NOTIFY_BIN" finish --status "$status" || true
+        "$DEPLOY_NOTIFY_BIN" finish --status "$status" --result "$DEPLOY_RESULT" || true
     fi
     exit "$status"
 }
@@ -66,6 +67,7 @@ log "Checking $REMOTE_NAME/$DEPLOY_BRANCH for updates from $old_rev"
 new_rev="$($GIT_BIN rev-parse "$REMOTE_NAME/$DEPLOY_BRANCH")"
 
 if [ "$old_rev" = "$new_rev" ]; then
+    DEPLOY_RESULT="up_to_date"
     log "Already up to date: $new_rev"
     exit 0
 fi
@@ -120,4 +122,5 @@ if [ "$RUN_DOCTOR" = "1" ]; then
     fi
 fi
 
+DEPLOY_RESULT="updated"
 log "Auto deploy completed: $old_rev -> $new_rev"
