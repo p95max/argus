@@ -5,4 +5,5 @@ Description=Argus PostgreSQL backup
 Type=oneshot
 User=argus
 Group=argus
-ExecStart=/usr/bin/flock -n /tmp/argus-backup-db.lock /usr/local/bin/argus-backup-db.sh
+TimeoutStartSec=30min
+ExecStart=/usr/local/bin/argus-run-background-job.sh argus-backup-db /usr/local/bin/argus-backup-db.sh
