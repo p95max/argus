@@ -110,26 +110,26 @@ def _write_pending_request(chat_id: str, user_id: str) -> bool:
 
 
 def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
+    _remove_stale_request_files()
+
+    if PENDING_REQUEST_FILE.exists() or ACTIVE_REQUEST_FILE.exists():
+        return DeployQueueResult(
+            ok=True,
+            message=(
+                "⏳ <b>Argus deploy</b>\n"
+                "Telegram-запрос уже поставлен в очередь или выполняется. "
+                "После завершения придёт отдельное сообщение."
+            ),
+        )
+
     service_state = _service_state()
     if service_state in {"active", "activating", "reloading"}:
         return DeployQueueResult(
             ok=True,
             message=(
                 "⏳ <b>Argus deploy</b>\n"
-                "Деплой уже выполняется или ожидает общую очередь. "
-                "После завершения придёт отдельное сообщение."
-            ),
-        )
-
-    _remove_stale_request_files()
-
-    if ACTIVE_REQUEST_FILE.exists():
-        return DeployQueueResult(
-            ok=True,
-            message=(
-                "⏳ <b>Argus deploy</b>\n"
-                "Telegram-запрос на деплой уже обрабатывается. "
-                "После завершения придёт отдельное сообщение."
+                "Auto-deploy уже запущен таймером или вручную. "
+                "Новый запуск не добавлен; текущий должен завершиться в пределах 30 минут."
             ),
         )
 
