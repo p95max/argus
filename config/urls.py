@@ -8,7 +8,7 @@ from django.views.generic import RedirectView
 from django.conf import settings
 from alerts import mobile
 from alerts.health import build_health_report
-from alerts.mobile_service_log import mobile_clear_service_events
+from alerts.mobile_service_log import mobile_clear_service_events, mobile_dashboard
 
 
 def health_check(request):
@@ -37,7 +37,7 @@ urlpatterns = [
         RedirectView.as_view(url=f"/{settings.STATIC_URL}favicon.svg", permanent=True),
         name="favicon",
     ),
-    path("m/", mobile.mobile_dashboard, name="mobile_dashboard"),
+    path("m/", mobile_dashboard, name="mobile_dashboard"),
     path("m/alerts/<int:alert_id>/", mobile.mobile_alert_detail, name="mobile_alert_detail"),
     path(
         "m/alerts/<int:alert_id>/status/",
