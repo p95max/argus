@@ -160,12 +160,14 @@ check_active argus-health-monitor.timer
 check_executable /usr/local/bin/argus-backup-db.sh
 check_executable /usr/local/bin/argus-health-notify.py
 check_executable /usr/local/bin/argus-auto-deploy.sh
+check_executable /usr/local/bin/argus-deploy-notify.py
 check_executable /usr/local/bin/argus-doctor.sh
 check_executable /usr/local/bin/argus-run-background-job.sh
 
 check_deployed_copy deploy/scripts/argus-backup-db.sh
 check_deployed_copy deploy/scripts/argus-health-notify.py
 check_deployed_copy deploy/scripts/argus-auto-deploy.sh
+check_deployed_copy deploy/scripts/argus-deploy-notify.py
 check_deployed_copy deploy/scripts/argus-doctor.sh
 check_deployed_copy deploy/scripts/argus-run-background-job.sh
 
