@@ -46,6 +46,23 @@
         {% endif %}
     {% endblock %}
 
+    {% if request.GET.view == 'archived' and request.user.is_staff %}
+        {% trans "Delete all archived leads?" as confirm_clear_archive %}
+        <section>
+            <div class="actions compact-actions">
+                <form
+                    method="post"
+                    action="{% url 'mobile_clear_archived_alerts' %}"
+                    onsubmit="return confirm('{{ confirm_clear_archive|escapejs }}')"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="small-action" type="submit">🧹 {% trans "Clear archive" %}</button>
+                </form>
+            </div>
+        </section>
+    {% endif %}
+
     {% block content %}{% endblock %}
 </main>
 </body>
