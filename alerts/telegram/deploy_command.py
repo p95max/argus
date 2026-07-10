@@ -1,14 +1,16 @@
+import html
 import json
 import logging
 import os
 import subprocess
+import time
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 
 from asgiref.sync import sync_to_async
 from django.utils import timezone
 
-from .handlers import PERMISSION_DENIED_MESSAGE
 from .i18n import telegram_gettext
 from .permissions import is_allowed_update
 
@@ -23,6 +25,8 @@ SYSTEMCTL_BIN = "/usr/bin/systemctl"
 SUDO_BIN = "/usr/bin/sudo"
 FLOCK_BIN = "/usr/bin/flock"
 TRUE_BIN = "/bin/true"
+STALE_REQUEST_SECONDS = 3600
+PERMISSION_DENIED_MESSAGE = "This user or chat does not have access to Argus."
 
 
 @dataclass(frozen=True)
@@ -60,6 +64,19 @@ def _queue_is_busy() -> bool:
         return True
 
     return result.returncode != 0
+
+
+def _remove_stale_request_files() -> None:
+    cutoff = time.time() - STALE_REQUEST_SECONDS
+    for path in (PENDING_REQUEST_FILE, ACTIVE_REQUEST_FILE):
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink(missing_ok=True)
+                logger.warning("Removed stale Telegram deploy request file: %s", path)
+        except FileNotFoundError:
+            continue
+        except OSError:
+            logger.exception("Could not inspect stale Telegram deploy request file: %s", path)
 
 
 def _write_pending_request(chat_id: str, user_id: str) -> bool:
@@ -104,6 +121,8 @@ def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
             ),
         )
 
+    _remove_stale_request_files()
+
     if ACTIVE_REQUEST_FILE.exists():
         return DeployQueueResult(
             ok=True,
@@ -115,6 +134,7 @@ def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
         )
 
     queue_busy = _queue_is_busy()
+    requested_local = timezone.localtime()
 
     try:
         created = _write_pending_request(chat_id=chat_id, user_id=user_id)
@@ -174,17 +194,18 @@ def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
             message=(
                 "🚨 <b>Argus deploy</b>\n"
                 "Не удалось поставить деплой в очередь.\n"
-                f"<pre>{detail[:1200]}</pre>"
+                f"<pre>{html.escape(detail[:1200])}</pre>"
             ),
         )
 
     if queue_busy:
+        latest_start = requested_local + timedelta(minutes=15)
         timing = (
-            "Общая очередь занята: запуск произойдёт после текущей задачи. "
-            "Максимальное ожидание — 15 минут."
+            "Общая очередь занята: запуск произойдёт после текущей задачи.\n"
+            f"Ориентир запуска: до {latest_start:%H:%M}, иначе запрос завершится по тайм-ауту."
         )
     else:
-        timing = "Общая очередь свободна: запуск ожидается сейчас."
+        timing = f"Общая очередь свободна: запуск ожидается сейчас ({requested_local:%H:%M:%S})."
 
     return DeployQueueResult(
         ok=True,
