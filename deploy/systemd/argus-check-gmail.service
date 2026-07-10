@@ -7,4 +7,5 @@ User=argus
 Group=argus
 WorkingDirectory=/opt/argus
 Environment="PATH=/opt/argus/.venv/bin"
-ExecStart=/usr/bin/flock -n /tmp/argus-check-gmail.lock /opt/argus/.venv/bin/python manage.py check_gmail --max-results 25
+TimeoutStartSec=30min
+ExecStart=/usr/local/bin/argus-run-background-job.sh argus-check-gmail /opt/argus/.venv/bin/python manage.py check_gmail --max-results 25
