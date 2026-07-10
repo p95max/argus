@@ -30,8 +30,14 @@ if ! [[ "$QUEUE_WAIT_SECONDS" =~ ^[0-9]+$ ]]; then
 fi
 
 JOB_LOCK_FILE="/tmp/${JOB_NAME}.lock"
-WAIT_STARTED_AT="$(date +%s)"
 
+exec 8>"$JOB_LOCK_FILE"
+if ! flock -n 8; then
+    echo "Queue[$JOB_NAME]: duplicate job is already running or waiting; skipping."
+    exit 0
+fi
+
+WAIT_STARTED_AT="$(date +%s)"
 exec 9>"$QUEUE_LOCK_FILE"
 echo "Queue[$JOB_NAME]: waiting up to ${QUEUE_WAIT_SECONDS}s for the background-job lock."
 
@@ -43,12 +49,6 @@ fi
 WAIT_FINISHED_AT="$(date +%s)"
 WAITED_SECONDS=$((WAIT_FINISHED_AT - WAIT_STARTED_AT))
 echo "Queue[$JOB_NAME]: acquired background-job lock after ${WAITED_SECONDS}s."
-
-exec 8>"$JOB_LOCK_FILE"
-if ! flock -n 8; then
-    echo "Queue[$JOB_NAME]: duplicate job is already running; skipping."
-    exit 0
-fi
 
 echo "Queue[$JOB_NAME]: starting command: $*"
 set +e
