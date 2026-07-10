@@ -94,7 +94,7 @@ class TelegramSettingsAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
         (
-            "Quiet hours",
+            _("Quiet hours"),
             {
                 "description": _(
                     "When quiet hours are enabled, regular Telegram alerts are not "
@@ -110,7 +110,7 @@ class TelegramSettingsAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Audit",
+            _("Audit"),
             {
                 "fields": ("created_at", "updated_at"),
                 "classes": ("collapse",),
