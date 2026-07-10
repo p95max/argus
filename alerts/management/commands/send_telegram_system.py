@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from alerts.telegram import send_system_telegram_alert
+from alerts.telegram.sender import send_system_telegram_alert
 
 
 class Command(BaseCommand):
