@@ -1,4 +1,5 @@
 from datetime import time
+import re
 
 from django.conf import settings
 from django.db import models
@@ -27,6 +28,11 @@ class MailboxAccount(TimestampedModel):
         ERROR = "error", _("Error")
         DISABLED = "disabled", _("Disabled")
 
+    class FetchPeriod(models.TextChoices):
+        TODAY = "today", _("Today")
+        LAST_7_DAYS = "last_7_days", _("Last 7 days")
+        ALL = "all", _("No date limit")
+
     name = models.CharField(_("name"), max_length=120)
     email = models.EmailField("email", unique=True, blank=True, null=True)
     is_active = models.BooleanField(_("active"), default=True)
@@ -35,6 +41,13 @@ class MailboxAccount(TimestampedModel):
         max_length=500,
         default="from:(kleinanzeigen.de)",
         blank=True,
+    )
+    fetch_period = models.CharField(
+        _("Email fetch period"),
+        max_length=20,
+        choices=FetchPeriod.choices,
+        default=FetchPeriod.TODAY,
+        help_text=_("Limits how far back Gmail messages are loaded."),
     )
 
     gmail_connected_email = models.EmailField(_("connected Gmail"), blank=True)
@@ -57,6 +70,23 @@ class MailboxAccount(TimestampedModel):
         ordering = ["email"]
         verbose_name = _("Mailbox")
         verbose_name_plural = _("Mailboxes")
+
+    def build_gmail_search_query(self):
+        base_query = re.sub(r"(?:^|\s)newer_than:(?:1d|7d)(?=\s|$)", " ", self.gmail_search_query or "")
+        base_query = " ".join(base_query.split())
+        period_query = {
+            self.FetchPeriod.TODAY: "newer_than:1d",
+            self.FetchPeriod.LAST_7_DAYS: "newer_than:7d",
+            self.FetchPeriod.ALL: "",
+        }.get(self.fetch_period, "newer_than:1d")
+        return " ".join(part for part in (base_query, period_query) if part)
+
+    def save(self, *args, **kwargs):
+        self.gmail_search_query = self.build_gmail_search_query()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and "fetch_period" in update_fields:
+            kwargs["update_fields"] = set(update_fields) | {"gmail_search_query"}
+        super().save(*args, **kwargs)
 
     def __str__(self):
         if self.email:
