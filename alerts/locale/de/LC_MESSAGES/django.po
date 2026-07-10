@@ -36,3 +36,21 @@ msgstr "Das Anfragearchiv ist bereits leer."
 
 msgid "Lead archive cleared. Deleted records: %(count)s."
 msgstr "Anfragearchiv geleert. Gelöschte Einträge: %(count)s."
+
+msgid "Email fetch period"
+msgstr "Zeitraum für den E-Mail-Abruf"
+
+msgid "Today"
+msgstr "Heute"
+
+msgid "Last 7 days"
+msgstr "Letzte 7 Tage"
+
+msgid "No date limit"
+msgstr "Ohne Datumsbegrenzung"
+
+msgid "Limits how far back Gmail messages are loaded."
+msgstr "Begrenzt, wie weit zurück Gmail-Nachrichten geladen werden."
+
+msgid "Controls how far back Gmail is searched. Only superusers can change this setting."
+msgstr "Legt fest, wie weit zurück Gmail durchsucht wird. Nur Superuser können diese Einstellung ändern."
