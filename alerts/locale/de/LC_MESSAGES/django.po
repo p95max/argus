@@ -54,3 +54,18 @@ msgstr "Begrenzt, wie weit zurück Gmail-Nachrichten geladen werden."
 
 msgid "Controls how far back Gmail is searched. Only superusers can change this setting."
 msgstr "Legt fest, wie weit zurück Gmail durchsucht wird. Nur Superuser können diese Einstellung ändern."
+
+msgid "A short Kleinanzeigen event card: who wrote, which listing it belongs to, and what needs attention."
+msgstr "Kurzübersicht zum Kleinanzeigen-Ereignis: Wer geschrieben hat, zu welcher Anzeige es gehört und was Aufmerksamkeit benötigt."
+
+msgid "Operational lead classification: event type, current handling status, priority, and risk or quality flags."
+msgstr "Operative Klassifizierung der Anfrage: Ereignistyp, aktueller Bearbeitungsstatus, Priorität sowie Risiko- oder Qualitätsmerkmale."
+
+msgid "Parser diagnostics. Partial means the email was handled, but some fields could not be extracted."
+msgstr "Parser-Diagnose. Teilweise bedeutet, dass die E-Mail verarbeitet wurde, einige Felder jedoch nicht extrahiert werden konnten."
+
+msgid "Raw Gmail data is kept for parser debugging and case rechecks."
+msgstr "Gmail-Rohdaten werden zur Parser-Fehlersuche und zur erneuten Prüfung von Fällen gespeichert."
+
+msgid "Gmail identifiers and timestamps for deduplication and processing audit."
+msgstr "Gmail-Kennungen und Zeitstempel für Deduplizierung und Nachvollziehbarkeit der Verarbeitung."
