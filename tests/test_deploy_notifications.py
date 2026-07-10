@@ -15,7 +15,7 @@ def load_module():
     return module
 
 
-def test_deploy_notification_lifecycle(monkeypatch, tmp_path):
+def configure_notification_module(monkeypatch, tmp_path):
     module = load_module()
     pending = tmp_path / "pending.json"
     active = tmp_path / "active.json"
@@ -38,6 +38,12 @@ def test_deploy_notification_lifecycle(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(module, "current_head", lambda: "abc1234")
 
+    return module, pending, active, sent
+
+
+def test_deploy_notification_lifecycle(monkeypatch, tmp_path):
+    module, pending, active, sent = configure_notification_module(monkeypatch, tmp_path)
+
     pending.write_text(
         json.dumps(
             {
@@ -55,12 +61,26 @@ def test_deploy_notification_lifecycle(monkeypatch, tmp_path):
     assert "deploy started" in sent[0][2]
     assert "Queue wait:" in sent[0][2]
 
-    assert module.handle_finish(0) == 0
+    assert module.handle_finish(0, "updated") == 0
     assert not active.exists()
     assert len(sent) == 2
     assert "deploy finished" in sent[1][2]
-    assert "Status: SUCCESS" in sent[1][2]
+    assert "Status: UPDATED" in sent[1][2]
     assert "HEAD: abc1234" in sent[1][2]
+
+
+def test_up_to_date_deploy_reports_no_redeploy(monkeypatch, tmp_path):
+    module, _, active, sent = configure_notification_module(monkeypatch, tmp_path)
+    active.write_text(json.dumps({"chat_id": "123", "started_at": 1}))
+
+    assert module.handle_finish(0, "up_to_date") == 0
+
+    assert not active.exists()
+    assert len(sent) == 1
+    assert "deploy check finished" in sent[0][2]
+    assert "Status: UP TO DATE" in sent[0][2]
+    assert "HEAD: abc1234" in sent[0][2]
+    assert "services were not redeployed" in sent[0][2]
 
 
 def test_timer_deploy_without_telegram_request_sends_nothing(monkeypatch, tmp_path):
@@ -76,7 +96,7 @@ def test_timer_deploy_without_telegram_request_sends_nothing(monkeypatch, tmp_pa
     )
 
     assert module.handle_start() == 0
-    assert module.handle_finish(0) == 0
+    assert module.handle_finish(0, "up_to_date") == 0
     assert sent == []
 
 
@@ -103,7 +123,7 @@ def test_failed_deploy_sends_failure_notification(monkeypatch, tmp_path):
 
     active.write_text(json.dumps({"chat_id": "123", "started_at": 1}))
 
-    assert module.handle_finish(7) == 0
+    assert module.handle_finish(7, "success") == 0
     assert not active.exists()
     assert len(sent) == 1
     assert "deploy failed" in sent[0]
