@@ -46,24 +46,38 @@
         {% endif %}
     {% endblock %}
 
+    {% block content %}{% endblock %}
+
     {% if request.GET.view == 'archived' and request.user.is_staff %}
         {% trans "Delete all archived leads?" as confirm_clear_archive %}
-        <section>
-            <div class="actions compact-actions">
-                <form
-                    method="post"
-                    action="{% url 'mobile_clear_archived_alerts' %}"
-                    onsubmit="return confirm('{{ confirm_clear_archive|escapejs }}')"
-                >
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button class="small-action" type="submit">🧹 {% trans "Clear archive" %}</button>
-                </form>
-            </div>
-        </section>
-    {% endif %}
+        <div id="archive-cleanup-actions" class="actions compact-actions" hidden>
+            <form
+                method="post"
+                action="{% url 'mobile_clear_archived_alerts' %}"
+                onsubmit="return confirm('{{ confirm_clear_archive|escapejs }}')"
+            >
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="small-action" type="submit">🧹 {% trans "Clear archive" %}</button>
+            </form>
+        </div>
+        <script>
+            (() => {
+                const actions = document.getElementById("archive-cleanup-actions");
+                const headings = document.querySelectorAll("main section h1");
+                const archiveHeading = Array.from(headings).find((heading) =>
+                    heading.textContent.includes("📦")
+                );
 
-    {% block content %}{% endblock %}
+                if (!actions || !archiveHeading) {
+                    return;
+                }
+
+                archiveHeading.insertAdjacentElement("afterend", actions);
+                actions.hidden = false;
+            })();
+        </script>
+    {% endif %}
 </main>
 </body>
 </html>
