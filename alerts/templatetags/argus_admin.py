@@ -2,6 +2,7 @@ from django import template
 from django.db.models import Count, Q
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from alerts.models import MailboxAccount, MarketplaceAlert
 
@@ -38,56 +39,56 @@ def argus_dashboard_counters():
 
     return [
         {
-            "label": "Новые сегодня",
+            "label": _("New today"),
             "value": status_counts["today"],
             "icon": "fas fa-calendar-day",
             "class": "info",
             "url": alerts_url,
         },
         {
-            "label": "Новые",
+            "label": _("New"),
             "value": status_counts["unread"],
             "icon": "fas fa-bell",
             "class": "danger",
             "url": f"{alerts_url}?alert_status__exact={MarketplaceAlert.AlertStatus.UNREAD}",
         },
         {
-            "label": "В работе",
+            "label": _("In work"),
             "value": status_counts["in_work"],
             "icon": "fas fa-user-clock",
             "class": "warning",
             "url": f"{alerts_url}?alert_status__exact={MarketplaceAlert.AlertStatus.IN_WORK}",
         },
         {
-            "label": "Высокий приоритет",
+            "label": _("High priority"),
             "value": status_counts["high_priority"],
             "icon": "fas fa-exclamation-circle",
             "class": "danger",
             "url": alerts_url,
         },
         {
-            "label": "Ошибки парсинга",
+            "label": _("Parser errors"),
             "value": status_counts["parser_errors"],
             "icon": "fas fa-code",
             "class": "warning",
             "url": alerts_url,
         },
         {
-            "label": "Активные ящики",
+            "label": _("Active mailboxes"),
             "value": mailbox_counts["active"],
             "icon": "fas fa-envelope",
             "class": "success",
             "url": mailbox_url,
         },
         {
-            "label": "Ошибки ящиков",
+            "label": _("Mailbox errors"),
             "value": mailbox_counts["errors"],
             "icon": "fas fa-heartbeat",
             "class": "danger",
             "url": f"{mailbox_url}?connection_status__exact={MailboxAccount.ConnectionStatus.ERROR}",
         },
         {
-            "label": "Игнор",
+            "label": _("Ignored"),
             "value": status_counts["ignored"],
             "icon": "fas fa-eye-slash",
             "class": "secondary",

@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.translation import gettext_lazy as _
 
 from ..attention import filter_needs_attention, needs_attention_alert_q
 
@@ -9,13 +10,13 @@ def status_badge(text, css_class):
 
 
 class NeedsAttentionFilter(admin.SimpleListFilter):
-    title = "Требует внимания"
+    title = _("Needs attention")
     parameter_name = "needs_attention"
 
     def lookups(self, request, model_admin):
         return (
-            ("yes", "Да"),
-            ("no", "Нет"),
+            ("yes", _("Yes")),
+            ("no", _("No")),
         )
 
     def queryset(self, request, queryset):

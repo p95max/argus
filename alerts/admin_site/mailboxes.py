@@ -4,6 +4,7 @@ from django.shortcuts import redirect
 from django.urls import path, reverse
 from django.utils.decorators import method_decorator
 from django.utils.html import format_html
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from ..gmail.gmail import check_mailbox
@@ -41,11 +42,11 @@ class MailboxAccountAdmin(admin.ModelAdmin):
     actions = ("enable_mailboxes", "disable_mailboxes")
     add_fieldsets = (
         (
-            "Основное",
+            _("Main"),
             {
-                "description": (
-                    "Создайте почтовый ящик, затем подключите Gmail через OAuth. "
-                    "Email будет заполнен автоматически после авторизации."
+                "description": _(
+                    "Create a mailbox, then connect Gmail through OAuth. "
+                    "The email will be filled automatically after authorization."
                 ),
                 "fields": ("name", "is_active"),
             },
@@ -54,18 +55,18 @@ class MailboxAccountAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (
-            "Основное",
+            _("Main"),
             {
-                "description": "Почтовый ящик, который Argus будет проверять через Gmail.",
+                "description": _("Mailbox that Argus will check through Gmail."),
                 "fields": ("name", "email_display", "is_active"),
             },
         ),
         (
             "Gmail",
             {
-                "description": (
-                    "OAuth подключается из Admin. Токен хранится для конкретного "
-                    "почтового ящика."
+                "description": _(
+                    "OAuth is connected from Admin. The token is stored for this "
+                    "specific mailbox."
                 ),
                 "fields": (
                     "gmail_search_query",
@@ -81,9 +82,9 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         (
             "Health",
             {
-                "description": (
-                    "Операционная диагностика: когда ящик проверялся и какая "
-                    "ошибка была последней."
+                "description": _(
+                    "Operational diagnostics: when the mailbox was checked and "
+                    "which error was last seen."
                 ),
                 "fields": (
                     "last_checked_at",
@@ -127,13 +128,13 @@ class MailboxAccountAdmin(admin.ModelAdmin):
             return self.add_fieldsets
         return super().get_fieldsets(request, obj)
 
-    @admin.display(description="Активен", ordering="is_active")
+    @admin.display(description=_("Active"), ordering="is_active")
     def active_badge(self, obj):
         if obj.is_active:
-            return status_badge("активен", "text-bg-success")
-        return status_badge("выключен", "text-bg-secondary")
+            return status_badge(_("active"), "text-bg-success")
+        return status_badge(_("disabled"), "text-bg-secondary")
 
-    @admin.display(description="Подключение", ordering="connection_status")
+    @admin.display(description=_("Connection"), ordering="connection_status")
     def connection_badge(self, obj):
         css_by_status = {
             MailboxAccount.ConnectionStatus.CONNECTED: "text-bg-success",
@@ -150,18 +151,18 @@ class MailboxAccountAdmin(admin.ModelAdmin):
     def gmail_oauth_badge(self, obj):
         if obj.gmail_oauth_token:
             return status_badge("OAuth OK", "text-bg-success")
-        return status_badge("нет токена", "text-bg-warning")
+        return status_badge(_("no token"), "text-bg-warning")
 
     @admin.display(description="Email")
     def email_display(self, obj):
         if obj.email:
             return obj.email
-        return "Email ещё не подключен. Подключите Gmail через OAuth."
+        return _("Email is not connected yet. Connect Gmail through OAuth.")
 
-    @admin.display(description="Gmail действия")
+    @admin.display(description=_("Gmail actions"))
     def gmail_oauth_actions(self, obj):
         if not obj.pk:
-            return "Сначала сохраните почтовый ящик."
+            return _("Save the mailbox first.")
 
         connect_url = reverse("admin:alerts_mailboxaccount_gmail_connect", args=[obj.pk])
         disconnect_url = reverse(
@@ -218,7 +219,7 @@ class MailboxAccountAdmin(admin.ModelAdmin):
     def _get_mailbox_or_redirect(self, request, object_id):
         mailbox = self.get_object(request, object_id)
         if mailbox is None:
-            messages.error(request, "Почтовый ящик не найден.")
+            messages.error(request, _("Mailbox was not found."))
             return None
         return mailbox
 
@@ -258,7 +259,11 @@ class MailboxAccountAdmin(admin.ModelAdmin):
 
         messages.success(
             request,
-            f"Gmail подключен: {result.google_email} для {result.mailbox.email}.",
+            _("Gmail connected: %(google_email)s for %(mailbox_email)s.")
+            % {
+                "google_email": result.google_email,
+                "mailbox_email": result.mailbox.email,
+            },
         )
         return redirect("admin:alerts_mailboxaccount_change", result.mailbox.id)
 
@@ -289,7 +294,11 @@ class MailboxAccountAdmin(admin.ModelAdmin):
             ]
         )
 
-        messages.success(request, f"Gmail отключен для {mailbox.email}.")
+        messages.success(
+            request,
+            _("Gmail disconnected for %(mailbox_email)s.")
+            % {"mailbox_email": mailbox.email},
+        )
         return redirect("admin:alerts_mailboxaccount_change", mailbox.id)
 
     @method_decorator(require_POST)
@@ -315,18 +324,18 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         )
         return redirect("admin:alerts_mailboxaccount_change", mailbox.id)
 
-    @admin.action(description="Включить выбранные ящики")
+    @admin.action(description=_("Enable selected mailboxes"))
     def enable_mailboxes(self, request, queryset):
         updated = queryset.update(
             is_active=True,
             connection_status=MailboxAccount.ConnectionStatus.NOT_CONNECTED,
         )
-        self.message_user(request, f"Включено ящиков: {updated}.")
+        self.message_user(request, _("Mailboxes enabled: %(count)s.") % {"count": updated})
 
-    @admin.action(description="Отключить выбранные ящики")
+    @admin.action(description=_("Disable selected mailboxes"))
     def disable_mailboxes(self, request, queryset):
         updated = queryset.update(
             is_active=False,
             connection_status=MailboxAccount.ConnectionStatus.DISABLED,
         )
-        self.message_user(request, f"Отключено ящиков: {updated}.")
+        self.message_user(request, _("Mailboxes disabled: %(count)s.") % {"count": updated})

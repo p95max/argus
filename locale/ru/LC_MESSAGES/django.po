@@ -53,3 +53,342 @@ msgstr "Настройки Argus"
 
 msgid "Audit"
 msgstr "Аудит"
+
+msgid "Admin"
+msgstr "Админка"
+
+msgid "Home"
+msgstr "Главная"
+
+msgid "Needs attention"
+msgstr "Требует внимания"
+
+msgid "Yes"
+msgstr "Да"
+
+msgid "No"
+msgstr "Нет"
+
+msgid "New today"
+msgstr "Новые сегодня"
+
+msgid "New"
+msgstr "Новые"
+
+msgid "In work"
+msgstr "В работе"
+
+msgid "High priority"
+msgstr "Высокий приоритет"
+
+msgid "Parser errors"
+msgstr "Ошибки парсинга"
+
+msgid "Active mailboxes"
+msgstr "Активные ящики"
+
+msgid "Mailbox errors"
+msgstr "Ошибки ящиков"
+
+msgid "Ignored"
+msgstr "Игнор"
+
+msgid "Lead"
+msgstr "Обращение"
+
+msgid "Status and priority"
+msgstr "Статус и приоритет"
+
+msgid "Parsing"
+msgstr "Парсинг"
+
+msgid "Source email"
+msgstr "Исходное письмо"
+
+msgid "Technical fields"
+msgstr "Технические поля"
+
+msgid "Type"
+msgstr "Тип"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Owner"
+msgstr "Исполнитель"
+
+msgid "Priority"
+msgstr "Приоритет"
+
+msgid "Risk"
+msgstr "Риск"
+
+msgid "Attention"
+msgstr "Внимание"
+
+msgid "risk: %(count)s"
+msgstr "риск: %(count)s"
+
+msgid "none"
+msgstr "нет"
+
+msgid "needed"
+msgstr "нужно"
+
+msgid "ok"
+msgstr "ок"
+
+msgid "Mark as in work"
+msgstr "Пометить как в работе"
+
+msgid "Mark as ignored"
+msgstr "Пометить как игнор"
+
+msgid "Return to new"
+msgstr "Вернуть в новые"
+
+msgid "Send test Telegram alert"
+msgstr "Отправить тестовый Telegram alert"
+
+msgid "Case closed: delete leads by listing_id"
+msgstr "Кейс закрыт: удалить обращения по listing_id"
+
+msgid "This is a useful lead: move to leads"
+msgstr "Это полезное обращение: перенести в обращения"
+
+msgid "This is a service email"
+msgstr "Это служебное письмо"
+
+msgid "This is a listing event"
+msgstr "Это событие по объявлению"
+
+msgid "Main"
+msgstr "Основное"
+
+msgid "Active"
+msgstr "Активен"
+
+msgid "active"
+msgstr "активен"
+
+msgid "disabled"
+msgstr "выключен"
+
+msgid "Connection"
+msgstr "Подключение"
+
+msgid "no token"
+msgstr "нет токена"
+
+msgid "Email is not connected yet. Connect Gmail through OAuth."
+msgstr "Email ещё не подключен. Подключите Gmail через OAuth."
+
+msgid "Gmail actions"
+msgstr "Gmail действия"
+
+msgid "Save the mailbox first."
+msgstr "Сначала сохраните почтовый ящик."
+
+msgid "Mailbox was not found."
+msgstr "Почтовый ящик не найден."
+
+msgid "Enable selected mailboxes"
+msgstr "Включить выбранные ящики"
+
+msgid "Disable selected mailboxes"
+msgstr "Отключить выбранные ящики"
+
+msgid "Lead flag"
+msgstr "Флаг обращения"
+
+msgid "Deduplication"
+msgstr "Дедупликация"
+
+msgid "Time"
+msgstr "Время"
+
+msgid "Mailbox status"
+msgstr "Статус ящиков"
+
+msgid "No mailboxes"
+msgstr "Нет ящиков"
+
+msgid "not yet"
+msgstr "ещё не было"
+
+msgid "Last check"
+msgstr "Последняя проверка"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "Configure in Admin"
+msgstr "Настроить в Admin"
+
+msgid "No mailboxes have been added yet."
+msgstr "Почтовые ящики пока не добавлены."
+
+msgid "Lead #%(id)s"
+msgstr "Обращение #%(id)s"
+
+msgid "Back"
+msgstr "Назад"
+
+msgid "Mailbox"
+msgstr "Ящик"
+
+msgid "Date"
+msgstr "Дата"
+
+msgid "Buyer"
+msgstr "Покупатель"
+
+msgid "In work by"
+msgstr "В работе у"
+
+msgid "Classification"
+msgstr "Классификация"
+
+msgid "Buyer message"
+msgstr "Сообщение покупателя"
+
+msgid "Email text"
+msgstr "Текст письма"
+
+msgid "Email text was not found."
+msgstr "Текст письма не найден."
+
+msgid "Take to work"
+msgstr "В работу"
+
+msgid "Release"
+msgstr "Снять"
+
+msgid "Ignore"
+msgstr "Игнор"
+
+msgid "Full information"
+msgstr "Полная информация"
+
+msgid "Settings"
+msgstr "Настройки"
+
+msgid "Last success"
+msgstr "Последний успех"
+
+msgid "Check now"
+msgstr "Проверить сейчас"
+
+msgid "Lead filters"
+msgstr "Фильтры обращений"
+
+msgid "All"
+msgstr "Все"
+
+msgid "Today"
+msgstr "Сегодня"
+
+msgid "Mine"
+msgstr "Мои"
+
+msgid "Archive"
+msgstr "Архив"
+
+msgid "Spam"
+msgstr "Спам"
+
+msgid "System log"
+msgstr "Системный журнал"
+
+msgid "Related lead #%(id)s"
+msgstr "Связанное обращение #%(id)s"
+
+msgid "Mark recovered"
+msgstr "Восстановлено"
+
+msgid "Ignore this error"
+msgstr "Игнорировать ошибку"
+
+msgid "Open related mailbox"
+msgstr "Открыть связанный ящик"
+
+msgid "There are no system messages or errors yet."
+msgstr "Системных сообщений и ошибок пока нет."
+
+msgid "My in-work leads"
+msgstr "Мои в работе"
+
+msgid "Ignored leads"
+msgstr "Игнорированные обращения"
+
+msgid "Spam and newsletters"
+msgstr "Спам и рассылки"
+
+msgid "All leads"
+msgstr "Все обращения"
+
+msgid "Leads"
+msgstr "Обращения"
+
+msgid "Case resolved"
+msgstr "Кейс решён"
+
+msgid "Open"
+msgstr "Открыть"
+
+msgid "There are no leads today yet."
+msgstr "Сегодня обращений пока нет."
+
+msgid "You have no leads in work."
+msgstr "У вас нет обращений в работе."
+
+msgid "There are no ignored leads yet."
+msgstr "Игнорированных обращений пока нет."
+
+msgid "There are no archived leads yet."
+msgstr "Архивных обращений пока нет."
+
+msgid "There is no spam or newsletters yet."
+msgstr "Спама и рассылок пока нет."
+
+msgid "There are no leads for this filter right now."
+msgstr "Сейчас нет обращений для этого фильтра."
+
+msgid "Lead pagination"
+msgstr "Пагинация обращений"
+
+msgid "First"
+msgstr "Первая"
+
+msgid "Next"
+msgstr "Вперёд"
+
+msgid "Last"
+msgstr "Последняя"
+
+msgid "Working hours"
+msgstr "Рабочие часы"
+
+msgid "On"
+msgstr "Вкл."
+
+msgid "Off"
+msgstr "Выкл."
+
+msgid "Turn off"
+msgstr "Выключить"
+
+msgid "Turn on"
+msgstr "Включить"
+
+msgid "Configure time"
+msgstr "Настроить время"
+
+msgid "Mail checked: fetched=%(fetched)s, created=%(created)s, duplicates=%(duplicates)s."
+msgstr "Почта проверена: fetched=%(fetched)s, created=%(created)s, duplicates=%(duplicates)s."
+
+msgid "🔄 Mailbox check is already running. Try again a little later."
+msgstr "🔄 Проверка почтовых ящиков уже выполняется. Повторите чуть позже."
+
+msgid "Mail checked: mailboxes=%(mailboxes)s, fetched=%(fetched)s, created=%(created)s, duplicates=%(duplicates)s."
+msgstr "Почта проверена: ящиков=%(mailboxes)s, fetched=%(fetched)s, created=%(created)s, duplicates=%(duplicates)s."

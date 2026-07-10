@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block title %}Argus alert #{{ alert.id }}{% endblock %}
-{% block header_title %}📋 Обращение #{{ alert.id }}{% endblock %}
+{% block header_title %}📋 {% blocktrans with id=alert.id %}Lead #{{ id }}{% endblocktrans %}{% endblock %}
 {% block header_actions %}
-    <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← Назад</a>
+    <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← {% trans "Back" %}</a>
 {% endblock %}
 
 {% block content %}
@@ -15,13 +16,13 @@
 
             <div class="alert-meta-grid">
                 <div class="alert-mailbox">
-                    <span class="meta-label">📬 Ящик</span>
+                    <span class="meta-label">📬 {% trans "Mailbox" %}</span>
                     <strong>{{ alert.mailbox.name|default:alert.mailbox.email }}</strong>
                     <span>{{ alert.mailbox.email }}</span>
                 </div>
 
                 <div class="alert-date">
-                    <span class="meta-label">📅 Дата</span>
+                    <span class="meta-label">📅 {% trans "Date" %}</span>
                     <strong>{{ alert.created_at|date:"d.m.Y" }}</strong>
                     <span>{{ alert.created_at|date:"H:i" }}</span>
                 </div>
@@ -36,9 +37,7 @@
                     {{ alert.get_priority_display }}
                 </span>
 
-                <span class="badge">
-                    {{ alert.get_event_type_display }}
-                </span>
+                <span class="badge">{{ alert.get_event_type_display }}</span>
 
                 <span class="badge {% if alert.parse_status == 'error' %}danger{% elif alert.parse_status == 'partial' %}warn{% else %}ok{% endif %}">
                     {{ alert.get_parse_status_display }}
@@ -55,7 +54,7 @@
                 <div class="info-row">
                     <span class="info-icon">👤</span>
                     <span class="info-content">
-                        <span class="info-label">Покупатель</span>
+                        <span class="info-label">{% trans "Buyer" %}</span>
                         <strong>{{ alert.buyer_name }}</strong>
                     </span>
                 </div>
@@ -65,7 +64,7 @@
                 <div class="info-row work-owner">
                     <span class="info-icon">👷</span>
                     <span class="info-content">
-                        <span class="info-label">В работе у</span>
+                        <span class="info-label">{% trans "In work by" %}</span>
                         <strong>
                             {% if alert.taken_by %}
                                 {{ alert.taken_by.get_full_name|default:alert.taken_by.username }}
@@ -81,7 +80,7 @@
                 <div class="info-row classification-note">
                     <span class="info-icon">🧠</span>
                     <span class="info-content">
-                        <span class="info-label">Классификация</span>
+                        <span class="info-label">{% trans "Classification" %}</span>
                         <span>{{ alert.classification_reason }}</span>
                     </span>
                 </div>
@@ -90,19 +89,19 @@
             {% if alert.message_text %}
                 <div class="buyer-message">
                     <div class="buyer-message-header">
-                        <span>💬 Сообщение покупателя</span>
+                        <span>💬 {% trans "Buyer message" %}</span>
                     </div>
                     <div class="buyer-message-body">{{ alert.message_text|linebreaksbr }}</div>
                 </div>
             {% elif alert.normalized_body %}
                 <div class="buyer-message">
                     <div class="buyer-message-header">
-                        <span>💬 Текст письма</span>
+                        <span>💬 {% trans "Email text" %}</span>
                     </div>
                     <div class="buyer-message-body">{{ alert.normalized_body|linebreaksbr }}</div>
                 </div>
             {% else %}
-                <div class="empty">Текст письма не найден.</div>
+                <div class="empty">{% trans "Email text was not found." %}</div>
             {% endif %}
 
             <div class="actions compact-actions">
@@ -115,7 +114,7 @@
                         type="submit"
                         {% if alert.alert_status == 'in_work' %}disabled{% endif %}
                     >
-                        🛠️ В работу
+                        🛠️ {% trans "Take to work" %}
                     </button>
                 </form>
 
@@ -128,7 +127,7 @@
                         type="submit"
                         {% if alert.alert_status == 'unread' %}disabled{% endif %}
                     >
-                        ↩️ Снять
+                        ↩️ {% trans "Release" %}
                     </button>
                 </form>
 
@@ -141,7 +140,7 @@
                         type="submit"
                         {% if alert.alert_status == 'ignored' %}disabled{% endif %}
                     >
-                        🚫 Игнор
+                        🚫 {% trans "Ignore" %}
                     </button>
                 </form>
             </div>
@@ -151,36 +150,37 @@
     <section>
         <details class="card collapsible-card">
             <summary class="collapsible-summary">
-                <span class="summary-title">📬 Ящик
+                <span class="summary-title">
+                    📬 {% trans "Mailbox" %}
 
-                     {% if alert.mailbox.connection_status == 'error' %}
-                    <span class="status-pill danger">
-                        <span class="status-dot"></span>
-                        Ошибка
-                    </span>
-                {% elif alert.mailbox.connection_status == 'connected' %}
-                    <span class="status-pill ok">
-                        <span class="status-dot"></span>
-                        OK
-                    </span>
-                {% else %}
-                    <span class="status-pill muted">
-                        <span class="status-dot"></span>
-                        {{ alert.mailbox.get_connection_status_display }}
-                    </span>
-                {% endif %}
-
+                    {% if alert.mailbox.connection_status == 'error' %}
+                        <span class="status-pill danger">
+                            <span class="status-dot"></span>
+                            {% trans "Error" %}
+                        </span>
+                    {% elif alert.mailbox.connection_status == 'connected' %}
+                        <span class="status-pill ok">
+                            <span class="status-dot"></span>
+                            OK
+                        </span>
+                    {% else %}
+                        <span class="status-pill muted">
+                            <span class="status-dot"></span>
+                            {{ alert.mailbox.get_connection_status_display }}
+                        </span>
+                    {% endif %}
                 </span>
             </summary>
 
             <div class="collapsible-content">
+                {% trans "not yet" as not_yet %}
                 <article class="card nested-card">
                     <div class="title">{{ alert.mailbox.name }}</div>
                     <div class="meta">{{ alert.mailbox.email }}</div>
 
                     <div class="badges">
                         <span class="badge {% if alert.mailbox.is_active %}ok{% else %}warn{% endif %}">
-                            {% if alert.mailbox.is_active %}активен{% else %}выключен{% endif %}
+                            {% if alert.mailbox.is_active %}{% trans "active" %}{% else %}{% trans "disabled" %}{% endif %}
                         </span>
 
                         <span class="badge {% if alert.mailbox.connection_status == 'error' %}danger{% elif alert.mailbox.connection_status == 'connected' %}ok{% else %}warn{% endif %}">
@@ -189,12 +189,12 @@
                     </div>
 
                     <div class="small">
-                        Последняя проверка:
-                        {{ alert.mailbox.last_checked_at|date:"d.m.Y H:i"|default:"ещё не было" }}
+                        {% trans "Last check" %}:
+                        {{ alert.mailbox.last_checked_at|date:"d.m.Y H:i"|default:not_yet }}
                     </div>
 
                     {% if alert.mailbox.last_error %}
-                        <div class="small">Ошибка: {{ alert.mailbox.last_error }}</div>
+                        <div class="small">{% trans "Error" %}: {{ alert.mailbox.last_error }}</div>
                     {% endif %}
                 </article>
             </div>
@@ -204,12 +204,12 @@
     <section>
         <div class="actions compact-actions">
             <a class="link-button small-action" href="{{ admin_alert_url }}">
-                ℹ️ Полная информация
+                ℹ️ {% trans "Full information" %}
             </a>
 
             {% if can_manage_mailboxes %}
                 <a class="link-button small-action" href="{{ admin_mailbox_url }}">
-                    ⚙️ Настройки
+                    ⚙️ {% trans "Settings" %}
                 </a>
             {% endif %}
         </div>

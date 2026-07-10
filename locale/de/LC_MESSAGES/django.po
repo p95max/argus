@@ -53,3 +53,333 @@ msgstr "Argus Einstellungen"
 
 msgid "Audit"
 msgstr "Audit"
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "Home"
+msgstr "Start"
+
+msgid "Needs attention"
+msgstr "Benötigt Aufmerksamkeit"
+
+msgid "Yes"
+msgstr "Ja"
+
+msgid "No"
+msgstr "Nein"
+
+msgid "New today"
+msgstr "Heute neu"
+
+msgid "New"
+msgstr "Neu"
+
+msgid "In work"
+msgstr "In Bearbeitung"
+
+msgid "High priority"
+msgstr "Hohe Priorität"
+
+msgid "Parser errors"
+msgstr "Parserfehler"
+
+msgid "Active mailboxes"
+msgstr "Aktive Postfächer"
+
+msgid "Mailbox errors"
+msgstr "Postfachfehler"
+
+msgid "Ignored"
+msgstr "Ignoriert"
+
+msgid "Lead"
+msgstr "Anfrage"
+
+msgid "Status and priority"
+msgstr "Status und Priorität"
+
+msgid "Parsing"
+msgstr "Parsing"
+
+msgid "Source email"
+msgstr "Quell-E-Mail"
+
+msgid "Technical fields"
+msgstr "Technische Felder"
+
+msgid "Type"
+msgstr "Typ"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Owner"
+msgstr "Bearbeiter"
+
+msgid "Priority"
+msgstr "Priorität"
+
+msgid "Risk"
+msgstr "Risiko"
+
+msgid "Attention"
+msgstr "Aufmerksamkeit"
+
+msgid "risk: %(count)s"
+msgstr "Risiko: %(count)s"
+
+msgid "none"
+msgstr "keine"
+
+msgid "needed"
+msgstr "nötig"
+
+msgid "ok"
+msgstr "ok"
+
+msgid "Mark as in work"
+msgstr "Als in Bearbeitung markieren"
+
+msgid "Mark as ignored"
+msgstr "Als ignoriert markieren"
+
+msgid "Return to new"
+msgstr "Zurück auf neu"
+
+msgid "Send test Telegram alert"
+msgstr "Test-Telegram-Alert senden"
+
+msgid "Case closed: delete leads by listing_id"
+msgstr "Fall geschlossen: Anfragen nach listing_id löschen"
+
+msgid "This is a useful lead: move to leads"
+msgstr "Das ist eine nützliche Anfrage: zu Anfragen verschieben"
+
+msgid "This is a service email"
+msgstr "Das ist eine Service-E-Mail"
+
+msgid "This is a listing event"
+msgstr "Das ist ein Anzeigenereignis"
+
+msgid "Main"
+msgstr "Allgemein"
+
+msgid "Active"
+msgstr "Aktiv"
+
+msgid "active"
+msgstr "aktiv"
+
+msgid "disabled"
+msgstr "deaktiviert"
+
+msgid "Connection"
+msgstr "Verbindung"
+
+msgid "no token"
+msgstr "kein Token"
+
+msgid "Email is not connected yet. Connect Gmail through OAuth."
+msgstr "E-Mail ist noch nicht verbunden. Gmail über OAuth verbinden."
+
+msgid "Gmail actions"
+msgstr "Gmail-Aktionen"
+
+msgid "Save the mailbox first."
+msgstr "Postfach zuerst speichern."
+
+msgid "Mailbox was not found."
+msgstr "Postfach wurde nicht gefunden."
+
+msgid "Enable selected mailboxes"
+msgstr "Ausgewählte Postfächer aktivieren"
+
+msgid "Disable selected mailboxes"
+msgstr "Ausgewählte Postfächer deaktivieren"
+
+msgid "Lead flag"
+msgstr "Anfrageflag"
+
+msgid "Deduplication"
+msgstr "Deduplizierung"
+
+msgid "Time"
+msgstr "Zeit"
+
+msgid "Mailbox status"
+msgstr "Postfachstatus"
+
+msgid "No mailboxes"
+msgstr "Keine Postfächer"
+
+msgid "not yet"
+msgstr "noch nie"
+
+msgid "Last check"
+msgstr "Letzte Prüfung"
+
+msgid "Error"
+msgstr "Fehler"
+
+msgid "Configure in Admin"
+msgstr "Im Admin konfigurieren"
+
+msgid "No mailboxes have been added yet."
+msgstr "Es wurden noch keine Postfächer hinzugefügt."
+
+msgid "Lead #%(id)s"
+msgstr "Anfrage #%(id)s"
+
+msgid "Back"
+msgstr "Zurück"
+
+msgid "Mailbox"
+msgstr "Postfach"
+
+msgid "Date"
+msgstr "Datum"
+
+msgid "Buyer"
+msgstr "Käufer"
+
+msgid "In work by"
+msgstr "In Bearbeitung durch"
+
+msgid "Classification"
+msgstr "Klassifikation"
+
+msgid "Buyer message"
+msgstr "Käufernachricht"
+
+msgid "Email text"
+msgstr "E-Mail-Text"
+
+msgid "Email text was not found."
+msgstr "E-Mail-Text wurde nicht gefunden."
+
+msgid "Take to work"
+msgstr "Übernehmen"
+
+msgid "Release"
+msgstr "Freigeben"
+
+msgid "Ignore"
+msgstr "Ignorieren"
+
+msgid "Full information"
+msgstr "Vollständige Informationen"
+
+msgid "Settings"
+msgstr "Einstellungen"
+
+msgid "Last success"
+msgstr "Letzter Erfolg"
+
+msgid "Check now"
+msgstr "Jetzt prüfen"
+
+msgid "Lead filters"
+msgstr "Anfragefilter"
+
+msgid "All"
+msgstr "Alle"
+
+msgid "Today"
+msgstr "Heute"
+
+msgid "Mine"
+msgstr "Meine"
+
+msgid "Archive"
+msgstr "Archiv"
+
+msgid "Spam"
+msgstr "Spam"
+
+msgid "System log"
+msgstr "Systemjournal"
+
+msgid "Related lead #%(id)s"
+msgstr "Verknüpfte Anfrage #%(id)s"
+
+msgid "Mark recovered"
+msgstr "Als behoben markieren"
+
+msgid "Ignore this error"
+msgstr "Diesen Fehler ignorieren"
+
+msgid "Open related mailbox"
+msgstr "Verknüpftes Postfach öffnen"
+
+msgid "There are no system messages or errors yet."
+msgstr "Es gibt noch keine Systemmeldungen oder Fehler."
+
+msgid "My in-work leads"
+msgstr "Meine laufenden Anfragen"
+
+msgid "Ignored leads"
+msgstr "Ignorierte Anfragen"
+
+msgid "Spam and newsletters"
+msgstr "Spam und Newsletter"
+
+msgid "All leads"
+msgstr "Alle Anfragen"
+
+msgid "Leads"
+msgstr "Anfragen"
+
+msgid "Case resolved"
+msgstr "Fall gelöst"
+
+msgid "Open"
+msgstr "Öffnen"
+
+msgid "There are no leads today yet."
+msgstr "Heute gibt es noch keine Anfragen."
+
+msgid "You have no leads in work."
+msgstr "Du hast keine Anfragen in Bearbeitung."
+
+msgid "There are no ignored leads yet."
+msgstr "Es gibt noch keine ignorierten Anfragen."
+
+msgid "There are no archived leads yet."
+msgstr "Es gibt noch keine archivierten Anfragen."
+
+msgid "There is no spam or newsletters yet."
+msgstr "Es gibt noch keinen Spam oder Newsletter."
+
+msgid "There are no leads for this filter right now."
+msgstr "Für diesen Filter gibt es aktuell keine Anfragen."
+
+msgid "Lead pagination"
+msgstr "Anfrage-Paginierung"
+
+msgid "First"
+msgstr "Erste"
+
+msgid "Next"
+msgstr "Weiter"
+
+msgid "Last"
+msgstr "Letzte"
+
+msgid "Working hours"
+msgstr "Arbeitszeiten"
+
+msgid "On"
+msgstr "Ein"
+
+msgid "Off"
+msgstr "Aus"
+
+msgid "Turn off"
+msgstr "Ausschalten"
+
+msgid "Turn on"
+msgstr "Einschalten"
+
+msgid "Configure time"
+msgstr "Zeit konfigurieren"

@@ -59,9 +59,10 @@ class TelegramSettingsAdmin(admin.ModelAdmin):
         (
             "Quiet hours",
             {
-                "description": (
-                    "Когда quiet hours включены, обычные Telegram alerts не отправляются "
-                    "в заданное окно. По умолчанию окно 22:00-07:00, но функция выключена."
+                "description": _(
+                    "When quiet hours are enabled, regular Telegram alerts are not "
+                    "sent during the configured window. The default window is "
+                    "22:00-07:00, but the feature is disabled by default."
                 ),
                 "fields": (
                     "quiet_hours_enabled",
@@ -93,11 +94,10 @@ class LeadFlagAdmin(admin.ModelAdmin):
     search_fields = ("code", "name")
     fieldsets = (
         (
-            "Флаг обращения",
+            _("Lead flag"),
             {
-                "description": (
-                    "Флаги помогают объяснить приоритет: хороший сигнал, риск "
-                    "или низкое качество обращения."
+                "description": _(
+                    "Flags explain priority: a good signal, a risk, or low lead quality."
                 ),
                 "fields": (
                     "code",
@@ -134,11 +134,11 @@ class ProcessedEmailAdmin(admin.ModelAdmin):
     )
     fieldsets = (
         (
-            "Дедупликация",
+            _("Deduplication"),
             {
-                "description": (
-                    "Техническая запись: письмо уже было обработано и не должно "
-                    "создать дубль alert."
+                "description": _(
+                    "Technical record: this email has already been processed and "
+                    "must not create a duplicate alert."
                 ),
                 "fields": (
                     "mailbox",
@@ -149,9 +149,9 @@ class ProcessedEmailAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Время",
+            _("Time"),
             {
-                "description": "Когда письмо пришло и когда Argus его обработал.",
+                "description": _("When the email arrived and when Argus processed it."),
                 "fields": (
                     "received_at",
                     "processed_at",

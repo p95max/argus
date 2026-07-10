@@ -1,6 +1,7 @@
 from django.contrib import admin, messages
 from django.db.models import Count, Q
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from ..cleanup import close_cases_for_alerts
 from ..models import LeadFlag, MailboxAccount, MarketplaceAlert, NoiseAlert
@@ -64,11 +65,11 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
     )
     fieldsets = (
         (
-            "Обращение",
+            _("Lead"),
             {
-                "description": (
-                    "Краткая карточка события из Kleinanzeigen. Здесь видно, кто "
-                    "написал, по какому объявлению и что требует внимания."
+                "description": _(
+                    "A short Kleinanzeigen event card: who wrote, which listing "
+                    "it belongs to, and what needs attention."
                 ),
                 "fields": (
                     "mailbox",
@@ -80,11 +81,11 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Статус и приоритет",
+            _("Status and priority"),
             {
-                "description": (
-                    "Рабочая классификация обращения: тип события, текущий статус "
-                    "обработки, важность и флаги риска/качества."
+                "description": _(
+                    "Operational lead classification: event type, current handling "
+                    "status, priority, and risk or quality flags."
                 ),
                 "fields": (
                     "event_type",
@@ -99,32 +100,31 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Парсинг",
+            _("Parsing"),
             {
-                "description": (
-                    "Диагностика результата парсера. Partial означает, что письмо "
-                    "обработано, но часть полей не удалось извлечь."
+                "description": _(
+                    "Parser diagnostics. Partial means the email was handled, but "
+                    "some fields could not be extracted."
                 ),
                 "fields": ("parse_status", "parse_error", "normalized_body"),
             },
         ),
         (
-            "Исходное письмо",
+            _("Source email"),
             {
-                "description": (
-                    "Сырые данные Gmail нужны для отладки parser logic и повторной "
-                    "проверки кейса."
+                "description": _(
+                    "Raw Gmail data is kept for parser debugging and case rechecks."
                 ),
                 "fields": ("subject", "raw_subject", "raw_body"),
                 "classes": ("collapse",),
             },
         ),
         (
-            "Технические поля",
+            _("Technical fields"),
             {
-                "description": (
-                    "Идентификаторы Gmail и timestamps для дедупликации и аудита "
-                    "обработки."
+                "description": _(
+                    "Gmail identifiers and timestamps for deduplication and "
+                    "processing audit."
                 ),
                 "fields": (
                     "gmail_message_id",
@@ -144,7 +144,7 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
         ),
     )
 
-    @admin.display(description="Обращение", ordering="listing_title")
+    @admin.display(description=_("Lead"), ordering="listing_title")
     def display_title(self, obj):
         return obj.listing_title or obj.subject or obj.get_event_type_display()
 
@@ -162,7 +162,7 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             )
         )
 
-    @admin.display(description="Тип", ordering="event_type")
+    @admin.display(description=_("Type"), ordering="event_type")
     def event_type_badge(self, obj):
         css_by_type = {
             MarketplaceAlert.EventType.BUYER_MESSAGE: "text-bg-primary",
@@ -175,7 +175,7 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             css_by_type.get(obj.event_type, "text-bg-secondary"),
         )
 
-    @admin.display(description="Статус", ordering="alert_status")
+    @admin.display(description=_("Status"), ordering="alert_status")
     def status_badge(self, obj):
         css_by_status = {
             MarketplaceAlert.AlertStatus.UNREAD: "text-bg-danger",
@@ -187,13 +187,13 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             css_by_status.get(obj.alert_status, "text-bg-secondary"),
         )
 
-    @admin.display(description="Исполнитель", ordering="taken_by_label")
+    @admin.display(description=_("Owner"), ordering="taken_by_label")
     def taken_by_display(self, obj):
         if obj.taken_by:
             return obj.taken_by.get_full_name() or obj.taken_by.get_username()
         return obj.taken_by_label or "—"
 
-    @admin.display(description="Приоритет", ordering="priority")
+    @admin.display(description=_("Priority"), ordering="priority")
     def priority_badge(self, obj):
         css_by_priority = {
             MarketplaceAlert.Priority.LOW: "text-bg-secondary",
@@ -206,14 +206,14 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             css_by_priority.get(obj.priority, "text-bg-secondary"),
         )
 
-    @admin.display(description="Риск")
+    @admin.display(description=_("Risk"))
     def risk_badge(self, obj):
         risk_count = getattr(obj, "risk_flags_count", 0)
         if risk_count:
-            return status_badge(f"риск: {risk_count}", "text-bg-danger")
-        return status_badge("нет", "text-bg-success")
+            return status_badge(_("risk: %(count)s") % {"count": risk_count}, "text-bg-danger")
+        return status_badge(_("none"), "text-bg-success")
 
-    @admin.display(description="Внимание")
+    @admin.display(description=_("Attention"))
     def needs_attention_badge(self, obj):
         if (
             obj.alert_status == MarketplaceAlert.AlertStatus.UNREAD
@@ -224,10 +224,10 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             or obj.telegram_error
             or obj.mailbox.connection_status == MailboxAccount.ConnectionStatus.ERROR
         ):
-            return status_badge("нужно", "text-bg-danger")
-        return status_badge("ок", "text-bg-success")
+            return status_badge(_("needed"), "text-bg-danger")
+        return status_badge(_("ok"), "text-bg-success")
 
-    @admin.display(description="Парсинг", ordering="parse_status")
+    @admin.display(description=_("Parsing"), ordering="parse_status")
     def parse_status_badge(self, obj):
         css_by_status = {
             MarketplaceAlert.ParseStatus.SUCCESS: "text-bg-success",
@@ -240,7 +240,7 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             css_by_status.get(obj.parse_status, "text-bg-secondary"),
         )
 
-    @admin.action(description="Пометить как в работе")
+    @admin.action(description=_("Mark as in work"))
     def mark_as_in_work(self, request, queryset):
         label = request.user.get_full_name() or request.user.get_username()
         updated = queryset.update(
@@ -249,14 +249,14 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             taken_by_label=label,
             taken_at=timezone.now(),
         )
-        self.message_user(request, f"Обращений переведено в работу: {updated}.")
+        self.message_user(request, _("Leads moved to in work: %(count)s.") % {"count": updated})
 
-    @admin.action(description="Пометить как игнор")
+    @admin.action(description=_("Mark as ignored"))
     def mark_as_ignored(self, request, queryset):
         updated = queryset.update(alert_status=MarketplaceAlert.AlertStatus.IGNORED)
-        self.message_user(request, f"Обращений помечено как игнор: {updated}.")
+        self.message_user(request, _("Leads marked ignored: %(count)s.") % {"count": updated})
 
-    @admin.action(description="Вернуть в новые")
+    @admin.action(description=_("Return to new"))
     def mark_as_unread(self, request, queryset):
         updated = queryset.update(
             alert_status=MarketplaceAlert.AlertStatus.UNREAD,
@@ -264,9 +264,9 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             taken_by_label="",
             taken_at=None,
         )
-        self.message_user(request, f"Обращений возвращено в новые: {updated}.")
+        self.message_user(request, _("Leads returned to new: %(count)s.") % {"count": updated})
 
-    @admin.action(description="Отправить тестовый Telegram alert")
+    @admin.action(description=_("Send test Telegram alert"))
     def send_test_telegram_alert(self, request, queryset):
         from alerts.admin import send_telegram_alert
 
@@ -280,7 +280,8 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
                 failed += 1
                 self.message_user(
                     request,
-                    f"Не удалось отправить Telegram alert #{alert.id}: {exc}",
+                    _("Could not send Telegram alert #%(id)s: %(error)s")
+                    % {"id": alert.id, "error": exc},
                     level=messages.ERROR,
                 )
                 continue
@@ -288,22 +289,22 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
             sent += 1
 
         if sent:
-            self.message_user(request, f"Тестовых Telegram alert отправлено: {sent}.")
+            self.message_user(request, _("Test Telegram alerts sent: %(count)s.") % {"count": sent})
 
         if failed:
             self.message_user(
                 request,
-                f"Ошибок отправки Telegram: {failed}.",
+                _("Telegram send errors: %(count)s.") % {"count": failed},
                 level=messages.WARNING,
             )
 
-    @admin.action(description="Кейс закрыт: удалить обращения по listing_id")
+    @admin.action(description=_("Case closed: delete leads by listing_id"))
     def close_case_by_listing(self, request, queryset):
         result = close_cases_for_alerts(queryset)
         if result.selected_cases == 0:
             self.message_user(
                 request,
-                "Не найдено обращений с listing_id для закрытия.",
+                _("No leads with listing_id were found for closing."),
                 level="warning",
             )
             return
@@ -311,8 +312,11 @@ class MarketplaceAlertAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             (
-                f"Закрыто кейсов: {result.selected_cases}; "
-                f"удалено обращений: {result.deleted_alerts}."
+                _("Closed cases: %(cases)s; deleted leads: %(leads)s.")
+                % {
+                    "cases": result.selected_cases,
+                    "leads": result.deleted_alerts,
+                }
             ),
         )
 
@@ -344,25 +348,25 @@ class NoiseAlertAdmin(MarketplaceAlertAdmin):
     def has_add_permission(self, request):
         return False
 
-    @admin.action(description="Это полезное обращение: перенести в обращения")
+    @admin.action(description=_("This is a useful lead: move to leads"))
     def mark_as_buyer_message(self, request, queryset):
         updated = queryset.update(
             event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
             parse_status=MarketplaceAlert.ParseStatus.PARTIAL,
             alert_status=MarketplaceAlert.AlertStatus.UNREAD,
         )
-        self.message_user(request, f"Писем перенесено в обращения: {updated}.")
+        self.message_user(request, _("Emails moved to leads: %(count)s.") % {"count": updated})
 
-    @admin.action(description="Это служебное письмо")
+    @admin.action(description=_("This is a service email"))
     def mark_as_system_notice(self, request, queryset):
         updated = queryset.update(
             event_type=MarketplaceAlert.EventType.SYSTEM_NOTICE,
             parse_status=MarketplaceAlert.ParseStatus.SUCCESS,
             alert_status=MarketplaceAlert.AlertStatus.UNREAD,
         )
-        self.message_user(request, f"Писем перенесено в служебные: {updated}.")
+        self.message_user(request, _("Emails moved to service messages: %(count)s.") % {"count": updated})
 
-    @admin.action(description="Это событие по объявлению")
+    @admin.action(description=_("This is a listing event"))
     def mark_as_listing_expiring(self, request, queryset):
         updated = queryset.update(
             event_type=MarketplaceAlert.EventType.LISTING_EXPIRING,
@@ -371,5 +375,5 @@ class NoiseAlertAdmin(MarketplaceAlertAdmin):
         )
         self.message_user(
             request,
-            f"Писем перенесено в события по объявлениям: {updated}.",
+            _("Emails moved to listing events: %(count)s.") % {"count": updated},
         )

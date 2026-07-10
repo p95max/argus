@@ -65,13 +65,13 @@ def test_mobile_panel_shows_needs_attention_and_empty_state(client, staff_user, 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
     assert "Audi A4" in body
-    assert "Сегодня" in body
-    assert "Мои" in body
-    assert "Игнор" in body
-    assert "Архив" in body
-    assert "Спам" in body
-    assert "Рабочие часы" in body
-    assert "Требует внимания" in body
+    assert "Today" in body
+    assert "Mine" in body
+    assert "Ignored" in body
+    assert "Archive" in body
+    assert "Spam" in body
+    assert "Working hours" in body
+    assert "Needs attention" in body
     assert "Mobile inbox" in body
 
 
@@ -133,10 +133,10 @@ def test_mobile_alert_detail_links_to_full_admin(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "Обращение" in body
+    assert "Lead" in body
     assert "Audi A4" in body
     assert reverse("admin:alerts_marketplacealert_change", args=[alert.id]) in body
-    assert "Полная информация" in body
+    assert "Full information" in body
 
 
 @pytest.mark.django_db
@@ -158,7 +158,7 @@ def test_mobile_panel_shows_system_events_tab(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "Системный журнал" in body
+    assert "System log" in body
     assert "Telegram send failed" in body
     assert "Bot token is not configured." in body
     assert "mobile@example.local" in body
@@ -172,7 +172,7 @@ def test_mobile_panel_system_events_empty_state(client, staff_user):
     response = client.get(f"{reverse('mobile_dashboard')}?view=system")
 
     assert response.status_code == 200
-    assert "Системных сообщений и ошибок пока нет." in response.content.decode("utf-8")
+    assert "There are no system messages or errors yet." in response.content.decode("utf-8")
 
 
 @pytest.mark.django_db
@@ -183,7 +183,7 @@ def test_mobile_panel_today_tab(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "Сегодня" in body
+    assert "Today" in body
     assert "Audi A4" in body
 
 
@@ -199,9 +199,9 @@ def test_mobile_panel_my_in_work_tab(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "Мои в работе" in body
-    assert "Кейс решён" in body
-    assert "✅В работу" not in body
+    assert "My in-work leads" in body
+    assert "Case resolved" in body
+    assert "✅ Take to work" not in body
     assert "Audi A4" in body
 
 
@@ -222,10 +222,10 @@ def test_mobile_panel_ignored_tab(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "Игнорированные обращения" in body
+    assert "Ignored leads" in body
     assert "Ignored Audi A4" in body
     assert "Visible BMW" not in body
-    assert "Кейсы по объявлениям" not in body
+    assert "Listing cases" not in body
 
 
 @pytest.mark.django_db
@@ -246,7 +246,7 @@ def test_mobile_panel_archived_tab(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "Архив" in body
+    assert "Archive" in body
     assert "Archived Audi A4" in body
     assert "Visible BMW" not in body
 
@@ -267,7 +267,7 @@ def test_mobile_panel_noise_tab(client, staff_user, alert):
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert "Спам и рассылки" in body
+    assert "Spam and newsletters" in body
     assert "Kleinanzeigen Newsletter" in body
 
 
@@ -313,7 +313,7 @@ def test_mobile_panel_manual_mailbox_check(monkeypatch, client, staff_user, aler
 
     assert response.status_code == 200
     assert checked == [alert.mailbox_id]
-    assert "Почта проверена" in response.content.decode("utf-8")
+    assert "Mail checked" in response.content.decode("utf-8")
 
 
 @pytest.mark.django_db
@@ -327,8 +327,8 @@ def test_mobile_panel_shows_gmail_operational_card(client, staff_user, alert):
     body = response.content.decode("utf-8")
 
     assert "Gmail" in body
-    assert "Последняя проверка" in body
-    assert "Новых сегодня" in body
+    assert "Last check" in body
+    assert "New today" in body
 
 
 @pytest.mark.django_db

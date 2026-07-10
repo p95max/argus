@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from .attention import filter_needs_attention, needs_attention_alert_q
@@ -278,7 +279,14 @@ def mobile_check_mailbox_now(request, mailbox_id):
     result = check_mailbox(mailbox)
     messages.success(
         request,
-        f"Почта проверена: fetched={result.fetched}, created={result.created}, duplicates={result.duplicates}.",
+        _(
+            "Mail checked: fetched=%(fetched)s, created=%(created)s, duplicates=%(duplicates)s."
+        )
+        % {
+            "fetched": result.fetched,
+            "created": result.created,
+            "duplicates": result.duplicates,
+        },
     )
     return redirect(_safe_next_url(request))
 
@@ -294,15 +302,17 @@ def mobile_check_gmail_now(request):
     except CommandAlreadyRunning:
         messages.warning(
             request,
-            "🔄 Проверка почтовых ящиков уже выполняется. Повторите чуть позже.",
+            _("🔄 Mailbox check is already running. Try again a little later."),
         )
         return redirect(_safe_next_url(request))
 
     messages.success(
         request,
-        "Почта проверена: "
-        f"ящиков={summary['mailboxes']}, fetched={summary['fetched']}, "
-        f"created={summary['created']}, duplicates={summary['duplicates']}.",
+        _(
+            "Mail checked: mailboxes=%(mailboxes)s, fetched=%(fetched)s, "
+            "created=%(created)s, duplicates=%(duplicates)s."
+        )
+        % summary,
     )
     return redirect(_safe_next_url(request))
 

@@ -1,6 +1,6 @@
-{% load static %}
+{% load static i18n %}
 <!doctype html>
-<html lang="ru">
+<html lang="{{ request.LANGUAGE_CODE|default:'en' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,8 +24,8 @@
                     href="{{ admin_alert_changelist_url }}"
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="Admin"
-                    title="Admin"
+                    aria-label="{% trans 'Admin' %}"
+                    title="{% trans 'Admin' %}"
                 >
                     ⚙️
                 </a>

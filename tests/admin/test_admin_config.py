@@ -55,7 +55,7 @@ def test_mailbox_admin_email_display_explains_missing_oauth():
     model_admin = MailboxAccountAdmin(MailboxAccount, AdminSite())
     mailbox = MailboxAccount(name="Test")
 
-    assert model_admin.email_display(mailbox) == "Email ещё не подключен. Подключите Gmail через OAuth."
+    assert model_admin.email_display(mailbox) == "Email is not connected yet. Connect Gmail through OAuth."
 
 
 @pytest.fixture

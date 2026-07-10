@@ -37,13 +37,13 @@ def test_mobile_dashboard_paginates_alerts_by_five(client, staff_user):
     assert first_page.status_code == 200
     first_body = first_page.content.decode("utf-8")
     assert first_body.count('class="card alert-card"') == 5
-    assert "Показано 1–5 из 7" in first_body
+    assert "Showing 1-5 of 7" in first_body
     assert "?view=all&amp;page=2" in first_body
-    assert "Вперёд" in first_body
+    assert "Next" in first_body
 
     assert second_page.status_code == 200
     second_body = second_page.content.decode("utf-8")
     assert second_body.count('class="card alert-card"') == 2
-    assert "Показано 6–7 из 7" in second_body
+    assert "Showing 6-7 of 7" in second_body
     assert "?view=all&amp;page=1" in second_body
-    assert "← Назад" in second_body
+    assert "← Back" in second_body

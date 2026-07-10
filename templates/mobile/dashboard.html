@@ -1,298 +1,304 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block title %}Argus mobile{% endblock %}
 {% block header_title %}Argus{% endblock %}
 
 {% block content %}
+    {% trans "not yet" as not_yet %}
 
     <section>
         <article class="card">
             <div class="title">Gmail</div>
             <div class="badges">
                 <span class="badge {% if gmail_summary.status == 'OK' %}ok{% elif gmail_summary.status == 'ERROR' %}danger{% else %}warn{% endif %}">
-                    Статус: {{ gmail_summary.status }}
+                    {% trans "Status" %}: {{ gmail_summary.status }}
                 </span>
-                <span class="badge">Новых сегодня: {{ gmail_summary.today_alerts }}</span>
+                <span class="badge">{% trans "New today" %}: {{ gmail_summary.today_alerts }}</span>
             </div>
-            <div class="small">Последняя проверка: {{ gmail_summary.last_checked_at|date:"H:i"|default:"ещё не было" }}</div>
-            <div class="small">Последний успех: {{ gmail_summary.last_success_at|date:"H:i"|default:"ещё не было" }}</div>
+            <div class="small">{% trans "Last check" %}: {{ gmail_summary.last_checked_at|date:"H:i"|default:not_yet }}</div>
+            <div class="small">{% trans "Last success" %}: {{ gmail_summary.last_success_at|date:"H:i"|default:not_yet }}</div>
 
             {% if can_manage_mailboxes and mailboxes %}
                 <div class="actions compact-actions">
                     <form method="post" action="{% url 'mobile_check_gmail_now' %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button class="small-action" type="submit">Проверить сейчас</button>
+                        <button class="small-action" type="submit">{% trans "Check now" %}</button>
                     </form>
                 </div>
             {% endif %}
-
         </article>
     </section>
 
     <section>
-        <nav class="mobile-panel-nav" aria-label="Фильтры обращений">
+        <nav class="mobile-panel-nav" aria-label="{% trans 'Lead filters' %}">
             <a class="panel-nav-item {% if view_mode == 'all' %}active{% endif %}" href="?view=all">
-                <span class="panel-nav-label">📋 Все</span>
+                <span class="panel-nav-label">📋 {% trans "All" %}</span>
                 <strong>{{ alert_counts.total }}</strong>
             </a>
 
             <a class="panel-nav-item {% if view_mode == 'today' %}active{% endif %}" href="?view=today">
-                <span class="panel-nav-label">📅 Сегодня</span>
+                <span class="panel-nav-label">📅 {% trans "Today" %}</span>
                 <strong>{{ alert_counts.today }}</strong>
             </a>
 
             <a class="panel-nav-item {% if view_mode == 'attention' %}active{% endif %}" href="?view=attention">
-                <span class="panel-nav-label">⚠️ Внимание</span>
+                <span class="panel-nav-label">⚠️ {% trans "Attention" %}</span>
                 <strong>{{ alert_counts.attention }}</strong>
             </a>
 
             <a class="panel-nav-item {% if view_mode == 'mine' %}active{% endif %}" href="?view=mine">
-                <span class="panel-nav-label">🛠️ Мои</span>
+                <span class="panel-nav-label">🛠️ {% trans "Mine" %}</span>
                 <strong>{{ alert_counts.mine }}</strong>
             </a>
 
             <a class="panel-nav-item {% if view_mode == 'ignored' %}active{% endif %}" href="?view=ignored">
-                <span class="panel-nav-label">🚫 Игнор</span>
+                <span class="panel-nav-label">🚫 {% trans "Ignored" %}</span>
                 <strong>{{ alert_counts.ignored }}</strong>
             </a>
 
             <a class="panel-nav-item {% if view_mode == 'archived' %}active{% endif %}" href="?view=archived">
-                <span class="panel-nav-label">📦 Архив</span>
+                <span class="panel-nav-label">📦 {% trans "Archive" %}</span>
                 <strong>{{ alert_counts.archived }}</strong>
             </a>
 
             <a class="panel-nav-item {% if view_mode == 'noise' %}active{% endif %}" href="?view=noise">
-                <span class="panel-nav-label">🧹 Спам</span>
+                <span class="panel-nav-label">🧹 {% trans "Spam" %}</span>
                 <strong>{{ alert_counts.noise }}</strong>
             </a>
 
             <a class="panel-nav-item {% if view_mode == 'system' %}active{% endif %}" href="?view=system">
-                <span class="panel-nav-label">🧾 Системный журнал</span>
+                <span class="panel-nav-label">🧾 {% trans "System log" %}</span>
                 <strong>{{ service_open_errors }}</strong>
             </a>
         </nav>
     </section>
 
     {% if view_mode == 'system' %}
-    <section>
-        <h2>Системный журнал</h2>
-        {% for event in service_events %}
-            <article class="card">
-                <div class="title">{{ event.title }}</div>
-                <div class="meta">
-                    {{ event.get_event_type_display }} · {{ event.last_seen_at|date:"d.m.Y H:i" }}
-                    {% if event.occurrences > 1 %} · повторов: {{ event.occurrences }}{% endif %}
-                </div>
-                <div class="badges">
-                    <span class="badge {% if event.severity == 'critical' or event.severity == 'error' %}danger{% elif event.severity == 'warning' %}warn{% else %}ok{% endif %}">{{ event.get_severity_display }}</span>
-                    <span class="badge {% if event.status == 'open' %}danger{% else %}ok{% endif %}">{{ event.get_status_display }}</span>
-                    {% if event.source %}
-                        <span class="badge">{{ event.source }}</span>
-                    {% endif %}
-                </div>
-                {% if event.mailbox %}
-                    <div class="small">Ящик: {{ event.mailbox.email }}</div>
-                {% endif %}
-                {% if event.alert %}
-                    <div class="small"><a href="{% url 'mobile_alert_detail' event.alert.id %}">Связанное обращение #{{ event.alert.id }}</a></div>
-                {% endif %}
-                {% if event.details %}
-                    <div class="small">{{ event.details|truncatechars:260 }}</div>
-                {% endif %}
-                <div class="actions compact-actions">
-                    {% if event.status == 'open' %}
-                        <form method="post" action="{% url 'mobile_service_event_action' event.id %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <input type="hidden" name="action" value="mark_recovered">
-                            <button class="small-action" type="submit">Mark recovered</button>
-                        </form>
-                        <form method="post" action="{% url 'mobile_service_event_action' event.id %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <input type="hidden" name="action" value="ignore">
-                            <button class="small-action" type="submit">Ignore this error</button>
-                        </form>
-                    {% endif %}
+        <section>
+            <h2>{% trans "System log" %}</h2>
+            {% for event in service_events %}
+                <article class="card">
+                    <div class="title">{{ event.title }}</div>
+                    <div class="meta">
+                        {{ event.get_event_type_display }} · {{ event.last_seen_at|date:"d.m.Y H:i" }}
+                        {% if event.occurrences > 1 %}
+                            · {% blocktrans count count=event.occurrences %}{{ count }} occurrence{% plural %}{{ count }} occurrences{% endblocktrans %}
+                        {% endif %}
+                    </div>
+                    <div class="badges">
+                        <span class="badge {% if event.severity == 'critical' or event.severity == 'error' %}danger{% elif event.severity == 'warning' %}warn{% else %}ok{% endif %}">{{ event.get_severity_display }}</span>
+                        <span class="badge {% if event.status == 'open' %}danger{% else %}ok{% endif %}">{{ event.get_status_display }}</span>
+                        {% if event.source %}
+                            <span class="badge">{{ event.source }}</span>
+                        {% endif %}
+                    </div>
                     {% if event.mailbox %}
-                        <a class="link-button small-action" href="{% url 'admin:alerts_mailboxaccount_change' event.mailbox.id %}">Open related mailbox</a>
+                        <div class="small">{% trans "Mailbox" %}: {{ event.mailbox.email }}</div>
                     {% endif %}
-                </div>
-            </article>
-        {% empty %}
-            <div class="empty">Системных сообщений и ошибок пока нет.</div>
-        {% endfor %}
-    </section>
+                    {% if event.alert %}
+                        <div class="small">
+                            <a href="{% url 'mobile_alert_detail' event.alert.id %}">
+                                {% blocktrans with id=event.alert.id %}Related lead #{{ id }}{% endblocktrans %}
+                            </a>
+                        </div>
+                    {% endif %}
+                    {% if event.details %}
+                        <div class="small">{{ event.details|truncatechars:260 }}</div>
+                    {% endif %}
+                    <div class="actions compact-actions">
+                        {% if event.status == 'open' %}
+                            <form method="post" action="{% url 'mobile_service_event_action' event.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <input type="hidden" name="action" value="mark_recovered">
+                                <button class="small-action" type="submit">{% trans "Mark recovered" %}</button>
+                            </form>
+                            <form method="post" action="{% url 'mobile_service_event_action' event.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <input type="hidden" name="action" value="ignore">
+                                <button class="small-action" type="submit">{% trans "Ignore this error" %}</button>
+                            </form>
+                        {% endif %}
+                        {% if event.mailbox %}
+                            <a class="link-button small-action" href="{% url 'admin:alerts_mailboxaccount_change' event.mailbox.id %}">{% trans "Open related mailbox" %}</a>
+                        {% endif %}
+                    </div>
+                </article>
+            {% empty %}
+                <div class="empty">{% trans "There are no system messages or errors yet." %}</div>
+            {% endfor %}
+        </section>
     {% else %}
-    <section>
-        <h1>
-            {% if view_mode == 'today' %}
-                📅 Сегодня
-            {% elif view_mode == 'attention' %}
-                ⚠️ Требует внимания
-            {% elif view_mode == 'mine' %}
-                🛠️ Мои в работе
-            {% elif view_mode == 'ignored' %}
-                🚫 Игнорированные обращения
-            {% elif view_mode == 'archived' %}
-                📦 Архив
-            {% elif view_mode == 'noise' %}
-                🧹 Спам и рассылки
-            {% elif view_mode == 'all' %}
-                📋 Все обращения
-            {% else %}
-                📋 Обращения
+        <section>
+            <h1>
+                {% if view_mode == 'today' %}
+                    📅 {% trans "Today" %}
+                {% elif view_mode == 'attention' %}
+                    ⚠️ {% trans "Needs attention" %}
+                {% elif view_mode == 'mine' %}
+                    🛠️ {% trans "My in-work leads" %}
+                {% elif view_mode == 'ignored' %}
+                    🚫 {% trans "Ignored leads" %}
+                {% elif view_mode == 'archived' %}
+                    📦 {% trans "Archive" %}
+                {% elif view_mode == 'noise' %}
+                    🧹 {% trans "Spam and newsletters" %}
+                {% elif view_mode == 'all' %}
+                    📋 {% trans "All leads" %}
+                {% else %}
+                    📋 {% trans "Leads" %}
+                {% endif %}
+            </h1>
+            {% if alerts_page %}
+                <div class="small">
+                    {% blocktrans with start=alerts_page.start_index end=alerts_page.end_index total=alerts_page.paginator.count page=alerts_page.number pages=alerts_page.paginator.num_pages %}Showing {{ start }}-{{ end }} of {{ total }} · page {{ page }} / {{ pages }}{% endblocktrans %}
+                </div>
             {% endif %}
-        </h1>
-        {% if alerts_page %}
-            <div class="small">
-                Показано {{ alerts_page.start_index }}–{{ alerts_page.end_index }} из {{ alerts_page.paginator.count }} · страница {{ alerts_page.number }} / {{ alerts_page.paginator.num_pages }}
-            </div>
-        {% endif %}
-        {% for alert in alerts %}
-            <article class="card alert-card">
-                <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
-                <div class="alert-meta-grid">
-                    <div class="alert-mailbox">
-                        <span class="meta-label">📬 Ящик</span>
-                        <strong>{{ alert.mailbox.name|default:alert.mailbox.email }}</strong>
-                        <span>{{ alert.mailbox.email }}</span>
-                    </div>
+            {% for alert in alerts %}
+                <article class="card alert-card">
+                    <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
+                    <div class="alert-meta-grid">
+                        <div class="alert-mailbox">
+                            <span class="meta-label">📬 {% trans "Mailbox" %}</span>
+                            <strong>{{ alert.mailbox.name|default:alert.mailbox.email }}</strong>
+                            <span>{{ alert.mailbox.email }}</span>
+                        </div>
 
-                    <div class="alert-date">
-                        <span class="meta-label">📅 Дата</span>
-                        <strong>{{ alert.created_at|date:"d.m.Y" }}</strong>
-                        <span>{{ alert.created_at|date:"H:i" }}</span>
+                        <div class="alert-date">
+                            <span class="meta-label">📅 {% trans "Date" %}</span>
+                            <strong>{{ alert.created_at|date:"d.m.Y" }}</strong>
+                            <span>{{ alert.created_at|date:"H:i" }}</span>
+                        </div>
                     </div>
+                    <div class="badges">
+                        <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">{{ alert.get_alert_status_display }}</span>
+                        <span class="badge {% if alert.priority == 'urgent' or alert.priority == 'high' %}danger{% endif %}">{{ alert.get_priority_display }}</span>
+                        <span class="badge">{{ alert.get_event_type_display }}</span>
+                        {% for flag in alert.flags.all %}
+                            <span class="badge {% if flag.category == 'risk' %}danger{% endif %}">{{ flag.name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% if alert.taken_by or alert.taken_by_label %}
+                        <div class="info-row work-owner">
+                            <span class="info-icon">👷</span>
+                            <span class="info-content">
+                                <span class="info-label">{% trans "In work by" %}</span>
+                                <strong>
+                                    {% if alert.taken_by %}
+                                        {{ alert.taken_by.get_full_name|default:alert.taken_by.username }}
+                                    {% else %}
+                                        {{ alert.taken_by_label }}
+                                    {% endif %}
+                                </strong>
+                            </span>
+                        </div>
+                    {% endif %}
+
+                    {% if alert.classification_reason %}
+                        <div class="info-row classification-note">
+                            <span class="info-icon">🧠</span>
+                            <span class="info-content">
+                                <span class="info-label">{% trans "Classification" %}</span>
+                                <span>{{ alert.classification_reason }}</span>
+                            </span>
+                        </div>
+                    {% endif %}
+
+                    <div class="actions">
+                        {% if view_mode == 'mine' and alert.alert_status == 'in_work' %}
+                            <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <input type="hidden" name="status" value="archived">
+                                <button type="submit">✅ {% trans "Case resolved" %}</button>
+                            </form>
+                        {% endif %}
+
+                        {% if view_mode != 'mine' %}
+                            <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <input type="hidden" name="status" value="in_work">
+                                <button
+                                    type="submit"
+                                    {% if alert.alert_status == 'in_work' %}disabled{% endif %}
+                                >
+                                    ✅ {% trans "Take to work" %}
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <input type="hidden" name="status" value="ignored">
+                            <button
+                                type="submit"
+                                {% if alert.alert_status == 'ignored' %}disabled{% endif %}
+                            >
+                                🚫 {% trans "Ignore" %}
+                            </button>
+                        </form>
+
+                        <a class="link-button" href="{% url 'mobile_alert_detail' alert.id %}">📋 {% trans "Open" %}</a>
+                    </div>
+                </article>
+            {% empty %}
+                <div class="empty">
+                    {% if view_mode == 'today' %}{% trans "There are no leads today yet." %}
+                    {% elif view_mode == 'mine' %}{% trans "You have no leads in work." %}
+                    {% elif view_mode == 'ignored' %}{% trans "There are no ignored leads yet." %}
+                    {% elif view_mode == 'archived' %}{% trans "There are no archived leads yet." %}
+                    {% elif view_mode == 'noise' %}{% trans "There is no spam or newsletters yet." %}
+                    {% else %}{% trans "There are no leads for this filter right now." %}{% endif %}
                 </div>
-                <div class="badges">
-                    <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">{{ alert.get_alert_status_display }}</span>
-                    <span class="badge {% if alert.priority == 'urgent' or alert.priority == 'high' %}danger{% endif %}">{{ alert.get_priority_display }}</span>
-                    <span class="badge">{{ alert.get_event_type_display }}</span>
-                    {% for flag in alert.flags.all %}
-                        <span class="badge {% if flag.category == 'risk' %}danger{% endif %}">{{ flag.name }}</span>
-                    {% endfor %}
-                </div>
-                {% if alert.taken_by or alert.taken_by_label %}
-                    <div class="info-row work-owner">
-                        <span class="info-icon">👷</span>
-                        <span class="info-content">
-                            <span class="info-label">В работе у</span>
-                            <strong>
-                                {% if alert.taken_by %}
-                                    {{ alert.taken_by.get_full_name|default:alert.taken_by.username }}
-                                {% else %}
-                                    {{ alert.taken_by_label }}
-                                {% endif %}
-                            </strong>
-                        </span>
-                    </div>
-                {% endif %}
-
-                {% if alert.classification_reason %}
-                    <div class="info-row classification-note">
-                        <span class="info-icon">🧠</span>
-                        <span class="info-content">
-                            <span class="info-label">Классификация</span>
-                            <span>{{ alert.classification_reason }}</span>
-                        </span>
-                    </div>
-                {% endif %}
-
-            <div class="actions">
-                {% if view_mode == 'mine' and alert.alert_status == 'in_work' %}
-                    <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <input type="hidden" name="status" value="archived">
-                        <button type="submit">✅ Кейс решён</button>
-                    </form>
-                {% endif %}
-
-                {% if view_mode != 'mine' %}
-                    <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <input type="hidden" name="status" value="in_work">
-                        <button
-                            type="submit"
-                            {% if alert.alert_status == 'in_work' %}disabled{% endif %}
-                        >
-                            ✅В работу
-                        </button>
-                    </form>
-                {% endif %}
-
-                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <input type="hidden" name="status" value="ignored">
-                    <button
-                        type="submit"
-                        {% if alert.alert_status == 'ignored' %}disabled{% endif %}
-                    >
-                        🚫Игнор
-                    </button>
-                </form>
-
-                <a class="link-button" href="{% url 'mobile_alert_detail' alert.id %}">📋Открыть</a>
-            </div>
-
-            </article>
-        {% empty %}
-            <div class="empty">
-                {% if view_mode == 'today' %}Сегодня обращений пока нет.
-                {% elif view_mode == 'mine' %}У вас нет обращений в работе.
-                {% elif view_mode == 'ignored' %}Игнорированных обращений пока нет.
-                {% elif view_mode == 'archived' %}Архивных обращений пока нет.
-                {% elif view_mode == 'noise' %}Спама и рассылок пока нет.
-                {% else %}Сейчас нет обращений для этого фильтра.{% endif %}
-            </div>
-        {% endfor %}
-        {% if alerts_page and alerts_page.paginator.num_pages > 1 %}
-            <nav class="actions compact-actions" aria-label="Пагинация обращений">
-                {% if alerts_page.has_previous %}
-                    <a class="link-button small-action" href="?view={{ view_mode }}&amp;page=1">« Первая</a>
-                    <a class="link-button small-action" href="?view={{ view_mode }}&amp;page={{ alerts_page.previous_page_number }}">← Назад</a>
-                {% endif %}
-                <span class="badge">{{ alerts_page.number }} / {{ alerts_page.paginator.num_pages }}</span>
-                {% if alerts_page.has_next %}
-                    <a class="link-button small-action" href="?view={{ view_mode }}&amp;page={{ alerts_page.next_page_number }}">Вперёд →</a>
-                    <a class="link-button small-action" href="?view={{ view_mode }}&amp;page={{ alerts_page.paginator.num_pages }}">Последняя »</a>
-                {% endif %}
-            </nav>
-        {% endif %}
-    </section>
+            {% endfor %}
+            {% if alerts_page and alerts_page.paginator.num_pages > 1 %}
+                <nav class="actions compact-actions" aria-label="{% trans 'Lead pagination' %}">
+                    {% if alerts_page.has_previous %}
+                        <a class="link-button small-action" href="?view={{ view_mode }}&amp;page=1">« {% trans "First" %}</a>
+                        <a class="link-button small-action" href="?view={{ view_mode }}&amp;page={{ alerts_page.previous_page_number }}">← {% trans "Back" %}</a>
+                    {% endif %}
+                    <span class="badge">{{ alerts_page.number }} / {{ alerts_page.paginator.num_pages }}</span>
+                    {% if alerts_page.has_next %}
+                        <a class="link-button small-action" href="?view={{ view_mode }}&amp;page={{ alerts_page.next_page_number }}">{% trans "Next" %} →</a>
+                        <a class="link-button small-action" href="?view={{ view_mode }}&amp;page={{ alerts_page.paginator.num_pages }}">{% trans "Last" %} »</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        </section>
     {% endif %}
 
     {% include "mobile/_mailbox_status.html" %}
     <section>
         <details class="card collapsible-card quiet-hours-block">
             <summary class="collapsible-summary">
-                <span class="summary-title">🔕Рабочие часы
+                <span class="summary-title">
+                    🔕 {% trans "Working hours" %}
 
-                                    {% if telegram_settings.quiet_hours_enabled %}
-                    <span class="status-pill ok">
-                        <span class="status-dot"></span>
-                        Вкл.
-                    </span>
-                {% else %}
-                    <span class="status-pill muted">
-                        <span class="status-dot"></span>
-                        Выкл.
-                    </span>
-                {% endif %}
-
+                    {% if telegram_settings.quiet_hours_enabled %}
+                        <span class="status-pill ok">
+                            <span class="status-dot"></span>
+                            {% trans "On" %}
+                        </span>
+                    {% else %}
+                        <span class="status-pill muted">
+                            <span class="status-dot"></span>
+                            {% trans "Off" %}
+                        </span>
+                    {% endif %}
                 </span>
             </summary>
 
             <div class="collapsible-content">
                 <div class="small">
                     {% if telegram_settings.quiet_hours_enabled %}
-                        Обычные уведомления приглушаются с {{ telegram_settings.quiet_hours_start|time:"H:i" }} до {{ telegram_settings.quiet_hours_end|time:"H:i" }}.
+                        {% blocktrans with start=telegram_settings.quiet_hours_start|time:"H:i" end=telegram_settings.quiet_hours_end|time:"H:i" %}Regular notifications are muted from {{ start }} to {{ end }}.{% endblocktrans %}
                     {% else %}
-                        Обычные уведомления приходят без паузы по времени.
+                        {% trans "Regular notifications are sent without a time pause." %}
                     {% endif %}
                 </div>
 
@@ -301,12 +307,12 @@
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
                         <button class="small-action" type="submit">
-                            {% if telegram_settings.quiet_hours_enabled %}Выключить{% else %}Включить{% endif %}
+                            {% if telegram_settings.quiet_hours_enabled %}{% trans "Turn off" %}{% else %}{% trans "Turn on" %}{% endif %}
                         </button>
                     </form>
 
                     <a class="link-button small-action" href="{{ admin_telegram_settings_url }}">
-                        Настроить время
+                        {% trans "Configure time" %}
                     </a>
                 </div>
             </div>
