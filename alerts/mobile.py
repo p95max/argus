@@ -26,6 +26,11 @@ def _require_staff(user):
         raise PermissionDenied("Mobile control panel is available only for staff users.")
 
 
+def _require_superuser(user):
+    if not user.is_active or not user.is_superuser:
+        raise PermissionDenied("Only a superuser can clear the system log.")
+
+
 def _require_mailbox_manage_permission(user):
     if not can_manage_mailboxes(user):
         raise PermissionDenied("You do not have permission to manage mailboxes.")
@@ -46,6 +51,25 @@ def _safe_next_url(request, fallback_name="mobile_dashboard"):
 @login_required
 def mobile_dashboard(request):
     _require_staff(request.user)
+
+    if request.method == "POST":
+        _require_superuser(request.user)
+        action = request.POST.get("action", "")
+
+        if action == "clear_resolved_service_events":
+            events = ServiceEvent.objects.exclude(status=ServiceEvent.Status.OPEN)
+        elif action == "clear_all_service_events":
+            events = ServiceEvent.objects.all()
+        else:
+            raise PermissionDenied("Unknown system log cleanup action.")
+
+        deleted_count, _ = events.delete()
+        messages.success(
+            request,
+            _("System log cleared. Deleted records: %(count)s.")
+            % {"count": deleted_count},
+        )
+        return redirect(_safe_next_url(request))
 
     today = timezone.localdate()
     alerts = (
