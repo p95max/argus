@@ -14,6 +14,7 @@ from urllib.parse import urljoin
 ENV_FILE = Path("/opt/argus/.env.local")
 STATE_FILE = Path("/var/tmp/argus-health-state.json")
 DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+FAILURE_CONFIRM_SECONDS = 30
 
 SERVICES = [
     "argus-web.service",
@@ -117,6 +118,38 @@ def get_failed_units():
 def check_disk():
     usage = shutil.disk_usage("/")
     return round((usage.used / usage.total) * 100, 1)
+
+
+def collect_problems(env):
+    problems = []
+
+    for service in SERVICES:
+        if not is_active(service):
+            problems.append(f"Service not active: {service}")
+
+    for timer in TIMERS:
+        if not is_active(timer):
+            problems.append(f"Timer not active: {timer}")
+
+    health_ok, health_detail = check_health(env)
+    if not health_ok:
+        problems.append(health_detail)
+
+    failed_units = get_failed_units()
+    if failed_units:
+        problems.append("Failed systemd units:\n" + "\n".join(failed_units[:10]))
+
+    disk_used = check_disk()
+    if disk_used >= 90:
+        problems.append(f"Disk usage is high: {disk_used}%")
+
+    return problems
+
+
+def problem_fingerprint(problems):
+    problem_text = "\n".join(problems)
+    problem_hash = hashlib.sha256(problem_text.encode("utf-8")).hexdigest() if problems else ""
+    return problem_text, problem_hash
 
 
 def build_problem_message(label, problem_text):
@@ -244,35 +277,30 @@ def main():
             return 0
         return 1
 
-    problems = []
-
-    for service in SERVICES:
-        if not is_active(service):
-            problems.append(f"Service not active: {service}")
-
-    for timer in TIMERS:
-        if not is_active(timer):
-            problems.append(f"Timer not active: {timer}")
-
-    health_ok, health_detail = check_health(env)
-    if not health_ok:
-        problems.append(health_detail)
-
-    failed_units = get_failed_units()
-    if failed_units:
-        problems.append("Failed systemd units:\n" + "\n".join(failed_units[:10]))
-
-    disk_used = check_disk()
-    if disk_used >= 90:
-        problems.append(f"Disk usage is high: {disk_used}%")
-
     state = load_state()
-    current_status = "fail" if problems else "ok"
-    problem_text = "\n".join(problems)
-    problem_hash = hashlib.sha256(problem_text.encode("utf-8")).hexdigest() if problems else ""
-
     previous_status = state.get("status")
     previous_hash = state.get("problem_hash")
+
+    problems = collect_problems(env)
+    _, initial_hash = problem_fingerprint(problems)
+    is_new_or_changed_failure = problems and (
+        previous_status != "fail" or previous_hash != initial_hash
+    )
+
+    if is_new_or_changed_failure:
+        print(
+            "Potential problem detected. "
+            f"Rechecking in {FAILURE_CONFIRM_SECONDS} seconds before notifying."
+        )
+        time.sleep(FAILURE_CONFIRM_SECONDS)
+        problems = collect_problems(env)
+        if problems:
+            print("Problem confirmed after the retry window.")
+        else:
+            print("Initial problem cleared during the retry window. No alert sent.")
+
+    current_status = "fail" if problems else "ok"
+    problem_text, problem_hash = problem_fingerprint(problems)
     notification_failed = False
 
     if current_status == "fail":
