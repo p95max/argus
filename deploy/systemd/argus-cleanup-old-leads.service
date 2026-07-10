@@ -7,4 +7,5 @@ User=argus
 Group=argus
 WorkingDirectory=/opt/argus
 Environment="PATH=/opt/argus/.venv/bin"
-ExecStart=/usr/bin/flock -n /tmp/argus-cleanup-old-leads.lock /opt/argus/.venv/bin/python manage.py cleanup_old_leads --days 30 --limit 100
+TimeoutStartSec=30min
+ExecStart=/usr/local/bin/argus-run-background-job.sh argus-cleanup-old-leads /opt/argus/.venv/bin/python manage.py cleanup_old_leads --days 30 --limit 100
