@@ -3,9 +3,6 @@
 [![CI](https://github.com/p95max/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/p95max/argus/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/p95max/argus/branch/master/graph/badge.svg)](https://codecov.io/gh/p95max/argus)
 [![CodeQL](https://github.com/p95max/argus/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/p95max/argus/actions/workflows/codeql-analysis.yml)
-![Python](https://img.shields.io/badge/python-3.12%2B-blue)
-![Django](https://img.shields.io/badge/django-6.0-092E20)
-![Deploy](https://img.shields.io/badge/deploy-VPS%20%2B%20systemd-informational)
 
 Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads Gmail messages through per-mailbox OAuth, classifies marketplace emails into buyer leads, noise/system messages, and operational service events, sends Telegram notifications, and gives operators both a full Django Admin UI and a compact mobile control panel.
 
