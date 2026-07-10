@@ -13,8 +13,8 @@ class LanguageCode(models.TextChoices):
 
 
 class TimestampedModel(models.Model):
-    created_at = models.DateTimeField("создано", auto_now_add=True)
-    updated_at = models.DateTimeField("обновлено", auto_now=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
     class Meta:
         abstract = True
@@ -22,14 +22,14 @@ class TimestampedModel(models.Model):
 
 class MailboxAccount(TimestampedModel):
     class ConnectionStatus(models.TextChoices):
-        NOT_CONNECTED = "not_connected", "Не подключен"
-        CONNECTED = "connected", "Подключен"
-        ERROR = "error", "Ошибка"
-        DISABLED = "disabled", "Отключен"
+        NOT_CONNECTED = "not_connected", _("Not connected")
+        CONNECTED = "connected", _("Connected")
+        ERROR = "error", _("Error")
+        DISABLED = "disabled", _("Disabled")
 
-    name = models.CharField("название", max_length=120)
+    name = models.CharField(_("name"), max_length=120)
     email = models.EmailField("email", unique=True, blank=True, null=True)
-    is_active = models.BooleanField("активен", default=True)
+    is_active = models.BooleanField(_("active"), default=True)
     gmail_search_query = models.CharField(
         "Gmail search query",
         max_length=500,
@@ -37,55 +37,55 @@ class MailboxAccount(TimestampedModel):
         blank=True,
     )
 
-    gmail_connected_email = models.EmailField("подключенный Gmail", blank=True)
+    gmail_connected_email = models.EmailField(_("connected Gmail"), blank=True)
     gmail_oauth_token = models.TextField("Gmail OAuth token JSON", blank=True)
-    gmail_oauth_connected_at = models.DateTimeField("Gmail подключен", null=True, blank=True)
-    gmail_oauth_last_refresh_at = models.DateTimeField("последнее обновление Gmail token", null=True, blank=True)
-    gmail_oauth_error = models.TextField("ошибка Gmail OAuth", blank=True)
+    gmail_oauth_connected_at = models.DateTimeField(_("Gmail connected at"), null=True, blank=True)
+    gmail_oauth_last_refresh_at = models.DateTimeField(_("last Gmail token refresh"), null=True, blank=True)
+    gmail_oauth_error = models.TextField(_("Gmail OAuth error"), blank=True)
 
     connection_status = models.CharField(
-        "статус подключения",
+        _("connection status"),
         max_length=32,
         choices=ConnectionStatus.choices,
         default=ConnectionStatus.NOT_CONNECTED,
     )
-    last_checked_at = models.DateTimeField("последняя проверка", null=True, blank=True)
-    last_success_at = models.DateTimeField("последний успех", null=True, blank=True)
-    last_error = models.TextField("последняя ошибка", blank=True)
+    last_checked_at = models.DateTimeField(_("last check"), null=True, blank=True)
+    last_success_at = models.DateTimeField(_("last success"), null=True, blank=True)
+    last_error = models.TextField(_("last error"), blank=True)
 
     class Meta:
         ordering = ["email"]
-        verbose_name = "Почтовый ящик"
-        verbose_name_plural = "Почтовые ящики"
+        verbose_name = _("Mailbox")
+        verbose_name_plural = _("Mailboxes")
 
     def __str__(self):
         if self.email:
             return f"{self.name} <{self.email}>"
-        return f"{self.name} <Gmail не подключен>"
+        return _("%(name)s <Gmail not connected>") % {"name": self.name}
 
 
 class LeadFlag(TimestampedModel):
     class Category(models.TextChoices):
-        POSITIVE = "positive", "Позитивный сигнал"
-        RISK = "risk", "Риск"
-        LOW_QUALITY = "low_quality", "Низкое качество"
-        SYSTEM = "system", "Системный"
+        POSITIVE = "positive", _("Positive signal")
+        RISK = "risk", _("Risk")
+        LOW_QUALITY = "low_quality", _("Low quality")
+        SYSTEM = "system", _("System")
 
-    code = models.SlugField("код", max_length=80, unique=True)
-    name = models.CharField("название", max_length=120)
+    code = models.SlugField(_("code"), max_length=80, unique=True)
+    name = models.CharField(_("name"), max_length=120)
     category = models.CharField(
-        "категория",
+        _("category"),
         max_length=32,
         choices=Category.choices,
         default=Category.POSITIVE,
     )
-    description = models.TextField("описание", blank=True)
-    is_active = models.BooleanField("активен", default=True)
+    description = models.TextField(_("description"), blank=True)
+    is_active = models.BooleanField(_("active"), default=True)
 
     class Meta:
         ordering = ["category", "name"]
-        verbose_name = "Приоритет обращения"
-        verbose_name_plural = "Приоритеты обращений"
+        verbose_name = _("Lead priority rule")
+        verbose_name_plural = _("Lead priority rules")
 
     def __str__(self):
         return self.name
@@ -93,92 +93,92 @@ class LeadFlag(TimestampedModel):
 
 class MarketplaceAlert(TimestampedModel):
     class EventType(models.TextChoices):
-        BUYER_MESSAGE = "buyer_message", "Сообщение покупателя"
-        LISTING_EXPIRING = "listing_expiring", "Объявление истекает"
-        SYSTEM_NOTICE = "system_notice", "Системное уведомление"
-        NOISE = "noise", "Шум"
+        BUYER_MESSAGE = "buyer_message", _("Buyer message")
+        LISTING_EXPIRING = "listing_expiring", _("Listing expiring")
+        SYSTEM_NOTICE = "system_notice", _("System notice")
+        NOISE = "noise", _("Noise")
 
     class AlertStatus(models.TextChoices):
-        UNREAD = "unread", "Новое"
-        IN_WORK = "in_work", "В работе"
-        IGNORED = "ignored", "Игнор"
-        ARCHIVED = "archived", "Архив"
+        UNREAD = "unread", _("New")
+        IN_WORK = "in_work", _("In work")
+        IGNORED = "ignored", _("Ignored")
+        ARCHIVED = "archived", _("Archived")
 
     class Priority(models.TextChoices):
-        LOW = "low", "Низкий"
-        NORMAL = "normal", "Обычный"
-        HIGH = "high", "Высокий"
-        URGENT = "urgent", "Срочный"
+        LOW = "low", _("Low")
+        NORMAL = "normal", _("Normal")
+        HIGH = "high", _("High")
+        URGENT = "urgent", _("Urgent")
 
     class ParseStatus(models.TextChoices):
-        SUCCESS = "success", "Успешно"
-        PARTIAL = "partial", "Частично"
-        ERROR = "error", "Ошибка"
-        SKIPPED = "skipped", "Пропущено"
+        SUCCESS = "success", _("Success")
+        PARTIAL = "partial", _("Partial")
+        ERROR = "error", _("Error")
+        SKIPPED = "skipped", _("Skipped")
 
     mailbox = models.ForeignKey(
         MailboxAccount,
-        verbose_name="почтовый ящик",
+        verbose_name=_("mailbox"),
         on_delete=models.CASCADE,
         related_name="alerts",
     )
-    flags = models.ManyToManyField(LeadFlag, verbose_name="флаги", blank=True, related_name="alerts")
+    flags = models.ManyToManyField(LeadFlag, verbose_name=_("flags"), blank=True, related_name="alerts")
 
     event_type = models.CharField(
-        "тип события",
+        _("event type"),
         max_length=32,
         choices=EventType.choices,
         default=EventType.BUYER_MESSAGE,
     )
     alert_status = models.CharField(
-        "статус",
+        _("status"),
         max_length=32,
         choices=AlertStatus.choices,
         default=AlertStatus.UNREAD,
     )
     taken_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        verbose_name="кто взял в работу",
+        verbose_name=_("taken by"),
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="marketplace_alerts_in_work",
     )
-    taken_by_label = models.CharField("исполнитель", max_length=160, blank=True)
-    taken_at = models.DateTimeField("взято в работу", null=True, blank=True)
+    taken_by_label = models.CharField(_("owner label"), max_length=160, blank=True)
+    taken_at = models.DateTimeField(_("taken at"), null=True, blank=True)
     priority = models.CharField(
-        "приоритет",
+        _("priority"),
         max_length=32,
         choices=Priority.choices,
         default=Priority.NORMAL,
     )
     parse_status = models.CharField(
-        "статус парсинга",
+        _("parse status"),
         max_length=32,
         choices=ParseStatus.choices,
         default=ParseStatus.SUCCESS,
     )
-    parse_error = models.TextField("ошибка парсинга", blank=True)
-    classification_reason = models.TextField("объяснение классификации", blank=True)
+    parse_error = models.TextField(_("parse error"), blank=True)
+    classification_reason = models.TextField(_("classification explanation"), blank=True)
 
-    listing_id = models.CharField("ID объявления", max_length=120, blank=True)
-    listing_title = models.CharField("название объявления", max_length=255, blank=True)
-    buyer_name = models.CharField("покупатель", max_length=150, blank=True)
-    subject = models.CharField("тема", max_length=500, blank=True)
-    message_text = models.TextField("сообщение", blank=True)
-    raw_subject = models.CharField("исходная тема", max_length=500, blank=True)
-    raw_body = models.TextField("исходное тело письма", blank=True)
-    normalized_body = models.TextField("нормализованное тело письма", blank=True)
+    listing_id = models.CharField(_("listing ID"), max_length=120, blank=True)
+    listing_title = models.CharField(_("listing title"), max_length=255, blank=True)
+    buyer_name = models.CharField(_("buyer"), max_length=150, blank=True)
+    subject = models.CharField(_("subject"), max_length=500, blank=True)
+    message_text = models.TextField(_("message"), blank=True)
+    raw_subject = models.CharField(_("raw subject"), max_length=500, blank=True)
+    raw_body = models.TextField(_("raw email body"), blank=True)
+    normalized_body = models.TextField(_("normalized email body"), blank=True)
 
     gmail_message_id = models.CharField("Gmail message ID", max_length=255, blank=True)
     gmail_thread_id = models.CharField("Gmail thread ID", max_length=255, blank=True)
     telegram_chat_id = models.CharField("Telegram chat ID", max_length=64, blank=True)
     telegram_message_id = models.CharField("Telegram message ID", max_length=64, blank=True)
-    telegram_sent_at = models.DateTimeField("отправлено в Telegram", null=True, blank=True)
-    telegram_error = models.TextField("ошибка Telegram", blank=True)
-    last_reminded_at = models.DateTimeField("последний reminder", null=True, blank=True)
-    received_at = models.DateTimeField("получено", null=True, blank=True)
-    processed_at = models.DateTimeField("обработано", default=timezone.now)
+    telegram_sent_at = models.DateTimeField(_("sent to Telegram at"), null=True, blank=True)
+    telegram_error = models.TextField(_("Telegram error"), blank=True)
+    last_reminded_at = models.DateTimeField(_("last reminder"), null=True, blank=True)
+    received_at = models.DateTimeField(_("received at"), null=True, blank=True)
+    processed_at = models.DateTimeField(_("processed at"), default=timezone.now)
 
     class Meta:
         ordering = ["-received_at", "-created_at"]
@@ -187,8 +187,8 @@ class MarketplaceAlert(TimestampedModel):
             models.Index(fields=["event_type"]),
             models.Index(fields=["listing_id"]),
         ]
-        verbose_name = "Обращение"
-        verbose_name_plural = "Обращения"
+        verbose_name = _("Lead")
+        verbose_name_plural = _("Leads")
 
     def __str__(self):
         title = self.listing_title or self.subject or self.get_event_type_display()
@@ -198,22 +198,22 @@ class MarketplaceAlert(TimestampedModel):
 class NoiseAlert(MarketplaceAlert):
     class Meta:
         proxy = True
-        verbose_name = "Письмо из спама или рассылки"
-        verbose_name_plural = "Спам и рассылки"
+        verbose_name = _("Spam or newsletter email")
+        verbose_name_plural = _("Spam and newsletters")
 
 
 class ProcessedEmail(TimestampedModel):
     mailbox = models.ForeignKey(
         MailboxAccount,
-        verbose_name="почтовый ящик",
+        verbose_name=_("mailbox"),
         on_delete=models.CASCADE,
         related_name="processed_emails",
     )
     gmail_message_id = models.CharField("Gmail message ID", max_length=255)
     gmail_thread_id = models.CharField("Gmail thread ID", max_length=255, blank=True)
-    subject = models.CharField("тема", max_length=500, blank=True)
-    received_at = models.DateTimeField("получено", null=True, blank=True)
-    processed_at = models.DateTimeField("обработано", default=timezone.now)
+    subject = models.CharField(_("subject"), max_length=500, blank=True)
+    received_at = models.DateTimeField(_("received at"), null=True, blank=True)
+    processed_at = models.DateTimeField(_("processed at"), default=timezone.now)
 
     class Meta:
         ordering = ["-processed_at"]
@@ -223,8 +223,8 @@ class ProcessedEmail(TimestampedModel):
                 name="unique_processed_email_per_mailbox",
             ),
         ]
-        verbose_name = "Проверенное письмо"
-        verbose_name_plural = "Проверенные письма"
+        verbose_name = _("Processed email")
+        verbose_name_plural = _("Processed emails")
 
     def __str__(self):
         return f"{self.mailbox.email}: {self.gmail_message_id}"
@@ -232,10 +232,10 @@ class ProcessedEmail(TimestampedModel):
 
 class ServiceEvent(TimestampedModel):
     class EventType(models.TextChoices):
-        MAILBOX_ERROR = "mailbox_error", "Ошибка mailbox"
-        PARSER_ERROR = "parser_error", "Ошибка parser"
-        TELEGRAM_SEND_ERROR = "telegram_send_error", "Ошибка Telegram send"
-        RECOVERY = "recovery", "Восстановление"
+        MAILBOX_ERROR = "mailbox_error", _("Mailbox error")
+        PARSER_ERROR = "parser_error", _("Parser error")
+        TELEGRAM_SEND_ERROR = "telegram_send_error", _("Telegram send error")
+        RECOVERY = "recovery", _("Recovery")
 
     class Severity(models.TextChoices):
         INFO = "info", "Info"
@@ -244,13 +244,13 @@ class ServiceEvent(TimestampedModel):
         CRITICAL = "critical", "Critical"
 
     class Status(models.TextChoices):
-        OPEN = "open", "Открыто"
-        RECOVERED = "recovered", "Восстановлено"
-        IGNORED = "ignored", "Игнор"
+        OPEN = "open", _("Open")
+        RECOVERED = "recovered", _("Recovered")
+        IGNORED = "ignored", _("Ignored")
 
     mailbox = models.ForeignKey(
         MailboxAccount,
-        verbose_name="почтовый ящик",
+        verbose_name=_("mailbox"),
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -258,25 +258,25 @@ class ServiceEvent(TimestampedModel):
     )
     alert = models.ForeignKey(
         MarketplaceAlert,
-        verbose_name="обращение",
+        verbose_name=_("lead"),
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="service_events",
     )
-    event_type = models.CharField("тип события", max_length=32, choices=EventType.choices)
-    severity = models.CharField("важность", max_length=16, choices=Severity.choices)
-    status = models.CharField("статус", max_length=16, choices=Status.choices, default=Status.OPEN)
-    source = models.CharField("источник", max_length=80, blank=True)
-    title = models.CharField("заголовок", max_length=255)
-    details = models.TextField("детали", blank=True)
+    event_type = models.CharField(_("event type"), max_length=32, choices=EventType.choices)
+    severity = models.CharField(_("severity"), max_length=16, choices=Severity.choices)
+    status = models.CharField(_("status"), max_length=16, choices=Status.choices, default=Status.OPEN)
+    source = models.CharField(_("source"), max_length=80, blank=True)
+    title = models.CharField(_("title"), max_length=255)
+    details = models.TextField(_("details"), blank=True)
     fingerprint = models.CharField("fingerprint", max_length=255, db_index=True)
-    occurrences = models.PositiveIntegerField("повторы", default=1)
-    first_seen_at = models.DateTimeField("первое событие", default=timezone.now)
-    last_seen_at = models.DateTimeField("последнее событие", default=timezone.now)
-    resolved_at = models.DateTimeField("восстановлено", null=True, blank=True)
-    telegram_sent_at = models.DateTimeField("отправлено в Telegram", null=True, blank=True)
-    telegram_error = models.TextField("ошибка Telegram", blank=True)
+    occurrences = models.PositiveIntegerField(_("occurrences"), default=1)
+    first_seen_at = models.DateTimeField(_("first seen at"), default=timezone.now)
+    last_seen_at = models.DateTimeField(_("last seen at"), default=timezone.now)
+    resolved_at = models.DateTimeField(_("resolved at"), null=True, blank=True)
+    telegram_sent_at = models.DateTimeField(_("sent to Telegram at"), null=True, blank=True)
+    telegram_error = models.TextField(_("Telegram error"), blank=True)
 
     class Meta:
         ordering = ["-last_seen_at", "-created_at"]
@@ -285,29 +285,29 @@ class ServiceEvent(TimestampedModel):
             models.Index(fields=["severity", "status"]),
             models.Index(fields=["fingerprint", "status"]),
         ]
-        verbose_name = "Запись системного журнала"
-        verbose_name_plural = "Системный журнал"
+        verbose_name = _("System log entry")
+        verbose_name_plural = _("System log")
 
     def __str__(self):
         return f"{self.get_event_type_display()}: {self.title}"
 
 
 class TelegramSettings(TimestampedModel):
-    quiet_hours_enabled = models.BooleanField("quiet hours включены", default=False)
-    quiet_hours_start = models.TimeField("quiet hours начало", default=time(22, 0))
-    quiet_hours_end = models.TimeField("quiet hours конец", default=time(7, 0))
+    quiet_hours_enabled = models.BooleanField(_("quiet hours enabled"), default=False)
+    quiet_hours_start = models.TimeField(_("quiet hours start"), default=time(22, 0))
+    quiet_hours_end = models.TimeField(_("quiet hours end"), default=time(7, 0))
     allow_urgent_during_quiet_hours = models.BooleanField(
-        "отправлять срочные alerts в quiet hours",
+        _("send urgent alerts during quiet hours"),
         default=False,
     )
 
     class Meta:
-        verbose_name = "Настройки Telegram"
-        verbose_name_plural = "Настройки Telegram"
+        verbose_name = _("Telegram settings")
+        verbose_name_plural = _("Telegram settings")
 
     def __str__(self):
-        status = "включены" if self.quiet_hours_enabled else "выключены"
-        return f"Telegram settings: quiet hours {status}"
+        status = _("enabled") if self.quiet_hours_enabled else _("disabled")
+        return _("Telegram settings: quiet hours %(status)s") % {"status": status}
 
     @classmethod
     def load(cls):

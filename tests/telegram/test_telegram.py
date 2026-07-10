@@ -166,7 +166,7 @@ def test_status_callback_does_not_change_alert_status(monkeypatch, alert):
 
     assert alert.alert_status == MarketplaceAlert.AlertStatus.UNREAD
     assert result.status_changed is False
-    assert "Новое" in result.answer_text
+    assert "New" in result.answer_text
 
 
 @pytest.mark.django_db

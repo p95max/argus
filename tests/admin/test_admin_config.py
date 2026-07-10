@@ -4,6 +4,7 @@ from django.test import RequestFactory
 from django.utils import translation
 
 from alerts.admin import (
+    ArgusSettingsAdmin,
     MailboxAccountAdmin,
     MarketplaceAlertAdmin,
     NeedsAttentionFilter,
@@ -11,6 +12,7 @@ from alerts.admin import (
 )
 from alerts.apps import AlertsConfig
 from alerts.models import (
+    ArgusSettings,
     LeadFlag,
     MailboxAccount,
     MarketplaceAlert,
@@ -28,6 +30,17 @@ def test_marketplace_alert_admin_has_event_type_filter():
 def test_admin_section_names_are_human_friendly():
     with translation.override("en"):
         assert AlertsConfig.verbose_name == "Mail and leads"
+        assert MailboxAccount._meta.verbose_name_plural == "Mailboxes"
+        assert MarketplaceAlert._meta.verbose_name_plural == "Leads"
+        assert NoiseAlert._meta.verbose_name_plural == "Spam and newsletters"
+        assert ProcessedEmail._meta.verbose_name_plural == "Processed emails"
+        assert LeadFlag._meta.verbose_name_plural == "Lead priority rules"
+        assert ServiceEvent._meta.verbose_name_plural == "System log"
+        assert TelegramSettings._meta.verbose_name_plural == "Telegram settings"
+
+
+def test_admin_section_names_translate_to_russian():
+    with translation.override("ru"):
         assert MailboxAccount._meta.verbose_name_plural == "Почтовые ящики"
         assert MarketplaceAlert._meta.verbose_name_plural == "Обращения"
         assert NoiseAlert._meta.verbose_name_plural == "Спам и рассылки"
@@ -55,7 +68,21 @@ def test_mailbox_admin_email_display_explains_missing_oauth():
     model_admin = MailboxAccountAdmin(MailboxAccount, AdminSite())
     mailbox = MailboxAccount(name="Test")
 
-    assert model_admin.email_display(mailbox) == "Email is not connected yet. Connect Gmail through OAuth."
+    with translation.override("en"):
+        assert (
+            model_admin.email_display(mailbox)
+            == "Email is not connected yet. Connect Gmail through OAuth."
+        )
+
+
+def test_argus_settings_admin_language_field_is_radio_choice():
+    model_admin = ArgusSettingsAdmin(ArgusSettings, AdminSite())
+    request = RequestFactory().get("/control/alerts/argussettings/1/change/")
+
+    form = model_admin.get_form(request)()
+
+    assert form.fields["language_code"].widget.__class__.__name__ == "RadioSelect"
+    assert "Django Admin" in form.fields["language_code"].help_text
 
 
 @pytest.fixture

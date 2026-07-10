@@ -1,11 +1,40 @@
+from django import forms
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
-from ..models import ArgusSettings, LeadFlag, ProcessedEmail, ServiceEvent, TelegramSettings
+from ..models import (
+    ArgusSettings,
+    LanguageCode,
+    LeadFlag,
+    ProcessedEmail,
+    ServiceEvent,
+    TelegramSettings,
+)
+
+
+class ArgusSettingsAdminForm(forms.ModelForm):
+    language_code = forms.ChoiceField(
+        label=_("Interface language"),
+        choices=(
+            (LanguageCode.ENGLISH, _("English - default")),
+            (LanguageCode.GERMAN, _("German - Deutsch")),
+            (LanguageCode.RUSSIAN, _("Russian - Русский")),
+        ),
+        widget=forms.RadioSelect,
+        help_text=_(
+            "This language is used globally in Django Admin, the mobile panel, "
+            "and operational UI. Only superusers can change it."
+        ),
+    )
+
+    class Meta:
+        model = ArgusSettings
+        fields = ("language_code",)
 
 
 @admin.register(ArgusSettings)
 class ArgusSettingsAdmin(admin.ModelAdmin):
+    form = ArgusSettingsAdminForm
     list_display = ("id", "language_code", "updated_at")
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (

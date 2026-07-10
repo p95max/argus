@@ -383,3 +383,111 @@ msgstr "Einschalten"
 
 msgid "Configure time"
 msgstr "Zeit konfigurieren"
+
+msgid "Mailboxes"
+msgstr "Postfächer"
+
+msgid "Lead priority rule"
+msgstr "Anfrage-Prioritätsregel"
+
+msgid "Lead priority rules"
+msgstr "Anfrage-Prioritätsregeln"
+
+msgid "Processed email"
+msgstr "Verarbeitete E-Mail"
+
+msgid "Processed emails"
+msgstr "Verarbeitete E-Mails"
+
+msgid "System log entry"
+msgstr "Systemlog-Eintrag"
+
+msgid "Telegram settings"
+msgstr "Telegram-Einstellungen"
+
+msgid "Spam or newsletter email"
+msgstr "Spam- oder Newsletter-E-Mail"
+
+msgid "English - default"
+msgstr "Englisch - Standard"
+
+msgid "German - Deutsch"
+msgstr "Deutsch"
+
+msgid "Russian - Русский"
+msgstr "Russisch - Русский"
+
+msgid "This language is used globally in Django Admin, the mobile panel, and operational UI. Only superusers can change it."
+msgstr "Diese Sprache wird global im Django Admin, im mobilen Panel und in der operativen UI verwendet. Nur Superuser können sie ändern."
+
+msgid "Not connected"
+msgstr "Nicht verbunden"
+
+msgid "Connected"
+msgstr "Verbunden"
+
+msgid "Disabled"
+msgstr "Deaktiviert"
+
+msgid "Positive signal"
+msgstr "Positives Signal"
+
+msgid "Low quality"
+msgstr "Niedrige Qualität"
+
+msgid "System"
+msgstr "System"
+
+msgid "Listing expiring"
+msgstr "Anzeige läuft ab"
+
+msgid "System notice"
+msgstr "Systemhinweis"
+
+msgid "Noise"
+msgstr "Rauschen"
+
+msgid "Archived"
+msgstr "Archiviert"
+
+msgid "Low"
+msgstr "Niedrig"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "High"
+msgstr "Hoch"
+
+msgid "Urgent"
+msgstr "Dringend"
+
+msgid "Success"
+msgstr "Erfolgreich"
+
+msgid "Partial"
+msgstr "Teilweise"
+
+msgid "Skipped"
+msgstr "Übersprungen"
+
+msgid "Mailbox error"
+msgstr "Postfachfehler"
+
+msgid "Parser error"
+msgstr "Parserfehler"
+
+msgid "Telegram send error"
+msgstr "Telegram-Sendefehler"
+
+msgid "Recovery"
+msgstr "Wiederherstellung"
+
+msgid "Open"
+msgstr "Offen"
+
+msgid "Recovered"
+msgstr "Wiederhergestellt"
+
+msgid "%(name)s <Gmail not connected>"
+msgstr "%(name)s <Gmail nicht verbunden>"
