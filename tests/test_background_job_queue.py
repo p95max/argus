@@ -49,6 +49,37 @@ def test_doctor_verifies_deployed_queue_runner():
     os.name == "nt",
     reason="The production queue runner uses bash and flock.",
 )
+def test_runner_works_with_restricted_systemd_path(tmp_path):
+    queue_lock = tmp_path / "queue.lock"
+    env = {
+        **os.environ,
+        "PATH": "/opt/argus/.venv/bin",
+        "ARGUS_BACKGROUND_QUEUE_LOCK_FILE": str(queue_lock),
+        "ARGUS_BACKGROUND_QUEUE_WAIT_SECONDS": "1",
+    }
+
+    result = subprocess.run(
+        [
+            str(RUNNER),
+            f"argus-test-path-{os.getpid()}",
+            "/bin/true",
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "acquired background-job lock" in result.stdout
+    assert "command finished with exit status 0" in result.stdout
+
+
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="The production queue runner uses bash and flock.",
+)
 def test_runner_serializes_concurrent_jobs(tmp_path):
     queue_lock = tmp_path / "queue.lock"
     order_file = tmp_path / "order.txt"
