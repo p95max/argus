@@ -28,8 +28,14 @@ def test_auto_deploy_emits_telegram_lifecycle_notifications():
     content = (ROOT / "deploy" / "scripts" / "argus-auto-deploy.sh").read_text()
 
     assert 'DEPLOY_NOTIFY_BIN="${DEPLOY_NOTIFY_BIN:-/usr/local/bin/argus-deploy-notify.py}"' in content
+    assert 'DEPLOY_RESULT="success"' in content
     assert '"$DEPLOY_NOTIFY_BIN" start' in content
-    assert '"$DEPLOY_NOTIFY_BIN" finish --status "$status"' in content
+    assert (
+        '"$DEPLOY_NOTIFY_BIN" finish --status "$status" '
+        '--result "$DEPLOY_RESULT"'
+    ) in content
+    assert 'DEPLOY_RESULT="up_to_date"' in content
+    assert 'DEPLOY_RESULT="updated"' in content
     assert "trap notify_deploy_finish EXIT" in content
 
 
