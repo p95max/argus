@@ -6,11 +6,11 @@ from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandle
 
 from alerts.telegram.config import get_telegram_config
 from alerts.telegram.deploy_command import handle_deploy_command
+from alerts.telegram.help_command import handle_help_command
 from alerts.telegram.handlers import (
     handle_alert_callback,
     handle_daily_summary_command,
     handle_health_command,
-    handle_help_command,
     handle_mailbox_status_command,
     handle_doctor_command,
     handle_unread_command,
