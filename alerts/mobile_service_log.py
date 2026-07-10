@@ -7,6 +7,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
+from . import mobile
 from .models import ServiceEvent
 
 
@@ -23,8 +24,19 @@ def _safe_next_url(request):
 
 
 @login_required
+def mobile_dashboard(request):
+    if request.method == "POST":
+        return _clear_service_events(request)
+    return mobile.mobile_dashboard(request)
+
+
+@login_required
 @require_POST
 def mobile_clear_service_events(request):
+    return _clear_service_events(request)
+
+
+def _clear_service_events(request):
     if not request.user.is_active or not request.user.is_superuser:
         raise PermissionDenied("Only a superuser can clear the system log.")
 
