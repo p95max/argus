@@ -69,3 +69,93 @@ msgstr "Gmail-Rohdaten werden zur Parser-Fehlersuche und zur erneuten Prüfung v
 
 msgid "Gmail identifiers and timestamps for deduplication and processing audit."
 msgstr "Gmail-Kennungen und Zeitstempel für Deduplizierung und Nachvollziehbarkeit der Verarbeitung."
+
+msgid "Quiet hours"
+msgstr "Ruhezeiten"
+
+msgid "When quiet hours are enabled, regular Telegram alerts are not sent during the configured window. The default window is 22:00-07:00, but the feature is disabled by default."
+msgstr "Wenn Ruhezeiten aktiviert sind, werden reguläre Telegram-Benachrichtigungen im eingestellten Zeitraum nicht gesendet. Das Standardfenster ist 22:00-07:00; die Funktion ist standardmäßig deaktiviert."
+
+msgid "Audit"
+msgstr "Audit"
+
+msgid "quiet hours enabled"
+msgstr "Ruhezeiten aktiviert"
+
+msgid "quiet hours start"
+msgstr "Beginn der Ruhezeit"
+
+msgid "quiet hours end"
+msgstr "Ende der Ruhezeit"
+
+msgid "send urgent alerts during quiet hours"
+msgstr "Dringende Meldungen während der Ruhezeit senden"
+
+msgid "created at"
+msgstr "Erstellt am"
+
+msgid "updated at"
+msgstr "Aktualisiert am"
+
+msgid "buyer"
+msgstr "Käufer"
+
+msgid "mailbox"
+msgstr "Postfach"
+
+msgid "event type"
+msgstr "Ereignistyp"
+
+msgid "status"
+msgstr "Status"
+
+msgid "taken by"
+msgstr "Bearbeitet von"
+
+msgid "priority"
+msgstr "Priorität"
+
+msgid "parse status"
+msgstr "Parsing-Status"
+
+msgid "last reminder"
+msgstr "Letzte Erinnerung"
+
+msgid "received at"
+msgstr "Empfangen am"
+
+msgid "processed at"
+msgstr "Verarbeitet am"
+
+msgid "flags"
+msgstr "Merkmale"
+
+msgid "classification explanation"
+msgstr "Klassifikationsbegründung"
+
+msgid "listing ID"
+msgstr "Anzeigen-ID"
+
+msgid "listing title"
+msgstr "Anzeigentitel"
+
+msgid "subject"
+msgstr "Betreff"
+
+msgid "message"
+msgstr "Nachricht"
+
+msgid "raw subject"
+msgstr "Originalbetreff"
+
+msgid "raw email body"
+msgstr "Originalinhalt der E-Mail"
+
+msgid "normalized email body"
+msgstr "Normalisierter E-Mail-Inhalt"
+
+msgid "sent to Telegram at"
+msgstr "An Telegram gesendet am"
+
+msgid "Telegram error"
+msgstr "Telegram-Fehler"
