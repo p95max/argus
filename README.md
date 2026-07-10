@@ -384,9 +384,9 @@ Access behavior:
 For two private Telegram users, configure both IDs in both lists:
 
 ```env
-TELEGRAM_DEFAULT_CHAT_ID=330297984
-TELEGRAM_ALLOWED_CHAT_IDS=330297984,123456789
-TELEGRAM_ALLOWED_USER_IDS=330297984,123456789
+TELEGRAM_DEFAULT_CHAT_ID=<YOUR_TELEGRAM_ID>
+TELEGRAM_ALLOWED_CHAT_IDS=<YOUR_TELEGRAM_ID>,<MANAGER_TELEGRAM_ID>
+TELEGRAM_ALLOWED_USER_IDS=<YOUR_TELEGRAM_ID>,<MANAGER_TELEGRAM_ID>
 ```
 
 In a one-to-one Telegram conversation, the private `chat_id` normally matches that user's Telegram `user_id`. Group chats are different: when the user allowlist is empty, every member of an allowed group can use the bot commands.
