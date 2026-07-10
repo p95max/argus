@@ -7,4 +7,5 @@ User=argus
 Group=argus
 WorkingDirectory=/opt/argus
 Environment="PATH=/opt/argus/.venv/bin"
-ExecStart=/usr/bin/flock -n /tmp/argus-unread-reminders.lock /opt/argus/.venv/bin/python manage.py send_unread_reminders --min-age-minutes 30 --reminder-interval-minutes 60 --limit 25
+TimeoutStartSec=30min
+ExecStart=/usr/local/bin/argus-run-background-job.sh argus-unread-reminders /opt/argus/.venv/bin/python manage.py send_unread_reminders --min-age-minutes 30 --reminder-interval-minutes 60 --limit 25
