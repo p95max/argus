@@ -55,7 +55,7 @@ urlpatterns = [
     ),
     path(
         "m/service-events/clear/",
-        mobile.mobile_clear_service_events,
+        mobile.mobile_dashboard,
         name="mobile_clear_service_events",
     ),
     path(
