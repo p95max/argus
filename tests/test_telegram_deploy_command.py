@@ -72,7 +72,7 @@ def test_request_deploy_reports_busy_queue_deadline(monkeypatch, tmp_path):
     assert result.ok is True
     assert "Общая очередь занята" in result.message
     assert "Ориентир запуска: до" in result.message
-    assert "15" not in result.message or "тайм-ауту" in result.message
+    assert "тайм-ауту" in result.message
 
 
 def test_request_deploy_does_not_enqueue_duplicate_active_service(monkeypatch, tmp_path):
@@ -88,9 +88,27 @@ def test_request_deploy_does_not_enqueue_duplicate_active_service(monkeypatch, t
     result = deploy_command.request_deploy(chat_id="123")
 
     assert result.ok is True
-    assert "уже выполняется или ожидает" in result.message
+    assert "уже запущен таймером или вручную" in result.message
+    assert "Новый запуск не добавлен" in result.message
     assert not deploy_command.PENDING_REQUEST_FILE.exists()
     assert len(commands) == 1
+
+
+def test_existing_telegram_request_promises_completion_message(monkeypatch, tmp_path):
+    configure_request_paths(monkeypatch, tmp_path)
+    deploy_command.PENDING_REQUEST_FILE.write_text("{}")
+
+    monkeypatch.setattr(
+        deploy_command,
+        "_service_state",
+        lambda: "activating",
+    )
+
+    result = deploy_command.request_deploy(chat_id="123")
+
+    assert result.ok is True
+    assert "Telegram-запрос уже поставлен" in result.message
+    assert "отдельное сообщение" in result.message
 
 
 def test_request_deploy_removes_request_when_systemctl_fails(monkeypatch, tmp_path):
