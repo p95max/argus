@@ -12,6 +12,8 @@ Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads
 
 ## Current Production Shape
 
+- Flexible operational control and monitoring through the Telegram bot, including alerts, mailbox status, health diagnostics, doctor checks, inline lead actions, and queued manual deploys with start/result reporting.
+- Serialized systemd job queue runs server-side operational scripts one at a time with global and per-job locks, duplicate-run prevention, bounded queue waiting, deploy/health checks, and Telegram lifecycle notifications.
 - `Deployed on a VPS` as an `internal production service`.
 - Intentionally `deployed without Docker` to keep RAM, CPU, and disk overhead low on a minimal VPS plan.
 - Full Jazzmin Admin at `/control/`.
@@ -21,8 +23,6 @@ Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads
 - Multiple Gmail mailboxes with per-mailbox OAuth.
 - Encrypted Gmail refresh tokens in `MailboxAccount.gmail_oauth_token`.
 - Buyer alerts, noise/system alerts, service events, unread reminders, cleanup, and mailbox health tracking.
-- Telegram bot with inline alert actions, status commands, health/doctor commands, queued `/deploy`, and mobile links.
-- Shared systemd background-job queue serializes Gmail checks, reminders, cleanup, backups, and auto-deploy.
 - PostgreSQL/Neon support through `DATABASE_URL`.
 - Tests use `config.test_settings` and in-memory SQLite, even when `.env.local` points to PostgreSQL.
 - GitHub Actions CI runs tests, migration checks, linting, and coverage enforcement on every push to `master` and every pull request.
