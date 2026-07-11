@@ -51,7 +51,7 @@ class ArgusSettingsAdmin(admin.ModelAdmin):
             },
         ),
         (
-            _("Audit"),
+            _("Language setting dates"),
             {
                 "fields": ("created_at", "updated_at"),
                 "classes": ("collapse",),
