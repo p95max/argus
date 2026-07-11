@@ -79,6 +79,9 @@ msgstr "Когда тихие часы включены, обычные увед
 msgid "Audit"
 msgstr "Аудит"
 
+msgid "Language setting dates"
+msgstr "Даты настройки языка"
+
 msgid "quiet hours enabled"
 msgstr "Тихие часы включены"
 
