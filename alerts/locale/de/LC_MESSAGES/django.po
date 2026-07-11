@@ -79,6 +79,9 @@ msgstr "Wenn Ruhezeiten aktiviert sind, werden reguläre Telegram-Benachrichtigu
 msgid "Audit"
 msgstr "Audit"
 
+msgid "Language setting dates"
+msgstr "Zeitpunkte der Spracheinstellung"
+
 msgid "quiet hours enabled"
 msgstr "Ruhezeiten aktiviert"
 
