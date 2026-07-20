@@ -148,6 +148,7 @@ check_enabled argus-unread-reminders.timer
 check_enabled argus-cleanup-old-leads.timer
 check_enabled argus-auto-deploy.timer
 check_enabled argus-backup-db.timer
+check_enabled argus-sync-db-to-neon.timer
 check_enabled argus-health-monitor.timer
 
 check_active argus-check-gmail.timer
@@ -155,9 +156,11 @@ check_active argus-unread-reminders.timer
 check_active argus-cleanup-old-leads.timer
 check_active argus-auto-deploy.timer
 check_active argus-backup-db.timer
+check_active argus-sync-db-to-neon.timer
 check_active argus-health-monitor.timer
 
 check_executable /usr/local/bin/argus-backup-db.sh
+check_executable /usr/local/bin/argus-sync-db-to-neon.sh
 check_executable /usr/local/bin/argus-health-notify.py
 check_executable /usr/local/bin/argus-auto-deploy.sh
 check_executable /usr/local/bin/argus-deploy-notify.py
@@ -165,6 +168,7 @@ check_executable /usr/local/bin/argus-doctor.sh
 check_executable /usr/local/bin/argus-run-background-job.sh
 
 check_deployed_copy deploy/scripts/argus-backup-db.sh
+check_deployed_copy deploy/scripts/argus-sync-db-to-neon.sh
 check_deployed_copy deploy/scripts/argus-health-notify.py
 check_deployed_copy deploy/scripts/argus-auto-deploy.sh
 check_deployed_copy deploy/scripts/argus-deploy-notify.py
