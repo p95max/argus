@@ -10,6 +10,7 @@ from django.utils.translation import gettext as _
 GMAIL_TIMER_UNIT = "argus-check-gmail.timer"
 GMAIL_SERVICE_UNIT = "argus-check-gmail.service"
 SYSTEMCTL_TIMEOUT_SECONDS = 8
+UNAVAILABLE_STATE = "unavailable"
 
 
 @dataclass(frozen=True)
@@ -39,14 +40,18 @@ class GmailPollingStatus:
 
     @property
     def is_available(self) -> bool:
-        return not self.error
+        return self.enabled_state != UNAVAILABLE_STATE and self.active_state != UNAVAILABLE_STATE
 
     @property
     def enabled_label(self) -> str:
+        if self.enabled_state == UNAVAILABLE_STATE:
+            return _("Unavailable")
         return _("Enabled") if self.is_enabled else _("Disabled")
 
     @property
     def active_label(self) -> str:
+        if self.active_state == UNAVAILABLE_STATE:
+            return _("unavailable")
         if self.active_state == "active":
             return _("active")
         if self.active_state == "inactive":
@@ -60,6 +65,15 @@ class GmailPollingCommandError(RuntimeError):
 
 def get_gmail_polling_status() -> GmailPollingStatus:
     enabled = _run_systemctl(["is-enabled", GMAIL_TIMER_UNIT])
+    if _is_missing_executable(enabled):
+        return GmailPollingStatus(
+            enabled_state=UNAVAILABLE_STATE,
+            active_state=UNAVAILABLE_STATE,
+            next_run_label=_("not scheduled"),
+            interval_label=_("unknown"),
+            error=_("systemctl is not available on this system."),
+        )
+
     active = _run_systemctl(["is-active", GMAIL_TIMER_UNIT])
     props = _run_systemctl(
         [
@@ -148,6 +162,10 @@ def _run_command(command: list[str], timeout: int = SYSTEMCTL_TIMEOUT_SECONDS) -
         (result.stdout or "").strip(),
         (result.stderr or "").strip(),
     )
+
+
+def _is_missing_executable(result: CommandResult) -> bool:
+    return result.returncode == 127
 
 
 def _normalize_state(value: str, *, fallback: str) -> str:

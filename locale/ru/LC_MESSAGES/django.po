@@ -555,6 +555,9 @@ msgstr "Перейти в мобильную админку"
 msgid "unknown"
 msgstr "неизвестно"
 
+msgid "unavailable"
+msgstr "недоступно"
+
 msgid "🚨 <b>New lead</b>"
 msgstr "🚨 <b>Новое обращение</b>"
 
@@ -798,6 +801,9 @@ msgstr "Включено"
 msgid "Disabled"
 msgstr "Выключено"
 
+msgid "Unavailable"
+msgstr "Недоступно"
+
 msgid "Timer"
 msgstr "Таймер"
 
@@ -857,6 +863,9 @@ msgstr "команда превысила время ожидания"
 
 msgid "systemctl command failed"
 msgstr "команда systemctl завершилась ошибкой"
+
+msgid "systemctl is not available on this system."
+msgstr "systemctl недоступен на этой системе."
 
 msgid "seconds"
 msgstr "секунд"

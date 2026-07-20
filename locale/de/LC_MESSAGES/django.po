@@ -546,6 +546,9 @@ msgstr "Mobile Admin öffnen"
 msgid "unknown"
 msgstr "unbekannt"
 
+msgid "unavailable"
+msgstr "nicht verfügbar"
+
 msgid "🚨 <b>New lead</b>"
 msgstr "🚨 <b>Neue Anfrage</b>"
 
@@ -789,6 +792,9 @@ msgstr "Aktiviert"
 msgid "Disabled"
 msgstr "Deaktiviert"
 
+msgid "Unavailable"
+msgstr "Nicht verfügbar"
+
 msgid "Timer"
 msgstr "Timer"
 
@@ -848,6 +854,9 @@ msgstr "Befehl hat das Zeitlimit überschritten"
 
 msgid "systemctl command failed"
 msgstr "systemctl-Befehl fehlgeschlagen"
+
+msgid "systemctl is not available on this system."
+msgstr "systemctl ist auf diesem System nicht verfügbar."
 
 msgid "seconds"
 msgstr "Sekunden"

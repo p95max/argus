@@ -57,7 +57,19 @@ def build_alert_keyboard(alert: MarketplaceAlert) -> InlineKeyboardMarkup:
 
 
 @use_argus_telegram_language
-def build_gmail_polling_keyboard(is_enabled: bool) -> InlineKeyboardMarkup:
+def build_gmail_polling_keyboard(is_enabled: bool, can_control: bool = True) -> InlineKeyboardMarkup:
+    if not can_control:
+        return InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        _("Refresh status"),
+                        callback_data=_polling_callback_data(POLLING_STATUS_ACTION),
+                    ),
+                ],
+            ]
+        )
+
     toggle_action = "disable" if is_enabled else "enable"
     toggle_label = _("Stop polling") if is_enabled else _("Start polling")
     return InlineKeyboardMarkup(

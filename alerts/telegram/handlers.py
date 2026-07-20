@@ -12,7 +12,11 @@ from django.utils.translation import gettext as _
 from telegram.error import BadRequest
 
 from ..models import MarketplaceAlert
-from ..gmail_polling import apply_gmail_polling_action, get_gmail_polling_status
+from ..gmail_polling import (
+    GmailPollingCommandError,
+    apply_gmail_polling_action,
+    get_gmail_polling_status,
+)
 from .git_status import build_git_deploy_status_text as build_git_deploy_status_text_v2
 from .i18n import telegram_gettext, use_argus_telegram_language
 from .keyboards import (
@@ -65,6 +69,7 @@ class GmailPollingCallbackResult:
     answer_text: str
     message_text: str
     is_enabled: bool
+    can_control: bool
 
 
 def _run_with_fresh_db_connection(func, *args, **kwargs):
@@ -286,7 +291,10 @@ async def handle_gmail_polling_command(update, context):
     await update.effective_message.reply_text(
         text,
         parse_mode="HTML",
-        reply_markup=build_gmail_polling_keyboard(status.is_enabled),
+        reply_markup=build_gmail_polling_keyboard(
+            status.is_enabled,
+            getattr(status, "is_available", True),
+        ),
         disable_web_page_preview=True,
     )
 
@@ -523,13 +531,17 @@ def handle_gmail_polling_callback_action(
     if action == "status":
         answer_text = _("Gmail polling status refreshed.")
     else:
-        answer_text = apply_gmail_polling_action(action)
+        try:
+            answer_text = apply_gmail_polling_action(action)
+        except GmailPollingCommandError as exc:
+            answer_text = _("Gmail polling action failed: %(error)s") % {"error": str(exc)}
 
     status = get_gmail_polling_status()
     return GmailPollingCallbackResult(
         answer_text=answer_text,
         message_text=build_gmail_polling_message(status),
         is_enabled=status.is_enabled,
+        can_control=status.is_available,
     )
 
 
@@ -691,7 +703,7 @@ async def _safe_edit_gmail_polling_message(query, result: GmailPollingCallbackRe
         await query.edit_message_text(
             text=result.message_text,
             parse_mode="HTML",
-            reply_markup=build_gmail_polling_keyboard(result.is_enabled),
+            reply_markup=build_gmail_polling_keyboard(result.is_enabled, result.can_control),
             disable_web_page_preview=True,
         )
     except BadRequest as exc:

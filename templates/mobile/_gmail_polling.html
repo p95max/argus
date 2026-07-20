@@ -3,9 +3,9 @@
 <article class="card gmail-polling-card">
     <div class="title">{% trans "Gmail polling" %}</div>
     <div class="badges">
-        <span class="badge {% if gmail_polling.is_enabled %}ok{% else %}danger{% endif %}">
+        <span class="badge {% if not gmail_polling.is_available %}warn{% elif gmail_polling.is_enabled %}ok{% else %}danger{% endif %}">
             {% trans "Status" %}:
-            {% if gmail_polling.is_enabled %}🟢 {% trans "Enabled" %}{% else %}🔴 {% trans "Disabled" %}{% endif %}
+            {% if not gmail_polling.is_available %}⚪ {{ gmail_polling.enabled_label }}{% elif gmail_polling.is_enabled %}🟢 {{ gmail_polling.enabled_label }}{% else %}🔴 {{ gmail_polling.enabled_label }}{% endif %}
         </span>
         <span class="badge {% if gmail_polling.is_active %}ok{% else %}warn{% endif %}">
             {% trans "Timer" %}: {{ gmail_polling.active_label }}
@@ -22,21 +22,23 @@
             <form method="post" action="{% url 'mobile_gmail_polling_action' 'enable' %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <button class="small-action" type="submit" {% if gmail_polling.is_enabled %}disabled{% endif %}>
+                <button class="small-action" type="submit" {% if not gmail_polling.is_available or gmail_polling.is_enabled %}disabled{% endif %}>
                     {% trans "Enable polling" %}
                 </button>
             </form>
             <form method="post" action="{% url 'mobile_gmail_polling_action' 'disable' %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <button class="small-action" type="submit" {% if not gmail_polling.is_enabled %}disabled{% endif %}>
+                <button class="small-action" type="submit" {% if not gmail_polling.is_available or not gmail_polling.is_enabled %}disabled{% endif %}>
                     {% trans "Disable polling" %}
                 </button>
             </form>
             <form method="post" action="{% url 'mobile_gmail_polling_action' 'run_now' %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                <button class="small-action" type="submit">{% trans "Run check now" %}</button>
+                <button class="small-action" type="submit" {% if not gmail_polling.is_available %}disabled{% endif %}>
+                    {% trans "Run check now" %}
+                </button>
             </form>
         </div>
     {% endif %}

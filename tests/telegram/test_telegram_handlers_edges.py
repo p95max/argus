@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from telegram.error import BadRequest
 
-from alerts.gmail_polling import GmailPollingStatus
+from alerts.gmail_polling import GmailPollingCommandError, GmailPollingStatus
 from alerts.telegram import handlers
 
 
@@ -127,6 +127,38 @@ def test_gmail_polling_callback_action_runs_systemd_action(monkeypatch):
     assert result.answer_text == "Gmail polling enabled."
     assert "Gmail polling" in result.message_text
     assert result.is_enabled is True
+
+
+def test_gmail_polling_callback_action_reports_systemd_error(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
+
+    def fail_action(action):
+        raise GmailPollingCommandError("sudo denied")
+
+    monkeypatch.setattr(handlers, "apply_gmail_polling_action", fail_action)
+    monkeypatch.setattr(
+        handlers,
+        "get_gmail_polling_status",
+        lambda: GmailPollingStatus(
+            enabled_state="unavailable",
+            active_state="unavailable",
+            next_run_label="not scheduled",
+            interval_label="unknown",
+            error="systemctl is not available on this system.",
+        ),
+    )
+
+    result = handlers.handle_gmail_polling_callback_action(
+        "polling:enable",
+        chat_id="42",
+        user_id="100",
+    )
+
+    assert result.answer_text == "Gmail polling action failed: sudo denied"
+    assert "systemctl is not available" in result.message_text
+    assert result.is_enabled is False
+    assert result.can_control is False
 
 
 def test_gmail_polling_callback_rejects_unknown_chat(monkeypatch):

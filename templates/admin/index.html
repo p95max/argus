@@ -37,8 +37,8 @@
             <div class="row">
                 <div class="col-md-3 col-6 mb-3">
                     <div class="text-muted small">{% trans "Status" %}</div>
-                    <strong class="{% if gmail_polling.is_enabled %}text-success{% else %}text-danger{% endif %}">
-                        {% if gmail_polling.is_enabled %}🟢 {% trans "Enabled" %}{% else %}🔴 {% trans "Disabled" %}{% endif %}
+                    <strong class="{% if not gmail_polling.is_available %}text-warning{% elif gmail_polling.is_enabled %}text-success{% else %}text-danger{% endif %}">
+                        {% if not gmail_polling.is_available %}⚪ {{ gmail_polling.enabled_label }}{% elif gmail_polling.is_enabled %}🟢 {{ gmail_polling.enabled_label }}{% else %}🔴 {{ gmail_polling.enabled_label }}{% endif %}
                     </strong>
                 </div>
                 <div class="col-md-3 col-6 mb-3">
@@ -65,21 +65,21 @@
                 <form class="d-inline" method="post" action="{% url 'admin_gmail_polling_action' 'enable' %}">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button class="btn btn-sm btn-success" type="submit" {% if gmail_polling.is_enabled %}disabled{% endif %}>
+                    <button class="btn btn-sm btn-success" type="submit" {% if not gmail_polling.is_available or gmail_polling.is_enabled %}disabled{% endif %}>
                         {% trans "Enable polling" %}
                     </button>
                 </form>
                 <form class="d-inline ml-2" method="post" action="{% url 'admin_gmail_polling_action' 'disable' %}">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button class="btn btn-sm btn-danger" type="submit" {% if not gmail_polling.is_enabled %}disabled{% endif %}>
+                    <button class="btn btn-sm btn-danger" type="submit" {% if not gmail_polling.is_available or not gmail_polling.is_enabled %}disabled{% endif %}>
                         {% trans "Disable polling" %}
                     </button>
                 </form>
                 <form class="d-inline ml-2" method="post" action="{% url 'admin_gmail_polling_action' 'run_now' %}">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button class="btn btn-sm btn-info" type="submit">
+                    <button class="btn btn-sm btn-info" type="submit" {% if not gmail_polling.is_available %}disabled{% endif %}>
                         {% trans "Run check now" %}
                     </button>
                 </form>

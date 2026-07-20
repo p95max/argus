@@ -517,8 +517,8 @@ def build_health_message(bot_started_at=None) -> str:
 @use_argus_telegram_language
 def build_gmail_polling_message(status: GmailPollingStatus | None = None) -> str:
     status = status or get_gmail_polling_status()
-    status_icon = "🟢" if status.is_enabled else "🔴"
-    timer_icon = "🟢" if status.is_active else "🟠"
+    status_icon = "⚪" if not status.is_available else "🟢" if status.is_enabled else "🔴"
+    timer_icon = "⚪" if not status.is_available else "🟢" if status.is_active else "🟠"
 
     lines = [
         f"📬 <b>Argus: {_('Gmail polling')}</b>",

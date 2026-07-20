@@ -67,6 +67,28 @@ def test_gmail_polling_status_reports_systemd_show_error(monkeypatch):
     assert status.error == "timer not found"
 
 
+def test_gmail_polling_status_handles_missing_systemctl(monkeypatch):
+    calls = []
+
+    def fake_run_command(command, timeout=8):
+        calls.append(command)
+        return CommandResult(127, "", "[Errno 2] No such file or directory: 'systemctl'")
+
+    monkeypatch.setattr("alerts.gmail_polling._run_command", fake_run_command)
+
+    status = get_gmail_polling_status()
+
+    assert status.enabled_state == "unavailable"
+    assert status.active_state == "unavailable"
+    assert status.enabled_label == "Unavailable"
+    assert status.active_label == "unavailable"
+    assert status.is_available is False
+    assert status.next_run_label == "not scheduled"
+    assert status.interval_label == "unknown"
+    assert status.error == "systemctl is not available on this system."
+    assert calls == [["systemctl", "is-enabled", "argus-check-gmail.timer"]]
+
+
 def test_gmail_polling_actions_use_sudo_systemctl(monkeypatch):
     calls = []
 
