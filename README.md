@@ -237,7 +237,9 @@ The UI reads:
 ```bash
 systemctl is-enabled argus-check-gmail.timer
 systemctl is-active argus-check-gmail.timer
-systemctl show argus-check-gmail.timer --property=NextElapseUSecRealtime --property=OnUnitActiveSec
+systemctl show argus-check-gmail.timer --property=NextElapseUSecRealtime
+systemctl list-timers --all --no-pager argus-check-gmail.timer
+systemctl cat argus-check-gmail.timer
 ```
 
 The start/stop buttons call only predefined systemd commands:

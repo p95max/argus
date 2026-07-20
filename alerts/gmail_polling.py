@@ -82,9 +82,21 @@ def get_gmail_polling_status() -> GmailPollingStatus:
             "show",
             GMAIL_TIMER_UNIT,
             "--property=NextElapseUSecRealtime",
-            "--property=OnUnitActiveSec",
         ]
     )
+    properties = _parse_systemctl_properties(props.stdout)
+    next_run_raw = properties.get("NextElapseUSecRealtime", "")
+    next_run_label = _format_next_run(next_run_raw)
+    if not next_run_raw:
+        timers = _run_systemctl(
+            ["list-timers", "--all", "--no-legend", "--no-pager", GMAIL_TIMER_UNIT]
+        )
+        if timers.returncode == 0:
+            next_run_raw = timers.stdout
+            next_run_label = _format_next_run(timers.stdout)
+
+    timer_definition = _run_systemctl(["cat", GMAIL_TIMER_UNIT])
+    interval_raw = _parse_timer_interval(timer_definition.stdout)
 
     errors = []
     if enabled.returncode not in {0, 1}:
@@ -93,15 +105,14 @@ def get_gmail_polling_status() -> GmailPollingStatus:
         errors.append(active.stderr or active.stdout)
     if props.returncode != 0:
         errors.append(props.stderr or props.stdout)
-    properties = _parse_systemctl_properties(props.stdout)
 
     return GmailPollingStatus(
         enabled_state=_normalize_state(enabled.stdout, fallback="unknown"),
         active_state=_normalize_state(active.stdout, fallback="unknown"),
-        next_run_raw=properties.get("NextElapseUSecRealtime", ""),
-        next_run_label=_format_next_run(properties.get("NextElapseUSecRealtime", "")),
-        interval_raw=properties.get("OnUnitActiveSec", ""),
-        interval_label=_format_interval(properties.get("OnUnitActiveSec", "")),
+        next_run_raw=next_run_raw,
+        next_run_label=next_run_label,
+        interval_raw=interval_raw,
+        interval_label=_format_interval(interval_raw),
         error="; ".join(error for error in errors if error),
     )
 
@@ -182,6 +193,11 @@ def _parse_systemctl_properties(output: str) -> dict[str, str]:
         if separator:
             properties[key] = value.strip()
     return properties
+
+
+def _parse_timer_interval(output: str) -> str:
+    intervals = re.findall(r"^OnUnitActiveSec=(.+)$", output, flags=re.MULTILINE)
+    return intervals[-1].strip() if intervals else ""
 
 
 def _format_next_run(value: str) -> str:

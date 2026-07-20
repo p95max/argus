@@ -17,16 +17,15 @@ def test_gmail_polling_status_reads_real_systemd_states(monkeypatch):
             return CommandResult(0, "enabled", "")
         if command[:2] == ["/usr/bin/systemctl", "is-active"]:
             return CommandResult(0, "active", "")
-        return CommandResult(
-            0,
-            "\n".join(
-                [
-                    "NextElapseUSecRealtime=Mon 2026-07-20 14:20:00 CEST",
-                    "OnUnitActiveSec=15min",
-                ]
-            ),
-            "",
-        )
+        if command[1] == "show":
+            return CommandResult(
+                0,
+                "NextElapseUSecRealtime=Mon 2026-07-20 14:20:00 CEST",
+                "",
+            )
+        if command[1] == "cat":
+            return CommandResult(0, "[Timer]\nOnUnitActiveSec=15min", "")
+        return CommandResult(1, "", "unexpected command")
 
     monkeypatch.setattr("alerts.gmail_polling._run_command", fake_run_command)
 
@@ -44,9 +43,35 @@ def test_gmail_polling_status_reads_real_systemd_states(monkeypatch):
             "show",
             "argus-check-gmail.timer",
             "--property=NextElapseUSecRealtime",
-            "--property=OnUnitActiveSec",
         ],
+        ["/usr/bin/systemctl", "cat", "argus-check-gmail.timer"],
     ]
+
+
+def test_gmail_polling_status_falls_back_to_timer_listing(monkeypatch):
+    def fake_run_command(command, timeout=8):
+        if command[1] == "is-enabled":
+            return CommandResult(0, "enabled", "")
+        if command[1] == "is-active":
+            return CommandResult(0, "active", "")
+        if command[1] == "show":
+            return CommandResult(0, "NextElapseUSecRealtime=", "")
+        if command[1] == "list-timers":
+            return CommandResult(
+                0,
+                "Mon 2026-07-20 14:45:00 CEST 10min left - - argus-check-gmail.timer",
+                "",
+            )
+        if command[1] == "cat":
+            return CommandResult(0, "[Timer]\nOnUnitActiveSec=15min", "")
+        return CommandResult(1, "", "unexpected command")
+
+    monkeypatch.setattr("alerts.gmail_polling._run_command", fake_run_command)
+
+    status = get_gmail_polling_status()
+
+    assert status.next_run_label == "14:45"
+    assert status.interval_label == "15 minutes"
 
 
 def test_gmail_polling_status_reports_systemd_show_error(monkeypatch):
