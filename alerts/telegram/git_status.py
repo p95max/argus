@@ -12,36 +12,27 @@ last_git_error = ""
 def build_git_deploy_status_text() -> str:
     git_root = find_git_root()
     if git_root is None:
-        return "🧬 Git deploy status\nStatus: git repo not found"
+        return "Git:\nStatus: repository not found"
 
     branch = run_git(["rev-parse", "--abbrev-ref", "HEAD"], git_root)
     head_sha = run_git(["rev-parse", "--short", "HEAD"], git_root)
     head_subject = run_git(["log", "-1", "--pretty=%s"], git_root)
-    head_date = run_git(
-        ["log", "-1", "--date=format:%d.%m.%Y %H:%M:%S", "--pretty=%cd"],
-        git_root,
-    )
-    origin_sha = run_git(["rev-parse", "--short", "origin/master"], git_root)
     relation = build_git_relation_text(git_root)
 
-    lines = ["🧬 Git deploy status", f"Repo: {git_root}"]
+    lines = ["Git:"]
     if branch:
         lines.append(f"Branch: {branch}")
-    if head_sha:
-        lines.append(f"Local HEAD: {head_sha}")
-    if head_subject:
-        lines.append(f"Commit: {head_subject}")
-    if head_date:
-        lines.append(f"Date: {head_date}")
-    if origin_sha:
-        lines.append(f"Origin/master: {origin_sha}")
+    if head_sha and head_subject:
+        lines.append(f"Commit: {head_sha} — {head_subject}")
+    elif head_sha:
+        lines.append(f"Commit: {head_sha}")
     if relation:
-        lines.append(f"Status: {relation}")
+        lines.append(f"Sync: {relation}")
 
-    if len(lines) == 2:
-        lines.append("Status: git command failed")
+    if len(lines) == 1:
+        lines.append("Status: git information unavailable")
     elif relation == "unknown" and last_git_error:
-        lines.append(f"Git error: {last_git_error[:220]}")
+        lines.append(f"Error: {last_git_error[:220]}")
 
     return "\n".join(lines)
 
@@ -81,9 +72,9 @@ def build_git_relation_text(git_root: Path) -> str:
     if ahead == 0 and behind == 0:
         return "up to date"
     if ahead == 0:
-        return f"behind origin/master by {behind} commit(s)"
+        return f"behind remote by {behind} commit(s)"
     if behind == 0:
-        return f"ahead of origin/master by {ahead} commit(s)"
+        return f"ahead of remote by {ahead} commit(s)"
     return f"diverged: ahead {ahead}, behind {behind}"
 
 
