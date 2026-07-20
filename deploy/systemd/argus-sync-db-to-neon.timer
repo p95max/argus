@@ -1,0 +1,11 @@
+[Unit]
+Description=Synchronize Argus PostgreSQL backup to Neon daily
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=15m
+Unit=argus-sync-db-to-neon.service
+
+[Install]
+WantedBy=timers.target
