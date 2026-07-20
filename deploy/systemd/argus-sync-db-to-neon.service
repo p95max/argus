@@ -1,0 +1,12 @@
+[Unit]
+Description=Synchronize Argus PostgreSQL database to Neon backup
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+User=argus
+Group=argus
+TimeoutStartSec=30min
+ExecStart=/usr/local/bin/argus-run-background-job.sh argus-sync-db-to-neon /usr/local/bin/argus-sync-db-to-neon.sh
