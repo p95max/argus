@@ -11,6 +11,8 @@ from alerts.telegram.help_command import build_bot_commands, handle_help_command
 from alerts.telegram.handlers import (
     handle_alert_callback,
     handle_daily_summary_command,
+    handle_gmail_polling_callback,
+    handle_gmail_polling_command,
     handle_health_command,
     handle_mailbox_status_command,
     handle_doctor_command,
@@ -80,6 +82,12 @@ class Command(BaseCommand):
             )
         )
         application.add_handler(
+            CallbackQueryHandler(
+                handle_gmail_polling_callback,
+                pattern=r"^polling:(status|enable|disable|run_now)$",
+            )
+        )
+        application.add_handler(
             CommandHandler(
                 "help",
                 handle_help_command,
@@ -119,6 +127,12 @@ class Command(BaseCommand):
             CommandHandler(
                 "unread",
                 handle_unread_command,
+            )
+        )
+        application.add_handler(
+            CommandHandler(
+                "polling",
+                handle_gmail_polling_command,
             )
         )
 

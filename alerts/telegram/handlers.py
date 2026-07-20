@@ -12,17 +12,21 @@ from django.utils.translation import gettext as _
 from telegram.error import BadRequest
 
 from ..models import MarketplaceAlert
+from ..gmail_polling import apply_gmail_polling_action, get_gmail_polling_status
 from .git_status import build_git_deploy_status_text as build_git_deploy_status_text_v2
 from .i18n import telegram_gettext, use_argus_telegram_language
 from .keyboards import (
     CALLBACK_STATUS_ACTION,
     CALLBACK_STATUS_UPDATES,
     build_alert_keyboard,
+    build_gmail_polling_keyboard,
     _parse_callback_data,
+    parse_gmail_polling_callback_data,
 )
 from .messages import (
     build_alert_message,
     build_daily_summary_message,
+    build_gmail_polling_message,
     build_health_message,
     build_mailbox_status_message,
     build_unread_reminder_report_message,
@@ -41,6 +45,7 @@ ACTIVE_BOT_COMMANDS = (
     ("mailboxes", "same as /status"),
     ("summary", "today's lead summary"),
     ("unread", "single report for unread leads"),
+    ("polling", "Gmail polling timer status and start/stop buttons"),
     ("health", "service health: DB, Gmail, Telegram, errors"),
     ("doctor", "production doctor: systemd, git, health and deploy status"),
 )
@@ -53,6 +58,13 @@ class AlertCallbackResult:
     alert: MarketplaceAlert
     answer_text: str
     status_changed: bool
+
+
+@dataclass(frozen=True)
+class GmailPollingCallbackResult:
+    answer_text: str
+    message_text: str
+    is_enabled: bool
 
 
 def _run_with_fresh_db_connection(func, *args, **kwargs):
@@ -156,6 +168,65 @@ async def handle_alert_callback(update, context):
     )
 
 
+async def handle_gmail_polling_callback(update, context):
+    query = update.callback_query
+
+    if query is None:
+        logger.warning("Telegram polling callback handler called without callback_query.")
+        return
+
+    chat_id = str(query.message.chat_id) if query.message else ""
+    user_id = str(query.from_user.id) if query.from_user else ""
+
+    logger.info(
+        "Telegram polling callback received. chat_id=%s user_id=%s data=%s",
+        chat_id,
+        user_id,
+        query.data,
+    )
+
+    try:
+        result = await _run_db_sync(
+            handle_gmail_polling_callback_action,
+            query.data,
+            chat_id=chat_id,
+            user_id=user_id,
+        )
+    except PermissionError:
+        logger.warning(
+            "Telegram polling callback rejected by permission. chat_id=%s user_id=%s data=%s",
+            chat_id,
+            user_id,
+            query.data,
+        )
+        await _safe_answer_callback(
+            query,
+            telegram_gettext(PERMISSION_DENIED_MESSAGE),
+            show_alert=True,
+        )
+        return
+    except ValueError as exc:
+        logger.warning(
+            "Telegram polling callback rejected. chat_id=%s user_id=%s data=%s error=%s",
+            chat_id,
+            user_id,
+            query.data,
+            exc,
+        )
+        await _safe_answer_callback(query, str(exc), show_alert=True)
+        return
+
+    await _safe_answer_callback(query, result.answer_text)
+    await _safe_edit_gmail_polling_message(query, result)
+
+    logger.info(
+        "Telegram polling callback handled. chat_id=%s user_id=%s data=%s",
+        chat_id,
+        user_id,
+        query.data,
+    )
+
+
 async def handle_mailbox_status_command(update, context):
     chat_id = str(update.effective_chat.id) if update.effective_chat else ""
     user_id = str(update.effective_user.id) if update.effective_user else ""
@@ -190,6 +261,36 @@ async def handle_mailbox_status_command(update, context):
         chat_id,
         user_id,
     )
+
+
+async def handle_gmail_polling_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    logger.info("Telegram polling command received. chat_id=%s user_id=%s", chat_id, user_id)
+
+    if not is_allowed_update(update):
+        logger.warning(
+            "Telegram polling command rejected by permission. chat_id=%s user_id=%s",
+            chat_id,
+            user_id,
+        )
+        await update.effective_message.reply_text(
+            telegram_gettext(PERMISSION_DENIED_MESSAGE),
+        )
+        return
+
+    status = await sync_to_async(get_gmail_polling_status, thread_sensitive=True)()
+    text = await sync_to_async(build_gmail_polling_message, thread_sensitive=True)(status)
+
+    await update.effective_message.reply_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=build_gmail_polling_keyboard(status.is_enabled),
+        disable_web_page_preview=True,
+    )
+
+    logger.info("Telegram polling command handled. chat_id=%s user_id=%s", chat_id, user_id)
 
 
 async def handle_help_command(update, context):
@@ -409,6 +510,29 @@ def update_alert_status_from_callback(
     return result.alert
 
 
+@use_argus_telegram_language
+def handle_gmail_polling_callback_action(
+    callback_data: str,
+    chat_id: str,
+    user_id: str = "",
+) -> GmailPollingCallbackResult:
+    if not is_allowed_telegram_actor(chat_id=chat_id, user_id=user_id):
+        raise PermissionError(_("Telegram actor is not allowed."))
+
+    action = parse_gmail_polling_callback_data(callback_data)
+    if action == "status":
+        answer_text = _("Gmail polling status refreshed.")
+    else:
+        answer_text = apply_gmail_polling_action(action)
+
+    status = get_gmail_polling_status()
+    return GmailPollingCallbackResult(
+        answer_text=answer_text,
+        message_text=build_gmail_polling_message(status),
+        is_enabled=status.is_enabled,
+    )
+
+
 def build_doctor_script_message() -> str:
     try:
         result = subprocess.run(
@@ -559,6 +683,28 @@ async def _safe_edit_alert_message(query, alert: MarketplaceAlert) -> None:
             "Telegram alert message edit failed. alert_id=%s",
             alert.id,
         )
+        raise
+
+
+async def _safe_edit_gmail_polling_message(query, result: GmailPollingCallbackResult) -> None:
+    try:
+        await query.edit_message_text(
+            text=result.message_text,
+            parse_mode="HTML",
+            reply_markup=build_gmail_polling_keyboard(result.is_enabled),
+            disable_web_page_preview=True,
+        )
+    except BadRequest as exc:
+        message = str(exc).lower()
+
+        if "message is not modified" in message:
+            logger.info("Telegram polling message edit skipped because message is not modified.")
+            return
+        if "query is too old" in message or "query id is invalid" in message:
+            logger.warning("Telegram polling message edit skipped because query is too old or invalid.")
+            return
+
+        logger.exception("Telegram polling message edit failed.")
         raise
 
 

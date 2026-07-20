@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from .attention import filter_needs_attention, needs_attention_alert_q
 from .command_locks import CommandAlreadyRunning, command_lock
 from .gmail.gmail import check_mailbox
+from .gmail_polling import get_gmail_polling_status
 from .health import build_health_report
 from .models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 from .permissions import can_manage_mailboxes, can_view_mailbox_operations
@@ -171,6 +172,7 @@ def mobile_dashboard(request):
         "last_success_at": mailbox_status["last_success_at"],
         "today_alerts": alert_counts["today"],
     }
+    gmail_polling = get_gmail_polling_status()
     health_report = build_health_report()
 
     context = {
@@ -180,6 +182,7 @@ def mobile_dashboard(request):
         "mailboxes": mailboxes,
         "mailbox_status": mailbox_status,
         "gmail_summary": gmail_summary,
+        "gmail_polling": gmail_polling,
         "health_report": health_report,
         "view_mode": view_mode,
         "alert_counts": alert_counts,

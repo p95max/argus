@@ -35,6 +35,7 @@ def test_help_lists_all_registered_commands():
         "mailboxes",
         "summary",
         "unread",
+        "polling",
         "health",
         "doctor",
         "deploy",

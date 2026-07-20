@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 
 from alerts.cases import build_case_summaries
 from alerts.models import LeadFlag, MailboxAccount, MarketplaceAlert
@@ -35,6 +38,10 @@ def test_build_case_summaries_groups_by_mailbox_and_listing():
         priority=MarketplaceAlert.Priority.HIGH,
     )
     latest.flags.add(risk_flag)
+    MarketplaceAlert.objects.filter(id=older.id).update(
+        created_at=timezone.now() - timedelta(minutes=10),
+    )
+    MarketplaceAlert.objects.filter(id=latest.id).update(created_at=timezone.now())
     MarketplaceAlert.objects.create(
         mailbox=other_mailbox,
         listing_id="listing-2",

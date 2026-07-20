@@ -24,6 +24,23 @@ def test_sudoers_allows_only_enqueuing_existing_deploy_service():
     assert "git push" not in content
 
 
+def test_sudoers_allows_only_gmail_polling_control_commands():
+    content = (ROOT / "deploy" / "sudoers" / "argus-auto-deploy").read_text()
+
+    assert (
+        "argus ALL=(root) NOPASSWD: /usr/bin/systemctl enable --now "
+        "argus-check-gmail.timer"
+    ) in content
+    assert (
+        "argus ALL=(root) NOPASSWD: /usr/bin/systemctl disable --now "
+        "argus-check-gmail.timer"
+    ) in content
+    assert (
+        "argus ALL=(root) NOPASSWD: /usr/bin/systemctl --no-block start "
+        "argus-check-gmail.service"
+    ) in content
+
+
 def test_auto_deploy_emits_telegram_lifecycle_notifications():
     content = (ROOT / "deploy" / "scripts" / "argus-auto-deploy.sh").read_text()
 

@@ -788,3 +788,87 @@ msgstr "Debug-режим"
 
 msgid "Demo data"
 msgstr "Demo-данные"
+
+msgid "Gmail polling"
+msgstr "Gmail polling"
+
+msgid "Enabled"
+msgstr "Включено"
+
+msgid "Disabled"
+msgstr "Выключено"
+
+msgid "Timer"
+msgstr "Таймер"
+
+msgid "Next run"
+msgstr "Следующий запуск"
+
+msgid "Interval"
+msgstr "Интервал"
+
+msgid "Systemd status error"
+msgstr "Ошибка статуса systemd"
+
+msgid "Enable polling"
+msgstr "Включить polling"
+
+msgid "Disable polling"
+msgstr "Выключить polling"
+
+msgid "Run check now"
+msgstr "Проверить сейчас"
+
+msgid "Start polling"
+msgstr "Запустить polling"
+
+msgid "Stop polling"
+msgstr "Остановить polling"
+
+msgid "Refresh status"
+msgstr "Обновить статус"
+
+msgid "Gmail polling enabled."
+msgstr "Gmail polling включён."
+
+msgid "Gmail polling disabled."
+msgstr "Gmail polling выключен."
+
+msgid "Gmail check started."
+msgstr "Gmail-проверка запущена."
+
+msgid "Gmail polling status refreshed."
+msgstr "Статус Gmail polling обновлён."
+
+msgid "Gmail polling action failed: %(error)s"
+msgstr "Действие Gmail polling не выполнено: %(error)s"
+
+msgid "Unknown Gmail polling action."
+msgstr "Неизвестное действие Gmail polling."
+
+msgid "Gmail polling timer status and start/stop buttons"
+msgstr "Статус Gmail polling timer и кнопки запуска/остановки"
+
+msgid "not scheduled"
+msgstr "не запланировано"
+
+msgid "command timed out"
+msgstr "команда превысила время ожидания"
+
+msgid "systemctl command failed"
+msgstr "команда systemctl завершилась ошибкой"
+
+msgid "seconds"
+msgstr "секунд"
+
+msgid "minutes"
+msgstr "минут"
+
+msgid "hours"
+msgstr "часов"
+
+msgid "days"
+msgstr "дней"
+
+msgid "%(amount)s %(unit)s"
+msgstr "%(amount)s %(unit)s"

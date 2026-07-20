@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from alerts.gmail_polling import get_gmail_polling_status
 from alerts.models import MailboxAccount, MarketplaceAlert
 
 register = template.Library()
@@ -95,3 +96,8 @@ def argus_dashboard_counters():
             "url": f"{alerts_url}?alert_status__exact={MarketplaceAlert.AlertStatus.IGNORED}",
         },
     ]
+
+
+@register.simple_tag
+def argus_gmail_polling_status():
+    return get_gmail_polling_status()

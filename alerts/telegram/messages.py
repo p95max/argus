@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from ..health import build_health_report
+from ..gmail_polling import GmailPollingStatus, get_gmail_polling_status
 from ..models import MailboxAccount, MarketplaceAlert
 from .i18n import use_argus_telegram_language
 from .quiet_hours import quiet_hours_allows_alert
@@ -508,6 +509,32 @@ def build_health_message(bot_started_at=None) -> str:
             [
                 "",
                 f'📱 <a href="{html.escape(mobile_url)}">{_("Open mobile admin")}</a>',
+            ]
+        )
+    return _fit_telegram_message(lines)
+
+
+@use_argus_telegram_language
+def build_gmail_polling_message(status: GmailPollingStatus | None = None) -> str:
+    status = status or get_gmail_polling_status()
+    status_icon = "🟢" if status.is_enabled else "🔴"
+    timer_icon = "🟢" if status.is_active else "🟠"
+
+    lines = [
+        f"📬 <b>Argus: {_('Gmail polling')}</b>",
+        f"📅 <b>{_('Date')}:</b> {_format_date(timezone.localdate())}",
+        f"🕒 <b>{_('Time')}:</b> {_format_time(timezone.now())}",
+        "",
+        f"{status_icon} <b>{_('Status')}:</b> {html.escape(status.enabled_label)}",
+        f"{timer_icon} <b>{_('Timer')}:</b> {html.escape(status.active_label)}",
+        f"⏭ <b>{_('Next run')}:</b> {html.escape(status.next_run_label)}",
+        f"⏱ <b>{_('Interval')}:</b> {html.escape(status.interval_label)}",
+    ]
+    if status.error:
+        lines.extend(
+            [
+                "",
+                f"⚠️ <b>{_('Systemd status error')}:</b> {html.escape(_truncate(status.error, 500))}",
             ]
         )
     return _fit_telegram_message(lines)

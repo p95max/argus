@@ -779,3 +779,87 @@ msgstr "Debug-Modus"
 
 msgid "Demo data"
 msgstr "Demo-Daten"
+
+msgid "Gmail polling"
+msgstr "Gmail-Polling"
+
+msgid "Enabled"
+msgstr "Aktiviert"
+
+msgid "Disabled"
+msgstr "Deaktiviert"
+
+msgid "Timer"
+msgstr "Timer"
+
+msgid "Next run"
+msgstr "Nächster Lauf"
+
+msgid "Interval"
+msgstr "Intervall"
+
+msgid "Systemd status error"
+msgstr "Systemd-Statusfehler"
+
+msgid "Enable polling"
+msgstr "Polling aktivieren"
+
+msgid "Disable polling"
+msgstr "Polling deaktivieren"
+
+msgid "Run check now"
+msgstr "Jetzt prüfen"
+
+msgid "Start polling"
+msgstr "Polling starten"
+
+msgid "Stop polling"
+msgstr "Polling stoppen"
+
+msgid "Refresh status"
+msgstr "Status aktualisieren"
+
+msgid "Gmail polling enabled."
+msgstr "Gmail-Polling aktiviert."
+
+msgid "Gmail polling disabled."
+msgstr "Gmail-Polling deaktiviert."
+
+msgid "Gmail check started."
+msgstr "Gmail-Prüfung gestartet."
+
+msgid "Gmail polling status refreshed."
+msgstr "Gmail-Polling-Status aktualisiert."
+
+msgid "Gmail polling action failed: %(error)s"
+msgstr "Gmail-Polling-Aktion fehlgeschlagen: %(error)s"
+
+msgid "Unknown Gmail polling action."
+msgstr "Unbekannte Gmail-Polling-Aktion."
+
+msgid "Gmail polling timer status and start/stop buttons"
+msgstr "Gmail-Polling-Timerstatus und Start/Stopp-Buttons"
+
+msgid "not scheduled"
+msgstr "nicht geplant"
+
+msgid "command timed out"
+msgstr "Befehl hat das Zeitlimit überschritten"
+
+msgid "systemctl command failed"
+msgstr "systemctl-Befehl fehlgeschlagen"
+
+msgid "seconds"
+msgstr "Sekunden"
+
+msgid "minutes"
+msgstr "Minuten"
+
+msgid "hours"
+msgstr "Stunden"
+
+msgid "days"
+msgstr "Tage"
+
+msgid "%(amount)s %(unit)s"
+msgstr "%(amount)s %(unit)s"

@@ -74,10 +74,24 @@ systemctl list-timers --all | grep argus
 
 Auto-deploy runs as the `argus` Linux user. The deploy script must restart the web and Telegram bot services after a successful pull, migration, collectstatic, and Django deploy check.
 
-To avoid storing or prompting for an interactive sudo password, production uses a narrow sudoers rule that allows only this command:
+To avoid storing or prompting for an interactive sudo password, production uses a narrow sudoers rule. Auto-deploy may restart only the runtime services:
 
 ```text
 /usr/bin/systemctl restart argus-web.service argus-telegram-bot.service
+```
+
+Telegram may enqueue only the predefined deploy service:
+
+```text
+/usr/bin/systemctl --no-block start argus-auto-deploy.service
+```
+
+Admin, Mobile, and Telegram may control only the Gmail polling timer/service:
+
+```text
+/usr/bin/systemctl enable --now argus-check-gmail.timer
+/usr/bin/systemctl disable --now argus-check-gmail.timer
+/usr/bin/systemctl --no-block start argus-check-gmail.service
 ```
 
 The repository template is:
@@ -97,6 +111,7 @@ Manual validation:
 ```bash
 sudo visudo -cf /etc/sudoers.d/argus-auto-deploy
 sudo -n systemctl restart argus-web.service argus-telegram-bot.service
+sudo -n systemctl --no-block start argus-check-gmail.service
 ```
 
 Expected result for the restart check:

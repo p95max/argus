@@ -9,6 +9,9 @@ from .i18n import use_argus_telegram_language
 
 CALLBACK_PREFIX = "alert"
 CALLBACK_STATUS_ACTION = "status"
+POLLING_CALLBACK_PREFIX = "polling"
+POLLING_STATUS_ACTION = "status"
+POLLING_ACTIONS = {"status", "enable", "disable", "run_now"}
 
 CALLBACK_STATUS_UPDATES = {
     "in_work": MarketplaceAlert.AlertStatus.IN_WORK,
@@ -53,8 +56,38 @@ def build_alert_keyboard(alert: MarketplaceAlert) -> InlineKeyboardMarkup:
     )
 
 
+@use_argus_telegram_language
+def build_gmail_polling_keyboard(is_enabled: bool) -> InlineKeyboardMarkup:
+    toggle_action = "disable" if is_enabled else "enable"
+    toggle_label = _("Stop polling") if is_enabled else _("Start polling")
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    toggle_label,
+                    callback_data=_polling_callback_data(toggle_action),
+                ),
+                InlineKeyboardButton(
+                    _("Run check now"),
+                    callback_data=_polling_callback_data("run_now"),
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    _("Refresh status"),
+                    callback_data=_polling_callback_data(POLLING_STATUS_ACTION),
+                ),
+            ],
+        ]
+    )
+
+
 def _callback_data(alert_id: int, action: str) -> str:
     return f"{CALLBACK_PREFIX}:{alert_id}:{action}"
+
+
+def _polling_callback_data(action: str) -> str:
+    return f"{POLLING_CALLBACK_PREFIX}:{action}"
 
 
 def _mobile_alert_url(alert: MarketplaceAlert) -> str:
@@ -84,3 +117,18 @@ def _parse_callback_data(callback_data: str) -> tuple[int, str]:
         raise ValueError("Unknown Telegram alert.") from exc
 
     return alert_id, action
+
+
+def parse_gmail_polling_callback_data(callback_data: str) -> str:
+    if not callback_data:
+        raise ValueError("Unknown Telegram action.")
+
+    parts = callback_data.split(":")
+    if len(parts) != 2 or parts[0] != POLLING_CALLBACK_PREFIX:
+        raise ValueError("Unknown Telegram action.")
+
+    action = parts[1]
+    if action not in POLLING_ACTIONS:
+        raise ValueError("Unknown Telegram action.")
+
+    return action

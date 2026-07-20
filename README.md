@@ -225,6 +225,32 @@ cd /opt/argus
 ./deploy/install-ops.sh
 ```
 
+### Gmail Polling Control
+
+Admin overview, the mobile panel, and Telegram `/polling` show the real
+`argus-check-gmail.timer` state from systemd, not a database flag.
+
+The UI reads:
+
+```bash
+systemctl is-enabled argus-check-gmail.timer
+systemctl is-active argus-check-gmail.timer
+systemctl show argus-check-gmail.timer --property=NextElapseUSecRealtime --property=OnUnitActiveSec
+```
+
+The start/stop buttons call only predefined systemd commands:
+
+```bash
+sudo -n systemctl enable --now argus-check-gmail.timer
+sudo -n systemctl disable --now argus-check-gmail.timer
+sudo -n systemctl --no-block start argus-check-gmail.service
+```
+
+Production sudoers must allow the `argus` web/bot user to run those exact
+commands without a password. There is no separate `gmail_polling_enabled`
+database flag; disabling the timer is the main Neon-saving switch because it
+prevents scheduled Django startup entirely.
+
 ### Background Job Queue
 
 The following systemd jobs share `/tmp/argus-background-jobs.lock` and execute one at a time:
@@ -259,6 +285,7 @@ sudo journalctl \
 | `/mailboxes` | Alias for `/status`. |
 | `/summary` | Show today's lead summary. |
 | `/unread` | Show one report with unread leads. |
+| `/polling` | Show Gmail polling timer status and start/stop/run-now buttons. |
 | `/health` | Show DB, Gmail, Telegram, and service-error health. |
 | `/doctor` | Run the production doctor and show systemd, Git, health, and deploy status. |
 | `/deploy` | Queue an immediate production auto-deploy and report queue state, actual start, and final result. |
@@ -429,6 +456,7 @@ Mailbox management requires superuser access or explicit add/change/delete permi
 It includes:
 
 - mailbox health and manual Gmail checks;
+- Gmail polling timer status and start/stop/run-now actions;
 - attention-required, today, and my-in-work views;
 - spam/noise view;
 - cases grouped by `mailbox + listing_id`;

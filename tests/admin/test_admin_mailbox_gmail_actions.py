@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
 
+from alerts.gmail_polling import GmailPollingStatus
 from alerts.models import MailboxAccount
 
 
@@ -94,3 +95,45 @@ def test_admin_gmail_check_now_requires_csrf(superuser, mailbox):
     )
 
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_admin_overview_shows_gmail_polling_block(monkeypatch, client, superuser):
+    monkeypatch.setattr(
+        "alerts.templatetags.argus_admin.get_gmail_polling_status",
+        lambda: GmailPollingStatus(
+            enabled_state="enabled",
+            active_state="active",
+            next_run_label="14:20",
+            interval_label="15 minutes",
+        ),
+    )
+    client.force_login(superuser)
+
+    response = client.get(reverse("admin:index"))
+    body = response.content.decode("utf-8")
+
+    assert response.status_code == 200
+    assert "Gmail polling" in body
+    assert "14:20" in body
+    assert reverse("admin_gmail_polling_action", args=["disable"]) in body
+    assert reverse("admin_gmail_polling_action", args=["run_now"]) in body
+
+
+@pytest.mark.django_db
+def test_admin_gmail_polling_action_runs_for_superuser(monkeypatch, client, superuser):
+    actions = []
+    monkeypatch.setattr(
+        "alerts.gmail_polling_views.apply_gmail_polling_action",
+        lambda action: actions.append(action) or "Gmail polling disabled.",
+    )
+    client.force_login(superuser)
+
+    response = client.post(
+        reverse("admin_gmail_polling_action", args=["disable"]),
+        {"next": reverse("admin:index")},
+    )
+
+    assert response.status_code == 302
+    assert response["Location"] == reverse("admin:index")
+    assert actions == ["disable"]

@@ -7,6 +7,7 @@ from django.views.generic import RedirectView
 
 from django.conf import settings
 from alerts import mobile
+from alerts.gmail_polling_views import gmail_polling_action
 from alerts.health import build_health_report
 from alerts.mobile_archive import mobile_clear_archived_alerts
 from alerts.mobile_service_log import mobile_clear_service_events, mobile_dashboard
@@ -71,9 +72,19 @@ urlpatterns = [
         name="mobile_check_gmail_now",
     ),
     path(
+        "m/gmail/polling/<str:action>/",
+        gmail_polling_action,
+        name="mobile_gmail_polling_action",
+    ),
+    path(
         "m/mailboxes/<int:mailbox_id>/check-now/",
         mobile.mobile_check_mailbox_now,
         name="mobile_check_mailbox_now",
+    ),
+    path(
+        f"{settings.DJANGO_ADMIN_URL}/gmail-polling/<str:action>/",
+        admin.site.admin_view(gmail_polling_action),
+        name="admin_gmail_polling_action",
     ),
     path(f"{settings.DJANGO_ADMIN_URL}/", admin.site.urls),
 ]

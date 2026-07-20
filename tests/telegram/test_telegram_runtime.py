@@ -8,6 +8,7 @@ from telegram.ext import CallbackQueryHandler
 
 from alerts.telegram.handlers import (
     handle_help_command,
+    handle_gmail_polling_command,
     handle_mailbox_status_command,
 )
 
@@ -93,6 +94,7 @@ def test_run_telegram_bot_registers_handlers_and_polling_options(monkeypatch):
     assert frozenset({"health"}) in command_sets
     assert frozenset({"doctor"}) in command_sets
     assert frozenset({"unread"}) in command_sets
+    assert frozenset({"polling"}) in command_sets
     assert app.run_polling_kwargs == {
         "allowed_updates": ["callback_query", "message"],
         "drop_pending_updates": True,
@@ -146,3 +148,27 @@ def test_status_command_replies_with_html_for_allowed_chat(monkeypatch):
             "disable_web_page_preview": True,
         }
     ]
+
+
+def test_gmail_polling_command_replies_with_status_and_buttons(monkeypatch):
+    update = FakeTelegramUpdate(chat_id="42", user_id="100")
+    monkeypatch.setattr("alerts.telegram.handlers.is_allowed_update", lambda update: True)
+
+    class Status:
+        is_enabled = True
+
+    monkeypatch.setattr(
+        "alerts.telegram.handlers.get_gmail_polling_status",
+        lambda: Status(),
+    )
+    monkeypatch.setattr(
+        "alerts.telegram.handlers.build_gmail_polling_message",
+        lambda status: "<b>Polling</b>",
+    )
+
+    asyncio.run(handle_gmail_polling_command(update, context=object()))
+
+    reply = update.effective_message.replies[0]
+    assert reply["text"] == "<b>Polling</b>"
+    assert reply["parse_mode"] == "HTML"
+    assert reply["reply_markup"].inline_keyboard[0][0].callback_data == "polling:disable"

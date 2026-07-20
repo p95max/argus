@@ -16,6 +16,7 @@ ACTIVE_BOT_COMMANDS = (
     ("mailboxes", "same as /status"),
     ("summary", "today's lead summary"),
     ("unread", "single report for unread leads"),
+    ("polling", "Gmail polling timer status and start/stop buttons"),
     ("health", "service health: DB, Gmail, Telegram, errors"),
     ("doctor", "production doctor: systemd, git, health and deploy status"),
     (
