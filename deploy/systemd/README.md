@@ -28,6 +28,7 @@ Expected managed helper scripts:
 ```text
 /usr/local/bin/argus-auto-deploy.sh
 /usr/local/bin/argus-backup-db.sh
+/usr/local/bin/argus-sync-db-to-neon.sh
 /usr/local/bin/argus-health-notify.py
 /usr/local/bin/argus-doctor.sh
 ```

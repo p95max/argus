@@ -18,6 +18,7 @@ QUEUED_SERVICES = {
     "argus-cleanup-old-leads.service": "argus-cleanup-old-leads",
     "argus-auto-deploy.service": "argus-auto-deploy",
     "argus-backup-db.service": "argus-backup-db",
+    "argus-sync-db-to-neon.service": "argus-sync-db-to-neon",
 }
 
 

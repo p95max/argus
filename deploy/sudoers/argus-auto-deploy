@@ -4,7 +4,7 @@ argus ALL=(root) NOPASSWD: /usr/bin/systemctl restart argus-web.service argus-te
 # Allow the Telegram bot to enqueue only the existing Argus auto-deploy service.
 argus ALL=(root) NOPASSWD: /usr/bin/systemctl --no-block start argus-auto-deploy.service
 
-# Allow Admin, Mobile, and Telegram to control only the Gmail polling timer.
+# Allow the Telegram bot to control only the Gmail polling timer.
 argus ALL=(root) NOPASSWD: /usr/bin/systemctl enable --now argus-check-gmail.timer
 argus ALL=(root) NOPASSWD: /usr/bin/systemctl disable --now argus-check-gmail.timer
 argus ALL=(root) NOPASSWD: /usr/bin/systemctl --no-block start argus-check-gmail.service

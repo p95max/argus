@@ -36,15 +36,20 @@ read_env_value() {
 [[ -f "$ENV_FILE" ]] || fail "environment file not found: $ENV_FILE"
 
 DATABASE_URL="${DATABASE_URL:-$(read_env_value "DATABASE_URL" "$ENV_FILE")}"
-NEON_BACKUP_DATABASE_URL="${NEON_BACKUP_DATABASE_URL:-$(read_env_value "NEON_BACKUP_DATABASE_URL" "$ENV_FILE")}"
+BACKUP_DATABASE_URL="${BACKUP_DATABASE_URL:-$(read_env_value "BACKUP_DATABASE_URL" "$ENV_FILE")}"
+
+# Compatibility with deployments configured before BACKUP_DATABASE_URL was introduced.
+if [[ -z "$BACKUP_DATABASE_URL" ]]; then
+    BACKUP_DATABASE_URL="$(read_env_value "NEON_BACKUP_DATABASE_URL" "$ENV_FILE")"
+fi
 
 [[ -n "$DATABASE_URL" ]] || fail "DATABASE_URL is not configured"
-[[ -n "$NEON_BACKUP_DATABASE_URL" ]] || fail "NEON_BACKUP_DATABASE_URL is not configured"
-[[ "$DATABASE_URL" != "$NEON_BACKUP_DATABASE_URL" ]] || fail "source and backup database URLs must differ"
+[[ -n "$BACKUP_DATABASE_URL" ]] || fail "BACKUP_DATABASE_URL is not configured"
+[[ "$DATABASE_URL" != "$BACKUP_DATABASE_URL" ]] || fail "source and backup database URLs must differ"
 
-# pg_dump/pg_restore must use Neon's direct endpoint, not the PgBouncer pooler.
-if [[ "$NEON_BACKUP_DATABASE_URL" == *-pooler.* ]]; then
-    fail "NEON_BACKUP_DATABASE_URL uses a pooled Neon endpoint; use the direct endpoint without '-pooler'"
+# pg_restore requires a direct database endpoint rather than a pooled endpoint.
+if [[ "$BACKUP_DATABASE_URL" == *-pooler.* ]]; then
+    fail "BACKUP_DATABASE_URL uses a pooled endpoint; use a direct PostgreSQL endpoint"
 fi
 
 PG_DUMP="${PG_DUMP:-}"
@@ -80,7 +85,7 @@ fi
 [[ -n "$PSQL" && -x "$PSQL" ]] || fail "psql not found"
 
 install -d -m 700 "$WORK_DIR"
-DUMP_FILE="$(mktemp "$WORK_DIR/.argus-neon-sync.XXXXXX.dump.tmp")"
+DUMP_FILE="$(mktemp "$WORK_DIR/.argus-remote-sync.XXXXXX.dump.tmp")"
 
 cleanup() {
     rm -f "${DUMP_FILE:-}"
@@ -99,9 +104,9 @@ log "Creating a consistent dump of the active database"
 [[ -s "$DUMP_FILE" ]] || fail "database dump is empty"
 "$PG_RESTORE" --list "$DUMP_FILE" >/dev/null
 
-log "Replacing the Neon backup database in one transaction"
+log "Replacing the remote backup database in one transaction"
 "$PG_RESTORE" \
-    --dbname="$NEON_BACKUP_DATABASE_URL" \
+    --dbname="$BACKUP_DATABASE_URL" \
     --clean \
     --if-exists \
     --no-owner \
@@ -111,9 +116,9 @@ log "Replacing the Neon backup database in one transaction"
     "$DUMP_FILE"
 
 SOURCE_MIGRATIONS="$($PSQL "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -tAc "SELECT COUNT(*) FROM django_migrations;")"
-BACKUP_MIGRATIONS="$($PSQL "$NEON_BACKUP_DATABASE_URL" -X -v ON_ERROR_STOP=1 -tAc "SELECT COUNT(*) FROM django_migrations;")"
+BACKUP_MIGRATIONS="$($PSQL "$BACKUP_DATABASE_URL" -X -v ON_ERROR_STOP=1 -tAc "SELECT COUNT(*) FROM django_migrations;")"
 
 [[ "$SOURCE_MIGRATIONS" = "$BACKUP_MIGRATIONS" ]] || \
     fail "migration count mismatch: source=$SOURCE_MIGRATIONS backup=$BACKUP_MIGRATIONS"
 
-log "Neon backup synchronized successfully (django_migrations=$BACKUP_MIGRATIONS)"
+log "Remote backup synchronized successfully (django_migrations=$BACKUP_MIGRATIONS)"

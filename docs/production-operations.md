@@ -86,7 +86,7 @@ Telegram may enqueue only the predefined deploy service:
 /usr/bin/systemctl --no-block start argus-auto-deploy.service
 ```
 
-Admin, Mobile, and Telegram may control only the Gmail polling timer/service:
+The Telegram bot may control only the Gmail polling timer/service:
 
 ```text
 /usr/bin/systemctl enable --now argus-check-gmail.timer
@@ -153,6 +153,7 @@ argus-unread-reminders.timer   Send unread alert reminders
 argus-cleanup-old-leads.timer  Delete old inactive lead branches
 argus-auto-deploy.timer        Pull/deploy new commits from GitHub
 argus-backup-db.timer          Create PostgreSQL backups
+argus-sync-db-to-neon.timer    Synchronize the primary database to remote backup
 argus-health-monitor.timer     Monitor production health and notify Telegram
 ```
 
@@ -170,6 +171,7 @@ systemctl status argus-unread-reminders.timer --no-pager -l
 systemctl status argus-cleanup-old-leads.timer --no-pager -l
 systemctl status argus-auto-deploy.timer --no-pager -l
 systemctl status argus-backup-db.timer --no-pager -l
+systemctl status argus-sync-db-to-neon.timer --no-pager -l
 systemctl status argus-health-monitor.timer --no-pager -l
 ```
 
@@ -181,6 +183,7 @@ sudo journalctl -u argus-unread-reminders.service -n 80 --no-pager -l
 sudo journalctl -u argus-cleanup-old-leads.service -n 80 --no-pager -l
 sudo journalctl -u argus-auto-deploy.service -n 100 --no-pager -l
 sudo journalctl -u argus-backup-db.service -n 80 --no-pager -l
+sudo journalctl -u argus-sync-db-to-neon.service -n 80 --no-pager -l
 sudo journalctl -u argus-health-monitor.service -n 80 --no-pager -l
 ```
 
@@ -237,6 +240,7 @@ systemctl list-timers --all | grep argus-auto-deploy
 ```text
 /usr/local/bin/argus-auto-deploy.sh
 /usr/local/bin/argus-backup-db.sh
+/usr/local/bin/argus-sync-db-to-neon.sh
 /usr/local/bin/argus-health-notify.py
 /usr/local/bin/argus-doctor.sh
 /usr/local/bin/argus-status.sh
@@ -373,6 +377,22 @@ Detailed restore instructions live in:
 
 ```text
 deploy/ops-restore.md
+```
+
+## Remote Backup Synchronization
+
+`argus-sync-db-to-neon.timer` runs daily at 03:15 with up to 15 minutes of randomized delay. It uses `DATABASE_URL` as the primary local PostgreSQL database and `BACKUP_DATABASE_URL` as a remote PostgreSQL reserve.
+
+The script makes a consistent custom dump, replaces the remote backup in a single transaction, and verifies that both databases have the same `django_migrations` count. The application never connects to `BACKUP_DATABASE_URL` during normal web, Gmail, or Telegram operation.
+
+Use a direct PostgreSQL endpoint for `BACKUP_DATABASE_URL`; pooled endpoints are not suitable for `pg_restore`. Existing deployments that still use the former backup variable continue to work, but should move to `BACKUP_DATABASE_URL` on the next secret rotation.
+
+Run and inspect it manually:
+
+```bash
+sudo systemctl start argus-sync-db-to-neon.service
+systemctl status argus-sync-db-to-neon.timer --no-pager -l
+sudo journalctl -u argus-sync-db-to-neon.service -n 80 --no-pager -l
 ```
 
 ## Status Snapshot

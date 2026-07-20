@@ -19,6 +19,12 @@ def load_health_notify_module():
     return module
 
 
+def test_health_monitor_checks_remote_backup_sync_timer():
+    module = load_health_notify_module()
+
+    assert "argus-sync-db-to-neon.timer" in module.TIMERS
+
+
 def configure_main(monkeypatch, module, *, checks, previous_state=None):
     check_results = iter(checks)
     sent_messages = []

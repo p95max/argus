@@ -23,7 +23,7 @@ Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads
 - Multiple Gmail mailboxes with per-mailbox OAuth.
 - Encrypted Gmail refresh tokens in `MailboxAccount.gmail_oauth_token`.
 - Buyer alerts, noise/system alerts, service events, unread reminders, cleanup, and mailbox health tracking.
-- PostgreSQL/Neon support through `DATABASE_URL`.
+- PostgreSQL on the VPS as the primary database, with a daily remote PostgreSQL backup synchronization.
 - Tests use `config.test_settings` and in-memory SQLite, even when `.env.local` points to PostgreSQL.
 - GitHub Actions CI runs tests, migration checks, linting, and coverage enforcement on every push to `master` and every pull request.
 - Coverage reports are uploaded to Codecov after CI test runs.
@@ -73,7 +73,9 @@ curl -H "Authorization: Bearer YOUR_TOKEN" http://127.0.0.1:8000/health/full/
 
 ## Environment
 
-Copy `.env.example` to `.env.local` and fill local secrets there. Do not commit `.env.local`.
+For local development, copy `.env.example` to `.env.local` and fill local secrets there. Do not commit `.env.local`.
+
+For the VPS, copy `.env.production.example` to `/opt/argus/.env.local` and fill the production values there. The production file is intentionally separate: it requires the local PostgreSQL primary URL and the remote backup URL. Do not use the local example on the VPS.
 
 Important settings:
 
@@ -123,9 +125,9 @@ TELEGRAM_SEND_ON_GMAIL_CHECK=False
 OAUTHLIB_INSECURE_TRANSPORT=False
 ```
 
-With `DJANGO_DEBUG=True`, Argus uses SQLite only when `DATABASE_URL` is empty. If `DATABASE_URL` is set, local runtime uses that PostgreSQL database too, including Neon.
+With `DJANGO_DEBUG=True`, Argus uses SQLite only when `DATABASE_URL` is empty. If `DATABASE_URL` is set, local runtime uses that PostgreSQL database too. The local example intentionally does not contain production backup settings.
 
-Tests are different on purpose: `pytest.ini` points to `config.test_settings`, which overrides the database to in-memory SQLite. This keeps `python -m poetry run pytest` away from Neon.
+Tests are different on purpose: `pytest.ini` points to `config.test_settings`, which overrides the database to in-memory SQLite. This keeps `python -m poetry run pytest` away from production databases.
 
 ## Language And Localization
 
@@ -148,7 +150,7 @@ Only superusers can view or edit `Argus settings`.
 
 ## Database
 
-Fresh PostgreSQL/Neon setup:
+Fresh PostgreSQL setup:
 
 ```powershell
 python -m poetry run python manage.py migrate
@@ -174,7 +176,25 @@ mailboxes_count = 1 if DEV_SEED_SAMPLE_DATA=True
 alerts_count = 3 if DEV_SEED_SAMPLE_DATA=True
 ```
 
-There is no SQLite-to-PostgreSQL migration script. New cloud databases are initialized from Django migrations plus `init_dev`.
+There is no SQLite-to-PostgreSQL migration script. New databases are initialized from Django migrations plus `init_dev`.
+
+### Production Backup Topology
+
+Production Django uses the local VPS PostgreSQL instance from `DATABASE_URL`. A separate `BACKUP_DATABASE_URL` points to a remote PostgreSQL reserve and is never used by the application itself.
+
+`argus-sync-db-to-neon.timer` starts daily at 03:15 with a randomized delay of up to 15 minutes. It replaces the remote backup from a consistent local dump, validates it, and compares the `django_migrations` count between both databases. The target is therefore normally no more than about one day behind the primary database.
+
+The first production synchronization completed successfully with `django_migrations=37`; this number will increase as new migrations are added. `ARGUS DOCTOR` verifies that the synchronization timer is enabled and active.
+
+Run or inspect the synchronization manually:
+
+```bash
+sudo systemctl start argus-sync-db-to-neon.service
+systemctl status argus-sync-db-to-neon.timer --no-pager -l
+sudo journalctl -u argus-sync-db-to-neon.service -n 80 --no-pager -l
+```
+
+Treat `BACKUP_DATABASE_URL` as a production secret. Rotate any previously exposed backup database password and update `/opt/argus/.env.local` afterwards.
 
 ## CI Quality Gate
 
@@ -250,9 +270,9 @@ sudo -n systemctl disable --now argus-check-gmail.timer
 sudo -n systemctl --no-block start argus-check-gmail.service
 ```
 
-Production sudoers must allow the `argus` web/bot user to run those exact
-commands without a password. There is no separate `gmail_polling_enabled`
-database flag; disabling the timer is the main Neon-saving switch because it
+Production sudoers allows the Telegram bot runtime to run those exact commands
+without a password. There is no separate `gmail_polling_enabled`
+database flag; disabling the timer is the main resource-saving switch because it
 prevents scheduled Django startup entirely.
 
 ### Background Job Queue
@@ -263,6 +283,7 @@ The following systemd jobs share `/tmp/argus-background-jobs.lock` and execute o
 - `argus-unread-reminders.service`
 - `argus-cleanup-old-leads.service`
 - `argus-backup-db.service`
+- `argus-sync-db-to-neon.service`
 - `argus-auto-deploy.service`
 
 Each job waits for the shared lock for up to 15 minutes. A separate per-job lock prevents duplicate instances of the same task. The web service, Telegram polling service, and health monitor remain independent from this queue.
@@ -277,6 +298,7 @@ sudo journalctl \
   -u argus-cleanup-old-leads.service \
   -u argus-auto-deploy.service \
   -u argus-backup-db.service \
+  -u argus-sync-db-to-neon.service \
   --since today --no-pager | grep 'Queue['
 ```
 
@@ -492,7 +514,7 @@ python -m poetry run pytest
 Current test behavior:
 
 - `pytest.ini` uses `DJANGO_SETTINGS_MODULE = config.test_settings`.
-- Tests force in-memory SQLite and do not use the production Neon database.
+- Tests force in-memory SQLite and do not use production databases.
 - Linux-specific queue tests are skipped on Windows because they require `bash` and `flock`.
 
 Useful focused checks:

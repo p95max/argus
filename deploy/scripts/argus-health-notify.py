@@ -27,6 +27,7 @@ TIMERS = [
     "argus-cleanup-old-leads.timer",
     "argus-auto-deploy.timer",
     "argus-backup-db.timer",
+    "argus-sync-db-to-neon.timer",
     "argus-health-monitor.timer",
 ]
 
