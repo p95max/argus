@@ -28,6 +28,9 @@ from alerts.telegram.handlers import (
 from alerts.telegram.keyboards import (
     build_alert_keyboard,
 )
+from alerts.telegram.i18n import override_argus_telegram_language
+from alerts.gmail_polling import GmailPollingStatus
+from alerts.telegram.messages import build_gmail_polling_message
 
 
 class FakeTelegramMessage:
@@ -93,6 +96,21 @@ def test_build_system_message_escapes_html():
 
     assert "Argus: system notice" in message
     assert "&lt;bad&gt;" in message
+
+
+def test_gmail_polling_message_localizes_interval_from_raw_value():
+    status = GmailPollingStatus(
+        enabled_state="enabled",
+        active_state="active",
+        next_run_raw="Mon 2026-07-20 14:45:00 CEST",
+        interval_raw="15min",
+        interval_label="15 minutes",
+    )
+
+    with override_argus_telegram_language("ru"):
+        message = build_gmail_polling_message(status)
+
+    assert "15 минут" in message
 
 
 def test_build_help_message_lists_active_bot_commands():

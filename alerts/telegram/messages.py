@@ -527,8 +527,8 @@ def build_gmail_polling_message(status: GmailPollingStatus | None = None) -> str
         "",
         f"{status_icon} <b>{_('Status')}:</b> {html.escape(status.enabled_label)}",
         f"{timer_icon} <b>{_('Timer')}:</b> {html.escape(status.active_label)}",
-        f"⏭ <b>{_('Next run')}:</b> {html.escape(status.next_run_label)}",
-        f"⏱ <b>{_('Interval')}:</b> {html.escape(status.interval_label)}",
+        f"⏭ <b>{_('Next run')}:</b> {html.escape(status.localized_next_run_label)}",
+        f"⏱ <b>{_('Interval')}:</b> {html.escape(status.localized_interval_label)}",
     ]
     if status.error:
         lines.extend(

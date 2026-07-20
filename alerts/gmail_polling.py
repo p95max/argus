@@ -60,6 +60,14 @@ class GmailPollingStatus:
             return _("inactive")
         return self.active_state or _("unknown")
 
+    @property
+    def localized_next_run_label(self) -> str:
+        return _format_next_run(self.next_run_raw) if self.next_run_raw else self.next_run_label
+
+    @property
+    def localized_interval_label(self) -> str:
+        return _format_interval(self.interval_raw) if self.interval_raw else self.interval_label
+
 
 class GmailPollingCommandError(RuntimeError):
     pass
