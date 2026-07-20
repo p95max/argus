@@ -872,3 +872,27 @@ msgstr "Tage"
 
 msgid "%(amount)s %(unit)s"
 msgstr "%(amount)s %(unit)s"
+
+msgid "bot capabilities and command list"
+msgstr "Bot-Funktionen und Befehlsliste"
+
+msgid "mailbox status and recent Gmail checks"
+msgstr "Postfachstatus und letzte Gmail-Prüfungen"
+
+msgid "today's leads summary"
+msgstr "Zusammenfassung der heutigen Anfragen"
+
+msgid "one summary of unread leads"
+msgstr "eine Zusammenfassung ungelesener Anfragen"
+
+msgid "manage Gmail polling on the production server"
+msgstr "Gmail-Polling auf dem Produktionsserver verwalten"
+
+msgid "service health: DB, Gmail, Telegram, and errors"
+msgstr "Servicezustand: DB, Gmail, Telegram und Fehler"
+
+msgid "production status: systemd, Git, health, and deploy"
+msgstr "Produktionsstatus: systemd, Git, health und deploy"
+
+msgid "start a production deploy and show its progress"
+msgstr "Production-Deploy starten und Fortschritt anzeigen"

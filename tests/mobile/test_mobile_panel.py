@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 
-from alerts.gmail_polling import GmailPollingStatus
 from alerts.models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 
 
@@ -330,31 +329,6 @@ def test_mobile_panel_shows_gmail_operational_card(client, staff_user, alert):
     assert "Gmail" in body
     assert "Last check" in body
     assert "New today" in body
-
-
-@pytest.mark.django_db
-def test_mobile_panel_shows_gmail_polling_block(monkeypatch, client, staff_user, alert):
-    staff_user.is_superuser = True
-    staff_user.save(update_fields=["is_superuser"])
-    monkeypatch.setattr(
-        "alerts.mobile.get_gmail_polling_status",
-        lambda: GmailPollingStatus(
-            enabled_state="enabled",
-            active_state="active",
-            next_run_label="14:20",
-            interval_label="15 minutes",
-        ),
-    )
-    client.force_login(staff_user)
-
-    response = client.get(reverse("mobile_dashboard"))
-    body = response.content.decode("utf-8")
-
-    assert response.status_code == 200
-    assert "Gmail polling" in body
-    assert "14:20" in body
-    assert reverse("mobile_gmail_polling_action", args=["disable"]) in body
-    assert reverse("mobile_gmail_polling_action", args=["run_now"]) in body
 
 
 @pytest.mark.django_db

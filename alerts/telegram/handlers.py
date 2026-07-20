@@ -18,6 +18,7 @@ from ..gmail_polling import (
     get_gmail_polling_status,
 )
 from .git_status import build_git_deploy_status_text as build_git_deploy_status_text_v2
+from .help_command import ACTIVE_BOT_COMMANDS
 from .i18n import telegram_gettext, use_argus_telegram_language
 from .keyboards import (
     CALLBACK_STATUS_ACTION,
@@ -42,17 +43,6 @@ from .permissions import is_allowed_telegram_actor, is_allowed_update
 
 logger = logging.getLogger(__name__)
 
-
-ACTIVE_BOT_COMMANDS = (
-    ("help", "what the bot can do and the command list"),
-    ("status", "Gmail mailbox status and latest checks"),
-    ("mailboxes", "same as /status"),
-    ("summary", "today's lead summary"),
-    ("unread", "single report for unread leads"),
-    ("polling", "Gmail polling timer status and start/stop buttons"),
-    ("health", "service health: DB, Gmail, Telegram, errors"),
-    ("doctor", "production doctor: systemd, git, health and deploy status"),
-)
 
 PERMISSION_DENIED_MESSAGE = "This user or chat does not have access to Argus."
 

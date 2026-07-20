@@ -227,8 +227,10 @@ cd /opt/argus
 
 ### Gmail Polling Control
 
-Admin overview, the mobile panel, and Telegram `/polling` show the real
-`argus-check-gmail.timer` state from systemd, not a database flag.
+Telegram `/polling` shows and manages the real `argus-check-gmail.timer`
+state from systemd, not a database flag. The control intentionally lives only
+in Telegram: it runs on the production VPS alongside systemd, whereas the
+local Windows interface cannot operate systemd services.
 
 The UI reads:
 
@@ -285,7 +287,7 @@ sudo journalctl \
 | `/mailboxes` | Alias for `/status`. |
 | `/summary` | Show today's lead summary. |
 | `/unread` | Show one report with unread leads. |
-| `/polling` | Show Gmail polling timer status and start/stop/run-now buttons. |
+| `/polling` | Manage the Gmail polling timer on the production server. |
 | `/health` | Show DB, Gmail, Telegram, and service-error health. |
 | `/doctor` | Run the production doctor and show systemd, Git, health, and deploy status. |
 | `/deploy` | Queue an immediate production auto-deploy and report queue state, actual start, and final result. |
@@ -456,7 +458,6 @@ Mailbox management requires superuser access or explicit add/change/delete permi
 It includes:
 
 - mailbox health and manual Gmail checks;
-- Gmail polling timer status and start/stop/run-now actions;
 - attention-required, today, and my-in-work views;
 - spam/noise view;
 - cases grouped by `mailbox + listing_id`;

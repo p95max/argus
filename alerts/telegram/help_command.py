@@ -11,17 +11,17 @@ from .permissions import is_allowed_update
 logger = logging.getLogger(__name__)
 
 ACTIVE_BOT_COMMANDS = (
-    ("help", "what the bot can do and the command list"),
-    ("status", "Gmail mailbox status and latest checks"),
+    ("help", "bot capabilities and command list"),
+    ("status", "mailbox status and recent Gmail checks"),
     ("mailboxes", "same as /status"),
-    ("summary", "today's lead summary"),
-    ("unread", "single report for unread leads"),
-    ("polling", "Gmail polling timer status and start/stop buttons"),
-    ("health", "service health: DB, Gmail, Telegram, errors"),
-    ("doctor", "production doctor: systemd, git, health and deploy status"),
+    ("summary", "today's leads summary"),
+    ("unread", "one summary of unread leads"),
+    ("polling", "manage Gmail polling on the production server"),
+    ("health", "service health: DB, Gmail, Telegram, and errors"),
+    ("doctor", "production status: systemd, Git, health, and deploy"),
     (
         "deploy",
-        "queue an immediate production deploy and report queue, start, and result",
+        "start a production deploy and show its progress",
     ),
 )
 

@@ -881,3 +881,27 @@ msgstr "дней"
 
 msgid "%(amount)s %(unit)s"
 msgstr "%(amount)s %(unit)s"
+
+msgid "bot capabilities and command list"
+msgstr "возможности бота и список команд"
+
+msgid "mailbox status and recent Gmail checks"
+msgstr "состояние ящиков и последние проверки Gmail"
+
+msgid "today's leads summary"
+msgstr "сводка по обращениям за сегодня"
+
+msgid "one summary of unread leads"
+msgstr "единый отчёт о непрочитанных обращениях"
+
+msgid "manage Gmail polling on the production server"
+msgstr "управление Gmail-проверкой на production-сервере"
+
+msgid "service health: DB, Gmail, Telegram, and errors"
+msgstr "состояние сервиса: DB, Gmail, Telegram и ошибки"
+
+msgid "production status: systemd, Git, health, and deploy"
+msgstr "состояние production: systemd, Git, health и deploy"
+
+msgid "start a production deploy and show its progress"
+msgstr "запустить production deploy и показать ход выполнения"

@@ -12,7 +12,6 @@
 
 {% block content %}
     {% argus_dashboard_counters as counters %}
-    {% argus_gmail_polling_status as gmail_polling %}
     <div class="row">
         {% for item in counters %}
             <div class="col-lg-3 col-6">
@@ -27,64 +26,6 @@
                 </a>
             </div>
         {% endfor %}
-    </div>
-
-    <div class="card mb-3">
-        <div class="card-header">
-            <h3 class="card-title mb-0">{% trans "Gmail polling" %}</h3>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="text-muted small">{% trans "Status" %}</div>
-                    <strong class="{% if not gmail_polling.is_available %}text-warning{% elif gmail_polling.is_enabled %}text-success{% else %}text-danger{% endif %}">
-                        {% if not gmail_polling.is_available %}⚪ {{ gmail_polling.enabled_label }}{% elif gmail_polling.is_enabled %}🟢 {{ gmail_polling.enabled_label }}{% else %}🔴 {{ gmail_polling.enabled_label }}{% endif %}
-                    </strong>
-                </div>
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="text-muted small">{% trans "Timer" %}</div>
-                    <strong class="{% if gmail_polling.is_active %}text-success{% else %}text-warning{% endif %}">
-                        {{ gmail_polling.active_label }}
-                    </strong>
-                </div>
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="text-muted small">{% trans "Next run" %}</div>
-                    <strong>{{ gmail_polling.next_run_label }}</strong>
-                </div>
-                <div class="col-md-3 col-6 mb-3">
-                    <div class="text-muted small">{% trans "Interval" %}</div>
-                    <strong>{{ gmail_polling.interval_label }}</strong>
-                </div>
-            </div>
-            {% if gmail_polling.error %}
-                <div class="alert alert-warning mb-3">
-                    {% trans "Systemd status error" %}: {{ gmail_polling.error|truncatechars:220 }}
-                </div>
-            {% endif %}
-            <div class="btn-group flex-wrap" role="group" aria-label="Gmail polling actions">
-                <form class="d-inline" method="post" action="{% url 'admin_gmail_polling_action' 'enable' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button class="btn btn-sm btn-success" type="submit" {% if not gmail_polling.is_available or gmail_polling.is_enabled %}disabled{% endif %}>
-                        {% trans "Enable polling" %}
-                    </button>
-                </form>
-                <form class="d-inline ml-2" method="post" action="{% url 'admin_gmail_polling_action' 'disable' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button class="btn btn-sm btn-danger" type="submit" {% if not gmail_polling.is_available or not gmail_polling.is_enabled %}disabled{% endif %}>
-                        {% trans "Disable polling" %}
-                    </button>
-                </form>
-                <form class="d-inline ml-2" method="post" action="{% url 'admin_gmail_polling_action' 'run_now' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <button class="btn btn-sm btn-info" type="submit" {% if not gmail_polling.is_available %}disabled{% endif %}>
-                        {% trans "Run check now" %}
-                    </button>
-                </form>
-            </div>
-        </div>
     </div>
     {{ block.super }}
 {% endblock %}

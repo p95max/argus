@@ -40,9 +40,9 @@ def test_help_lists_all_registered_commands():
         "doctor",
         "deploy",
     ]
-    assert "queue" in command_descriptions["deploy"]
-    assert "start" in command_descriptions["deploy"]
-    assert "result" in command_descriptions["deploy"]
+    assert "production server" in command_descriptions["polling"]
+    assert "production deploy" in command_descriptions["deploy"]
+    assert "progress" in command_descriptions["deploy"]
 
 
 def test_bot_command_menu_matches_help_command_list():
@@ -51,9 +51,10 @@ def test_bot_command_menu_matches_help_command_list():
     assert [command.command for command in commands] == [
         command for command, _description in ACTIVE_BOT_COMMANDS
     ]
+    polling = next(command for command in commands if command.command == "polling")
+    assert "production server" in polling.description
     deploy = next(command for command in commands if command.command == "deploy")
-    assert "queue" in deploy.description
-    assert "result" in deploy.description
+    assert "progress" in deploy.description
 
 
 def test_help_command_rejects_disallowed_update(monkeypatch):
