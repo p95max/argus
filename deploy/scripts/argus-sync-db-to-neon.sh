@@ -42,6 +42,11 @@ NEON_BACKUP_DATABASE_URL="${NEON_BACKUP_DATABASE_URL:-$(read_env_value "NEON_BAC
 [[ -n "$NEON_BACKUP_DATABASE_URL" ]] || fail "NEON_BACKUP_DATABASE_URL is not configured"
 [[ "$DATABASE_URL" != "$NEON_BACKUP_DATABASE_URL" ]] || fail "source and backup database URLs must differ"
 
+# pg_dump/pg_restore must use Neon's direct endpoint, not the PgBouncer pooler.
+if [[ "$NEON_BACKUP_DATABASE_URL" == *-pooler.* ]]; then
+    fail "NEON_BACKUP_DATABASE_URL uses a pooled Neon endpoint; use the direct endpoint without '-pooler'"
+fi
+
 PG_DUMP="${PG_DUMP:-}"
 PG_RESTORE="${PG_RESTORE:-}"
 PSQL="${PSQL:-}"
