@@ -9,6 +9,8 @@ from django.utils.translation import gettext as _
 
 GMAIL_TIMER_UNIT = "argus-check-gmail.timer"
 GMAIL_SERVICE_UNIT = "argus-check-gmail.service"
+SYSTEMCTL_BIN = "/usr/bin/systemctl"
+SUDO_BIN = "/usr/bin/sudo"
 SYSTEMCTL_TIMEOUT_SECONDS = 8
 UNAVAILABLE_STATE = "unavailable"
 
@@ -130,11 +132,11 @@ def apply_gmail_polling_action(action: str) -> str:
 
 
 def _run_systemctl(args: list[str]) -> CommandResult:
-    return _run_command(["systemctl", *args])
+    return _run_command([SYSTEMCTL_BIN, *args])
 
 
 def _run_systemctl_action(args: list[str]) -> None:
-    result = _run_command(["sudo", "-n", "systemctl", *args], timeout=20)
+    result = _run_command([SUDO_BIN, "-n", SYSTEMCTL_BIN, *args], timeout=20)
     if result.returncode != 0:
         detail = result.stderr or result.stdout or _("systemctl command failed")
         raise GmailPollingCommandError(detail)

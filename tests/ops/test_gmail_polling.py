@@ -13,9 +13,9 @@ def test_gmail_polling_status_reads_real_systemd_states(monkeypatch):
 
     def fake_run_command(command, timeout=8):
         calls.append(command)
-        if command[:2] == ["systemctl", "is-enabled"]:
+        if command[:2] == ["/usr/bin/systemctl", "is-enabled"]:
             return CommandResult(0, "enabled", "")
-        if command[:2] == ["systemctl", "is-active"]:
+        if command[:2] == ["/usr/bin/systemctl", "is-active"]:
             return CommandResult(0, "active", "")
         return CommandResult(
             0,
@@ -37,10 +37,10 @@ def test_gmail_polling_status_reads_real_systemd_states(monkeypatch):
     assert status.next_run_label == "14:20"
     assert status.interval_label == "15 minutes"
     assert calls == [
-        ["systemctl", "is-enabled", "argus-check-gmail.timer"],
-        ["systemctl", "is-active", "argus-check-gmail.timer"],
+        ["/usr/bin/systemctl", "is-enabled", "argus-check-gmail.timer"],
+        ["/usr/bin/systemctl", "is-active", "argus-check-gmail.timer"],
         [
-            "systemctl",
+            "/usr/bin/systemctl",
             "show",
             "argus-check-gmail.timer",
             "--property=NextElapseUSecRealtime",
@@ -51,9 +51,9 @@ def test_gmail_polling_status_reads_real_systemd_states(monkeypatch):
 
 def test_gmail_polling_status_reports_systemd_show_error(monkeypatch):
     def fake_run_command(command, timeout=8):
-        if command[:2] == ["systemctl", "is-enabled"]:
+        if command[:2] == ["/usr/bin/systemctl", "is-enabled"]:
             return CommandResult(1, "disabled", "")
-        if command[:2] == ["systemctl", "is-active"]:
+        if command[:2] == ["/usr/bin/systemctl", "is-active"]:
             return CommandResult(3, "inactive", "")
         return CommandResult(1, "", "timer not found")
 
@@ -85,7 +85,7 @@ def test_gmail_polling_status_handles_missing_systemctl(monkeypatch):
     assert status.next_run_label == "not scheduled"
     assert status.interval_label == "unknown"
     assert status.error == "systemctl is not available on this system."
-    assert calls == [["systemctl", "is-enabled", "argus-check-gmail.timer"]]
+    assert calls == [["/usr/bin/systemctl", "is-enabled", "argus-check-gmail.timer"]]
 
 
 def test_gmail_polling_actions_use_sudo_systemctl(monkeypatch):
@@ -102,10 +102,10 @@ def test_gmail_polling_actions_use_sudo_systemctl(monkeypatch):
     assert apply_gmail_polling_action("run_now") == "Gmail check started."
 
     assert calls == [
-        (["sudo", "-n", "systemctl", "enable", "--now", "argus-check-gmail.timer"], 20),
-        (["sudo", "-n", "systemctl", "disable", "--now", "argus-check-gmail.timer"], 20),
+        (["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "enable", "--now", "argus-check-gmail.timer"], 20),
+        (["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "disable", "--now", "argus-check-gmail.timer"], 20),
         (
-            ["sudo", "-n", "systemctl", "--no-block", "start", "argus-check-gmail.service"],
+            ["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "--no-block", "start", "argus-check-gmail.service"],
             20,
         ),
     ]
