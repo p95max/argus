@@ -40,6 +40,7 @@ sudo systemctl enable --now \
     argus-cleanup-old-leads.timer \
     argus-auto-deploy.timer \
     argus-backup-db.timer \
+    argus-sync-db-to-neon.timer \
     argus-health-monitor.timer
 
 systemctl status argus-web.service --no-pager -l
