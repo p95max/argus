@@ -40,11 +40,10 @@ def test_health_monitor_remains_independent_from_background_queue():
 
 def test_doctor_verifies_deployed_queue_runner():
     content = (ROOT / "deploy" / "scripts" / "argus-doctor.sh").read_text()
-    assert "check_executable /usr/local/bin/argus-run-background-job.sh" in content
-    assert (
-        "check_deployed_copy deploy/scripts/argus-run-background-job.sh"
-        in content
-    )
+    assert "deploy/scripts/argus-run-background-job.sh" in content
+    assert 'deployed_path="/usr/local/bin/$(basename "$relative_path")"' in content
+    assert '[[ ! -x "$deployed_path" ]]' in content
+    assert 'cmp -s "$repo_path" "$deployed_path"' in content
 
 
 @pytest.mark.skipif(
@@ -98,7 +97,7 @@ def test_runner_serializes_concurrent_jobs(tmp_path):
             "argus-test-first",
             "bash",
             "-c",
-            f"sleep 0.4; printf 'first\\n' >> {quoted_order_file}",
+            f"sleep 0.4; printf 'first\n' >> {quoted_order_file}",
         ],
         env=env,
         stdout=subprocess.PIPE,
@@ -113,7 +112,7 @@ def test_runner_serializes_concurrent_jobs(tmp_path):
             "argus-test-second",
             "bash",
             "-c",
-            f"printf 'second\\n' >> {quoted_order_file}",
+            f"printf 'second\n' >> {quoted_order_file}",
         ],
         env=env,
         capture_output=True,
@@ -151,7 +150,7 @@ def test_runner_skips_duplicate_job_before_queueing(tmp_path):
             job_name,
             "bash",
             "-c",
-            f"sleep 0.4; printf 'first\\n' >> {quoted_order_file}",
+            f"sleep 0.4; printf 'first\n' >> {quoted_order_file}",
         ],
         env=env,
         stdout=subprocess.PIPE,
@@ -166,7 +165,7 @@ def test_runner_skips_duplicate_job_before_queueing(tmp_path):
             job_name,
             "bash",
             "-c",
-            f"printf 'duplicate\\n' >> {quoted_order_file}",
+            f"printf 'duplicate\n' >> {quoted_order_file}",
         ],
         env=env,
         capture_output=True,
