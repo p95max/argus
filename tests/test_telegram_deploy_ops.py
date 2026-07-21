@@ -59,5 +59,7 @@ def test_auto_deploy_emits_telegram_lifecycle_notifications():
 def test_doctor_verifies_deployed_notifier():
     content = (ROOT / "deploy" / "scripts" / "argus-doctor.sh").read_text()
 
-    assert "check_executable /usr/local/bin/argus-deploy-notify.py" in content
-    assert "check_deployed_copy deploy/scripts/argus-deploy-notify.py" in content
+    assert "deploy/scripts/argus-deploy-notify.py" in content
+    assert 'deployed_path="/usr/local/bin/$(basename "$relative_path")"' in content
+    assert '[[ ! -x "$deployed_path" ]]' in content
+    assert 'cmp -s "$repo_path" "$deployed_path"' in content
