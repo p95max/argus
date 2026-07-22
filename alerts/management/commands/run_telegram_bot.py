@@ -7,6 +7,7 @@ from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandle
 
 from alerts.telegram.config import get_telegram_config
 from alerts.telegram.deploy_command import handle_deploy_command
+from alerts.telegram.doctor_command import handle_doctor_command
 from alerts.telegram.help_command import build_bot_commands, handle_help_command
 from alerts.telegram.handlers import (
     handle_alert_callback,
@@ -15,7 +16,6 @@ from alerts.telegram.handlers import (
     handle_gmail_polling_command,
     handle_health_command,
     handle_mailbox_status_command,
-    handle_doctor_command,
     handle_unread_command,
 )
 
@@ -74,7 +74,6 @@ class Command(BaseCommand):
         application.bot_data["argus_started_at"] = timezone.now()
 
         application.add_error_handler(log_telegram_error)
-
         application.add_handler(
             CallbackQueryHandler(
                 handle_alert_callback,
