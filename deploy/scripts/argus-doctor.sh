@@ -182,6 +182,9 @@ timer_status() {
     enabled="$(systemctl is-enabled "$timer" 2>/dev/null || true)"
     active="$(systemctl is-active "$timer" 2>/dev/null || true)"
     next_run="$(systemctl show "$timer" --property=NextElapseUSecRealtime --value 2>/dev/null || true)"
+    if [[ -z "$next_run" || "$next_run" == "n/a" || "$next_run" == "0" ]]; then
+        next_run="$(systemctl list-timers --all --no-legend --no-pager 2>/dev/null | grep -F "$timer" | head -n 1 || true)"
+    fi
     [[ -n "$next_run" ]] || next_run="not scheduled"
 
     printf '  %s: %s (enabled: %s, next run: %s)\n' \

@@ -73,11 +73,9 @@ def get_server_timers_status() -> ServerTimersStatus:
         )
         next_run_at = _parse_properties(properties.stdout).get("NextElapseUSecRealtime", "")
         if not next_run_at:
-            listed_timers = _run_systemctl(
-                ["list-timers", "--all", "--no-legend", "--no-pager", timer.unit]
-            )
+            listed_timers = _run_systemctl(["list-timers", "--all", "--no-legend", "--no-pager"])
             if listed_timers.returncode == 0:
-                next_run_at = listed_timers.stdout
+                next_run_at = _timer_line(listed_timers.stdout, timer.unit)
         errors = [
             result.stderr or result.stdout
             for result, allowed_codes in (
@@ -144,3 +142,10 @@ def _format_next_run(value: str) -> str:
 
     match = re.search(r"\b(\d{1,2}:\d{2}(?::\d{2})?)\b", value)
     return match.group(1) if match else value
+
+
+def _timer_line(output: str, unit: str) -> str:
+    for line in output.splitlines():
+        if unit in line:
+            return line.strip()
+    return ""

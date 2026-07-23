@@ -15,9 +15,16 @@ def test_server_timer_status_uses_list_timers_when_next_property_is_empty(monkey
         ]
     )
     monkeypatch.setattr(server_timers, "SERVER_TIMERS", (server_timers.SERVER_TIMERS[0],))
-    monkeypatch.setattr(server_timers, "_run_systemctl", lambda args: next(responses))
+    calls = []
+
+    def run_systemctl(args):
+        calls.append(args)
+        return next(responses)
+
+    monkeypatch.setattr(server_timers, "_run_systemctl", run_systemctl)
 
     status = server_timers.get_server_timers_status()
 
     assert status.is_healthy is True
     assert status.timers[0].next_run_at == "12:50:00"
+    assert calls[-1] == ["list-timers", "--all", "--no-legend", "--no-pager"]
