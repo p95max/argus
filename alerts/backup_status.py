@@ -84,6 +84,14 @@ def get_backup_status() -> BackupStatus:
                 "--property=ExecMainExitTimestamp",
             ]
         )
+        unavailable_result = _find_systemd_unavailable(enabled, active, service)
+        if unavailable_result:
+            return BackupStatus(
+                (),
+                error=unavailable_result.stderr
+                or unavailable_result.stdout
+                or "systemctl is unavailable",
+            )
         properties = _parse_properties(service.stdout)
         errors = [
             result.stderr or result.stdout
@@ -146,6 +154,10 @@ def _is_systemd_unavailable(result: CommandResult) -> bool:
             "failed to connect to bus",
         )
     )
+
+
+def _find_systemd_unavailable(*results: CommandResult) -> CommandResult | None:
+    return next((result for result in results if _is_systemd_unavailable(result)), None)
 
 
 def _parse_properties(output: str) -> dict[str, str]:

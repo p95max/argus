@@ -71,9 +71,24 @@ def get_server_timers_status() -> ServerTimersStatus:
         properties = _run_systemctl(
             ["show", timer.unit, "--property=NextElapseUSecRealtime"]
         )
+        unavailable_result = _find_systemd_unavailable(enabled, active, properties)
+        if unavailable_result:
+            return ServerTimersStatus(
+                (),
+                error=unavailable_result.stderr
+                or unavailable_result.stdout
+                or "systemctl is unavailable",
+            )
         next_run_at = _parse_properties(properties.stdout).get("NextElapseUSecRealtime", "")
         if not next_run_at:
             listed_timers = _run_systemctl(["list-timers", "--all", "--no-legend", "--no-pager"])
+            if _is_systemd_unavailable(listed_timers):
+                return ServerTimersStatus(
+                    (),
+                    error=listed_timers.stderr
+                    or listed_timers.stdout
+                    or "systemctl is unavailable",
+                )
             if listed_timers.returncode == 0:
                 next_run_at = _timer_line(listed_timers.stdout, timer.unit)
         errors = [
@@ -136,6 +151,10 @@ def _is_systemd_unavailable(result: CommandResult) -> bool:
             "failed to connect to bus",
         )
     )
+
+
+def _find_systemd_unavailable(*results: CommandResult) -> CommandResult | None:
+    return next((result for result in results if _is_systemd_unavailable(result)), None)
 
 
 def _parse_properties(output: str) -> dict[str, str]:

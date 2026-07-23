@@ -45,3 +45,22 @@ def test_server_timer_status_handles_linux_without_systemd(monkeypatch):
 
     assert status.is_available is False
     assert status.is_healthy is False
+
+
+def test_server_timer_status_handles_systemd_bus_error_after_enabled_check(monkeypatch):
+    responses = iter(
+        [
+            server_timers.CommandResult(0, "disabled", ""),
+            server_timers.CommandResult(1, "", "Failed to connect to bus: Host is down"),
+            server_timers.CommandResult(
+                1,
+                "",
+                "System has not been booted with systemd as init system (PID 1).",
+            ),
+        ]
+    )
+    monkeypatch.setattr(server_timers, "_run_systemctl", lambda args: next(responses))
+
+    status = server_timers.get_server_timers_status()
+
+    assert status.is_available is False
