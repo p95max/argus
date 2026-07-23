@@ -17,6 +17,15 @@ from alerts.server_timers import ServerTimer, ServerTimerStatus, ServerTimersSta
 def healthy_env(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "token")
     monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    # Full health tests must not depend on the CI runner's systemd instance.
+    monkeypatch.setattr(
+        "alerts.health.get_backup_status",
+        lambda: BackupStatus((), error="systemd is unavailable in tests"),
+    )
+    monkeypatch.setattr(
+        "alerts.health.get_server_timers_status",
+        lambda: ServerTimersStatus((), error="systemd is unavailable in tests"),
+    )
 
 
 @pytest.mark.django_db
