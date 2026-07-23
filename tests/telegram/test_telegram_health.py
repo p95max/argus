@@ -39,7 +39,10 @@ def test_build_health_message_contains_operational_state(monkeypatch, alert):
     assert "🩺 <b>Argus: health</b>" in message
     assert "🟢 <b>DB:</b> OK" in message
     assert "🟢 <b>Gmail:</b> OK" in message
-    assert "💾 <b>Backups:</b> Local backup: OK, Last run: 2026-07-23 02:30" in message
+    assert (
+        "💾 <b>Backups:</b>\n"
+        "   Local archive: success (timer: active, Last run: 2026-07-23 02:30)"
+    ) in message
     assert "🟢 <b>Mailboxes:</b> active 1 / errors 0" in message
     assert "🔴 <b>Open errors:</b> 0" in message
     assert "🆕 <b>New leads:</b> 1" in message

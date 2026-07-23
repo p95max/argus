@@ -84,8 +84,8 @@ def test_health_report_includes_successful_backup_status(monkeypatch, healthy_en
     assert report["checks"]["backup"] == {
         "ok": True,
         "status": "ok",
-        "detail": "Local backup: OK, Last run: 2026-07-23 02:30; "
-        "Remote backup: OK, Last run: 2026-07-23 03:15",
+        "detail": "Local archive: success (timer: active, Last run: 2026-07-23 02:30); "
+        "Remote copy: success (timer: active, Last run: 2026-07-23 03:15)",
     }
     assert report["labels"]["checks"]["backup"] == "Backups"
 

@@ -963,6 +963,18 @@ msgstr "Резервные копии"
 msgid "Last run"
 msgstr "Последний запуск"
 
+msgid "Local archive"
+msgstr "Локальный архив"
+
+msgid "Remote copy"
+msgstr "Удалённая копия"
+
+msgid "success"
+msgstr "успешно"
+
+msgid "%(label)s: %(result)s (timer: %(timer)s, %(last_run)s: %(timestamp)s)"
+msgstr "%(label)s: %(result)s (таймер: %(timer)s, %(last_run)s: %(timestamp)s)"
+
 msgid "Argus: deployment"
 msgstr "Argus: развёртывание"
 

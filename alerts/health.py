@@ -173,12 +173,14 @@ def _check_backup_status(status: BackupStatus) -> HealthCheck:
 
 
 def _backup_job_detail(job: BackupJobStatus) -> str:
-    label = _("Local backup") if job.job.key == "local" else _("Remote backup")
-    result = _("OK") if job.result == "success" else job.result
+    label = _("Local archive") if job.job.key == "local" else _("Remote copy")
+    result = _("success") if job.result == "success" else job.result
+    timer = _("active") if job.active_state == "active" else job.active_state
     last_run = job.last_run_at or _("not run yet")
-    return _("%(label)s: %(result)s, %(last_run)s: %(timestamp)s") % {
+    return _("%(label)s: %(result)s (timer: %(timer)s, %(last_run)s: %(timestamp)s)") % {
         "label": label,
         "result": result,
+        "timer": timer,
         "last_run": _("Last run"),
         "timestamp": last_run,
     }

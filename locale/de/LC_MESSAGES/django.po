@@ -954,6 +954,18 @@ msgstr "Sicherungen"
 msgid "Last run"
 msgstr "Letzter Lauf"
 
+msgid "Local archive"
+msgstr "Lokales Archiv"
+
+msgid "Remote copy"
+msgstr "Externe Kopie"
+
+msgid "success"
+msgstr "erfolgreich"
+
+msgid "%(label)s: %(result)s (timer: %(timer)s, %(last_run)s: %(timestamp)s)"
+msgstr "%(label)s: %(result)s (Timer: %(timer)s, %(last_run)s: %(timestamp)s)"
+
 msgid "Argus: deployment"
 msgstr "Argus: Bereitstellung"
 
