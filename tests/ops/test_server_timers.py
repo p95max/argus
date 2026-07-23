@@ -28,3 +28,20 @@ def test_server_timer_status_uses_list_timers_when_next_property_is_empty(monkey
     assert status.is_healthy is True
     assert status.timers[0].next_run_at == "12:50:00"
     assert calls[-1] == ["list-timers", "--all", "--no-legend", "--no-pager"]
+
+
+def test_server_timer_status_handles_linux_without_systemd(monkeypatch):
+    monkeypatch.setattr(
+        server_timers,
+        "_run_systemctl",
+        lambda args: server_timers.CommandResult(
+            1,
+            "",
+            "System has not been booted with systemd as init system (PID 1).",
+        ),
+    )
+
+    status = server_timers.get_server_timers_status()
+
+    assert status.is_available is False
+    assert status.is_healthy is False

@@ -64,7 +64,7 @@ def get_server_timers_status() -> ServerTimersStatus:
     statuses = []
     for timer in SERVER_TIMERS:
         enabled = _run_systemctl(["is-enabled", timer.unit])
-        if enabled.returncode == 127:
+        if _is_systemd_unavailable(enabled):
             return ServerTimersStatus((), error=enabled.stderr or "systemctl is unavailable")
 
         active = _run_systemctl(["is-active", timer.unit])
@@ -125,6 +125,17 @@ def _run_systemctl(args: list[str]) -> CommandResult:
 def _normalize_state(value: str, *, fallback: str) -> str:
     lines = (value or "").strip().splitlines()
     return lines[0].strip() if lines else fallback
+
+
+def _is_systemd_unavailable(result: CommandResult) -> bool:
+    text = f"{result.stdout}\n{result.stderr}".lower()
+    return result.returncode == 127 or any(
+        marker in text
+        for marker in (
+            "system has not been booted with systemd",
+            "failed to connect to bus",
+        )
+    )
 
 
 def _parse_properties(output: str) -> dict[str, str]:

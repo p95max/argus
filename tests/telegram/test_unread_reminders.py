@@ -188,8 +188,8 @@ def test_async_send_telegram_reminder_report_sends_single_message(monkeypatch, m
     assert bot.calls[0]["chat_id"] == "42"
     assert "⏰ <b>Argus: unread leads</b>" in bot.calls[0]["text"]
     assert "🆕 <b>Unread:</b> 2" in bot.calls[0]["text"]
-    assert "📱 <a" in bot.calls[0]["text"]
-    assert bot.calls[0].get("reply_markup") is None
+    assert "📱 <a" not in bot.calls[0]["text"]
+    assert bot.calls[0]["reply_markup"] is not None
     assert first.last_reminded_at is not None
     assert second.last_reminded_at is not None
     assert first.telegram_error == ""
