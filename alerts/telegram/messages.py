@@ -503,6 +503,7 @@ def build_health_message(bot_started_at=None) -> str:
         f"{icon('gmail_recent_check')} <b>Gmail:</b> {html.escape(label('gmail_recent_check'))}",
         f"🕒 <b>{_('Last check')}:</b> {_format_dt(last_check)}",
         f"✅ <b>{_('Last success')}:</b> {_format_dt(last_success)}",
+        f"💾 <b>{_('Backups')}:</b> {html.escape(checks['backup']['detail'])}",
         "",
         f"🔴 <b>{_('Open errors')}:</b> {open_errors}",
         f"🆕 <b>{_('New leads')}:</b> {unread}",

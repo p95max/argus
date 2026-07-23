@@ -932,3 +932,66 @@ msgstr "Warnung"
 
 msgid "Information"
 msgstr "Information"
+
+msgid "Backup status is unavailable because systemd is not available."
+msgstr "Der Sicherungsstatus ist nicht verfügbar, weil systemd nicht verfügbar ist."
+
+msgid "Local backup"
+msgstr "Lokale Sicherung"
+
+msgid "Remote backup"
+msgstr "Externe Sicherung"
+
+msgid "not run yet"
+msgstr "noch nicht ausgeführt"
+
+msgid "%(label)s: %(result)s, %(last_run)s: %(timestamp)s"
+msgstr "%(label)s: %(result)s, %(last_run)s: %(timestamp)s"
+
+msgid "Backups"
+msgstr "Sicherungen"
+
+msgid "Last run"
+msgstr "Letzter Lauf"
+
+msgid "Argus: deployment"
+msgstr "Argus: Bereitstellung"
+
+msgid "In progress"
+msgstr "Läuft"
+
+msgid "Queued"
+msgstr "In Warteschlange"
+
+msgid "A Telegram deployment request is already queued or running. A separate message will arrive when it finishes."
+msgstr "Eine Bereitstellungsanfrage aus Telegram ist bereits in der Warteschlange oder wird ausgeführt. Nach Abschluss folgt eine separate Nachricht."
+
+msgid "Auto-deploy is already running. A new run was not added; the current deployment should finish within 30 minutes."
+msgstr "Auto-Deploy läuft bereits. Es wurde kein weiterer Lauf hinzugefügt; die aktuelle Bereitstellung sollte innerhalb von 30 Minuten abgeschlossen sein."
+
+msgid "Could not create the deployment request: %(error)s."
+msgstr "Bereitstellungsanfrage konnte nicht erstellt werden: %(error)s."
+
+msgid "A deployment request is already queued. A separate message will arrive when it finishes."
+msgstr "Eine Bereitstellungsanfrage ist bereits in der Warteschlange. Nach Abschluss folgt eine separate Nachricht."
+
+msgid "Could not queue the deployment: %(error)s."
+msgstr "Bereitstellung konnte nicht in die Warteschlange gestellt werden: %(error)s."
+
+msgid "Could not queue the deployment."
+msgstr "Bereitstellung konnte nicht in die Warteschlange gestellt werden."
+
+msgid "Shared queue is busy: the run will start after the current job."
+msgstr "Die gemeinsame Warteschlange ist belegt: Der Lauf startet nach der aktuellen Aufgabe."
+
+msgid "Expected start: by %(time)s. Otherwise the request will end after its timeout."
+msgstr "Voraussichtlicher Start: bis %(time)s. Andernfalls endet die Anfrage nach ihrem Timeout."
+
+msgid "Shared queue is free: the run is expected now (%(time)s)."
+msgstr "Die gemeinsame Warteschlange ist frei: Der Start wird jetzt erwartet (%(time)s)."
+
+msgid "Queued in the shared background queue."
+msgstr "In die gemeinsame Hintergrundwarteschlange gestellt."
+
+msgid "The bot will send a separate message about the actual start and result."
+msgstr "Der Bot sendet eine separate Nachricht über den tatsächlichen Start und das Ergebnis."

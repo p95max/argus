@@ -41,6 +41,7 @@ def test_health_monitor_remains_independent_from_background_queue():
 def test_doctor_verifies_deployed_queue_runner():
     content = (ROOT / "deploy" / "scripts" / "argus-doctor.sh").read_text()
     assert "deploy/scripts/argus-run-background-job.sh" in content
+    assert "backup_job_status" in content
     assert 'deployed_path="/usr/local/bin/$(basename "$relative_path")"' in content
     assert '[[ ! -x "$deployed_path" ]]' in content
     assert 'cmp -s "$repo_path" "$deployed_path"' in content

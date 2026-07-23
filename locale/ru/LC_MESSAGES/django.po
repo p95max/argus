@@ -941,3 +941,66 @@ msgstr "Предупреждение"
 
 msgid "Information"
 msgstr "Информация"
+
+msgid "Backup status is unavailable because systemd is not available."
+msgstr "Состояние резервных копий недоступно, потому что systemd недоступен."
+
+msgid "Local backup"
+msgstr "Локальная резервная копия"
+
+msgid "Remote backup"
+msgstr "Удалённая резервная копия"
+
+msgid "not run yet"
+msgstr "ещё не выполнялась"
+
+msgid "%(label)s: %(result)s, %(last_run)s: %(timestamp)s"
+msgstr "%(label)s: %(result)s, %(last_run)s: %(timestamp)s"
+
+msgid "Backups"
+msgstr "Резервные копии"
+
+msgid "Last run"
+msgstr "Последний запуск"
+
+msgid "Argus: deployment"
+msgstr "Argus: развёртывание"
+
+msgid "In progress"
+msgstr "Выполняется"
+
+msgid "Queued"
+msgstr "В очереди"
+
+msgid "A Telegram deployment request is already queued or running. A separate message will arrive when it finishes."
+msgstr "Запрос на развёртывание из Telegram уже поставлен в очередь или выполняется. После завершения придёт отдельное сообщение."
+
+msgid "Auto-deploy is already running. A new run was not added; the current deployment should finish within 30 minutes."
+msgstr "Автоматическое развёртывание уже выполняется. Новый запуск не добавлен; текущий должен завершиться в течение 30 минут."
+
+msgid "Could not create the deployment request: %(error)s."
+msgstr "Не удалось создать запрос на развёртывание: %(error)s."
+
+msgid "A deployment request is already queued. A separate message will arrive when it finishes."
+msgstr "Запрос на развёртывание уже поставлен в очередь. После завершения придёт отдельное сообщение."
+
+msgid "Could not queue the deployment: %(error)s."
+msgstr "Не удалось поставить развёртывание в очередь: %(error)s."
+
+msgid "Could not queue the deployment."
+msgstr "Не удалось поставить развёртывание в очередь."
+
+msgid "Shared queue is busy: the run will start after the current job."
+msgstr "Общая очередь занята: запуск начнётся после текущей задачи."
+
+msgid "Expected start: by %(time)s. Otherwise the request will end after its timeout."
+msgstr "Ожидаемый запуск: до %(time)s. Иначе запрос завершится по тайм-ауту."
+
+msgid "Shared queue is free: the run is expected now (%(time)s)."
+msgstr "Общая очередь свободна: запуск ожидается сейчас (%(time)s)."
+
+msgid "Queued in the shared background queue."
+msgstr "Поставлено в общую фоновую очередь."
+
+msgid "The bot will send a separate message about the actual start and result."
+msgstr "Бот отдельно сообщит о фактическом старте и результате."

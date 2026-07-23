@@ -35,6 +35,20 @@ class DeployQueueResult:
     message: str
 
 
+def _t(message: str) -> str:
+    return telegram_gettext(message)
+
+
+def _build_deploy_message(icon: str, status: str, *body: str) -> str:
+    lines = [
+        f"{icon} <b>{_t('Argus: deployment')}</b>",
+        f"📌 <b>{_t('Status')}:</b> {_t(status)}",
+        "",
+        *body,
+    ]
+    return "\n".join(lines)
+
+
 def _service_state() -> str:
     try:
         result = subprocess.run(
@@ -115,10 +129,13 @@ def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
     if PENDING_REQUEST_FILE.exists() or ACTIVE_REQUEST_FILE.exists():
         return DeployQueueResult(
             ok=True,
-            message=(
-                "⏳ <b>Argus deploy</b>\n"
-                "Telegram-запрос уже поставлен в очередь или выполняется. "
-                "После завершения придёт отдельное сообщение."
+            message=_build_deploy_message(
+                "⏳",
+                "In progress",
+                _t(
+                    "A Telegram deployment request is already queued or running. "
+                    "A separate message will arrive when it finishes."
+                ),
             ),
         )
 
@@ -126,10 +143,13 @@ def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
     if service_state in {"active", "activating", "reloading"}:
         return DeployQueueResult(
             ok=True,
-            message=(
-                "⏳ <b>Argus deploy</b>\n"
-                "Auto-deploy уже запущен таймером или вручную. "
-                "Новый запуск не добавлен; текущий должен завершиться в пределах 30 минут."
+            message=_build_deploy_message(
+                "⏳",
+                "In progress",
+                _t(
+                    "Auto-deploy is already running. A new run was not added; "
+                    "the current deployment should finish within 30 minutes."
+                ),
             ),
         )
 
@@ -142,19 +162,24 @@ def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
         logger.exception("Could not create Telegram deploy request file.")
         return DeployQueueResult(
             ok=False,
-            message=(
-                "🚨 <b>Argus deploy</b>\n"
-                f"Не удалось создать запрос: {exc.__class__.__name__}."
+            message=_build_deploy_message(
+                "🔴",
+                "Error",
+                _t("Could not create the deployment request: %(error)s.")
+                % {"error": exc.__class__.__name__},
             ),
         )
 
     if not created:
         return DeployQueueResult(
             ok=True,
-            message=(
-                "⏳ <b>Argus deploy</b>\n"
-                "Запрос уже поставлен в очередь. "
-                "После завершения придёт отдельное сообщение."
+            message=_build_deploy_message(
+                "⏳",
+                "Queued",
+                _t(
+                    "A deployment request is already queued. "
+                    "A separate message will arrive when it finishes."
+                ),
             ),
         )
 
@@ -179,9 +204,11 @@ def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
         logger.exception("Could not enqueue Telegram deploy request.")
         return DeployQueueResult(
             ok=False,
-            message=(
-                "🚨 <b>Argus deploy</b>\n"
-                f"Не удалось поставить деплой в очередь: {exc.__class__.__name__}."
+            message=_build_deploy_message(
+                "🔴",
+                "Error",
+                _t("Could not queue the deployment: %(error)s.")
+                % {"error": exc.__class__.__name__},
             ),
         )
 
@@ -191,9 +218,10 @@ def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
         logger.error("Telegram deploy enqueue failed: %s", detail)
         return DeployQueueResult(
             ok=False,
-            message=(
-                "🚨 <b>Argus deploy</b>\n"
-                "Не удалось поставить деплой в очередь.\n"
+            message=_build_deploy_message(
+                "🔴",
+                "Error",
+                _t("Could not queue the deployment."),
                 f"<pre>{html.escape(detail[:1200])}</pre>"
             ),
         )
@@ -201,19 +229,25 @@ def request_deploy(chat_id: str, user_id: str = "") -> DeployQueueResult:
     if queue_busy:
         latest_start = requested_local + timedelta(minutes=15)
         timing = (
-            "Общая очередь занята: запуск произойдёт после текущей задачи.\n"
-            f"Ориентир запуска: до {latest_start:%H:%M}, иначе запрос завершится по тайм-ауту."
+            _t("Shared queue is busy: the run will start after the current job.")
+            + "\n"
+            + _t("Expected start: by %(time)s. Otherwise the request will end after its timeout.")
+            % {"time": f"{latest_start:%H:%M}"}
         )
     else:
-        timing = f"Общая очередь свободна: запуск ожидается сейчас ({requested_local:%H:%M:%S})."
+        timing = _t("Shared queue is free: the run is expected now (%(time)s).") % {
+            "time": f"{requested_local:%H:%M:%S}"
+        }
 
     return DeployQueueResult(
         ok=True,
-        message=(
-            "🚀 <b>Argus deploy</b>\n"
-            "Статус: поставлен в общую очередь.\n"
-            f"{timing}\n\n"
-            "Бот отдельно сообщит о фактическом старте и результате."
+        message=_build_deploy_message(
+            "🚀",
+            "Queued",
+            _t("Queued in the shared background queue."),
+            timing,
+            "",
+            _t("The bot will send a separate message about the actual start and result."),
         ),
     )
 

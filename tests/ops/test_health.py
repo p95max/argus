@@ -6,6 +6,7 @@ from django.core.management import call_command
 from django.urls import reverse
 from django.utils import timezone
 
+from alerts.backup_status import BackupJob, BackupJobStatus, BackupStatus
 from alerts.health import build_health_report
 from alerts.models import ArgusSettings, LanguageCode, MailboxAccount
 from alerts.seed_data import DEMO_MAILBOX_EMAIL
@@ -62,6 +63,44 @@ def test_health_report_marks_stale_gmail_check(healthy_env):
 
     assert report["checks"]["gmail_recent_check"]["ok"] is False
     assert report["checks"]["gmail_recent_check"]["status"] == "warning"
+
+
+@pytest.mark.django_db
+def test_health_report_includes_successful_backup_status(monkeypatch, healthy_env):
+    local = BackupJob("local", "local.timer", "local.service")
+    remote = BackupJob("remote", "remote.timer", "remote.service")
+    monkeypatch.setattr(
+        "alerts.health.get_backup_status",
+        lambda: BackupStatus(
+            (
+                BackupJobStatus(local, "enabled", "active", "success", "2026-07-23 02:30"),
+                BackupJobStatus(remote, "enabled", "active", "success", "2026-07-23 03:15"),
+            )
+        ),
+    )
+
+    report = build_health_report()
+
+    assert report["checks"]["backup"] == {
+        "ok": True,
+        "status": "ok",
+        "detail": "Local backup: OK, Last run: 2026-07-23 02:30; "
+        "Remote backup: OK, Last run: 2026-07-23 03:15",
+    }
+    assert report["labels"]["checks"]["backup"] == "Backups"
+
+
+@pytest.mark.django_db
+def test_health_report_keeps_local_health_ok_without_systemd(monkeypatch, healthy_env):
+    monkeypatch.setattr(
+        "alerts.health.get_backup_status",
+        lambda: BackupStatus((), error="systemctl is unavailable"),
+    )
+
+    report = build_health_report()
+
+    assert report["checks"]["backup"]["ok"] is True
+    assert report["checks"]["backup"]["status"] == "unavailable"
 
 
 @pytest.mark.django_db

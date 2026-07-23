@@ -9,6 +9,7 @@ from django.db.models import Count, Max, Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
+from .backup_status import BackupJobStatus, BackupStatus, get_backup_status
 from .models import MailboxAccount, MarketplaceAlert, ServiceEvent
 from .seed_data import DEMO_MAILBOX_EMAIL
 from .telegram.config import get_telegram_config
@@ -25,6 +26,7 @@ class HealthCheck:
 
 def build_health_report(*, include_deploy_checks: bool = False) -> dict:
     now = timezone.now()
+    backup_status = get_backup_status()
     checks = {
         "database": _check_database(),
         "active_mailbox": _check_active_mailbox(),
@@ -32,6 +34,7 @@ def build_health_report(*, include_deploy_checks: bool = False) -> dict:
         "telegram_delivery": _check_recent_telegram_delivery_errors(now),
         "gmail_recent_check": _check_recent_gmail_check(now),
         "open_service_errors": _check_open_service_errors(),
+        "backup": _check_backup_status(backup_status),
     }
 
     if include_deploy_checks:
@@ -155,6 +158,32 @@ def _check_open_service_errors() -> HealthCheck:
     return HealthCheck(True, "ok", _("No open service errors."))
 
 
+def _check_backup_status(status: BackupStatus) -> HealthCheck:
+    if not status.is_available:
+        return HealthCheck(
+            True,
+            "unavailable",
+            _("Backup status is unavailable because systemd is not available."),
+        )
+
+    details = "; ".join(_backup_job_detail(job) for job in status.jobs)
+    if status.is_healthy:
+        return HealthCheck(True, "ok", details)
+    return HealthCheck(False, "error", details)
+
+
+def _backup_job_detail(job: BackupJobStatus) -> str:
+    label = _("Local backup") if job.job.key == "local" else _("Remote backup")
+    result = _("OK") if job.result == "success" else job.result
+    last_run = job.last_run_at or _("not run yet")
+    return _("%(label)s: %(result)s, %(last_run)s: %(timestamp)s") % {
+        "label": label,
+        "result": result,
+        "last_run": _("Last run"),
+        "timestamp": last_run,
+    }
+
+
 def _check_deploy_secrets() -> HealthCheck:
     missing = []
     for name in ("SECRET_KEY", "DATABASE_URL", "GMAIL_OAUTH_TOKEN_FERNET_KEY"):
@@ -249,6 +278,7 @@ def _build_health_labels() -> dict:
             "telegram_delivery": _("Telegram delivery"),
             "gmail_recent_check": _("Latest Gmail check"),
             "open_service_errors": _("Open service errors"),
+            "backup": _("Backups"),
             "secrets": _("Production secrets"),
             "debug": _("Debug mode"),
             "demo_data": _("Demo data"),

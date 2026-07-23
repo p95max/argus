@@ -151,6 +151,27 @@ check_application_health() {
     return 1
 }
 
+backup_job_status() {
+    local label="$1"
+    local timer="$2"
+    local service="$3"
+    local timer_state
+    local result
+    local last_run
+
+    timer_state="$(systemctl is-active "$timer" 2>/dev/null || true)"
+    result="$(systemctl show "$service" --property=Result --value 2>/dev/null || true)"
+    last_run="$(systemctl show "$service" --property=ExecMainExitTimestamp --value 2>/dev/null || true)"
+    [[ -n "$last_run" ]] || last_run="not run yet"
+
+    if [[ "$timer_state" != "active" || "$result" != "success" ]]; then
+        record_problem "$label backup is unhealthy: timer=$timer_state result=${result:-unknown}"
+    fi
+
+    printf '  %s: %s (timer: %s, last run: %s)\n' \
+        "$label" "${result:-unknown}" "${timer_state:-unknown}" "$last_run"
+}
+
 cd "$PROJECT_DIR"
 HEALTH_BODY="$(mktemp /tmp/argus-health.XXXXXX.json)"
 
@@ -192,6 +213,9 @@ printf 'Ops deployment: %s (%s/%s scripts current)\n' \
     "$([[ "$DEPLOYED_SCRIPTS" == "${#SCRIPTS[@]}" ]] && echo OK || echo FAILED)" \
     "$DEPLOYED_SCRIPTS" "${#SCRIPTS[@]}"
 printf 'Application:    %s\n' "$APPLICATION_STATUS"
+printf 'Backups:\n'
+backup_job_status "Local archive" "argus-backup-db.timer" "argus-backup-db.service"
+backup_job_status "Remote copy" "argus-sync-db-to-neon.timer" "argus-sync-db-to-neon.service"
 printf 'Systemd:        %s\n' "$([[ "$FAILED_UNITS_COUNT" -eq 0 ]] && echo 'No failed units' || echo "$FAILED_UNITS_COUNT failed unit(s)")"
 printf 'Disk usage:     %s%%\n' "$DISK_USED_PERCENT"
 
