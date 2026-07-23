@@ -119,9 +119,25 @@ def test_health_report_includes_server_timers(monkeypatch, healthy_env):
     assert report["checks"]["server_timers"] == {
         "ok": True,
         "status": "ok",
-        "detail": "Gmail checks: active, next run: 12:45:00",
+        "detail": "🟢 Gmail checks: active, next run: 12:45:00",
     }
     assert report["labels"]["checks"]["server_timers"] == "Server timers"
+
+
+@pytest.mark.django_db
+def test_health_report_marks_unhealthy_timer_red(monkeypatch, healthy_env):
+    timer = ServerTimer("gmail", "argus-check-gmail.timer")
+    monkeypatch.setattr(
+        "alerts.health.get_server_timers_status",
+        lambda: ServerTimersStatus(
+            (ServerTimerStatus(timer, "disabled", "inactive", "", "timer is disabled"),)
+        ),
+    )
+
+    report = build_health_report()
+
+    assert report["checks"]["server_timers"]["ok"] is False
+    assert report["checks"]["server_timers"]["detail"].startswith("🔴 Gmail checks: inactive")
 
 
 @pytest.mark.django_db

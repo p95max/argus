@@ -213,13 +213,15 @@ def _server_timer_detail(timer: ServerTimerStatus) -> str:
         "backup_remote": _("Remote copy"),
         "health": _("Health monitor"),
     }
+    icon = "🟢" if timer.is_healthy else "🔴"
     state = _("active") if timer.active_state == "active" else timer.active_state
     next_run = timer.next_run_at or _("not scheduled")
-    return _("%(label)s: %(state)s, next run: %(next_run)s") % {
+    details = _("%(label)s: %(state)s, next run: %(next_run)s") % {
         "label": labels[timer.timer.key],
         "state": state,
         "next_run": next_run,
     }
+    return f"{icon} {details}"
 
 
 def _check_deploy_secrets() -> HealthCheck:

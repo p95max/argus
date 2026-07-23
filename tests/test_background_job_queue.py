@@ -43,6 +43,7 @@ def test_doctor_verifies_deployed_queue_runner():
     assert "deploy/scripts/argus-run-background-job.sh" in content
     assert "backup_job_status" in content
     assert "timer_status" in content
+    assert "grep -oE" in content
     assert 'deployed_path="/usr/local/bin/$(basename "$relative_path")"' in content
     assert '[[ ! -x "$deployed_path" ]]' in content
     assert 'cmp -s "$repo_path" "$deployed_path"' in content
