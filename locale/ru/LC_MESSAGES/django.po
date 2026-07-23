@@ -975,6 +975,30 @@ msgstr "успешно"
 msgid "%(label)s: %(result)s (timer: %(timer)s, %(last_run)s: %(timestamp)s)"
 msgstr "%(label)s: %(result)s (таймер: %(timer)s, %(last_run)s: %(timestamp)s)"
 
+msgid "Server timer status is unavailable because systemd is not available."
+msgstr "Состояние серверных таймеров недоступно, потому что systemd недоступен."
+
+msgid "Server timers"
+msgstr "Серверные таймеры"
+
+msgid "Gmail checks"
+msgstr "Проверки Gmail"
+
+msgid "Unread reminders"
+msgstr "Напоминания о непрочитанных"
+
+msgid "Lead cleanup"
+msgstr "Очистка обращений"
+
+msgid "Automatic deploy"
+msgstr "Автоматическое развёртывание"
+
+msgid "Health monitor"
+msgstr "Мониторинг состояния"
+
+msgid "%(label)s: %(state)s, next run: %(next_run)s"
+msgstr "%(label)s: %(state)s, следующий запуск: %(next_run)s"
+
 msgid "Argus: deployment"
 msgstr "Argus: развёртывание"
 

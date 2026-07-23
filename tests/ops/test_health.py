@@ -10,6 +10,7 @@ from alerts.backup_status import BackupJob, BackupJobStatus, BackupStatus
 from alerts.health import build_health_report
 from alerts.models import ArgusSettings, LanguageCode, MailboxAccount
 from alerts.seed_data import DEMO_MAILBOX_EMAIL
+from alerts.server_timers import ServerTimer, ServerTimerStatus, ServerTimersStatus
 
 
 @pytest.fixture
@@ -101,6 +102,26 @@ def test_health_report_keeps_local_health_ok_without_systemd(monkeypatch, health
 
     assert report["checks"]["backup"]["ok"] is True
     assert report["checks"]["backup"]["status"] == "unavailable"
+
+
+@pytest.mark.django_db
+def test_health_report_includes_server_timers(monkeypatch, healthy_env):
+    timer = ServerTimer("gmail", "argus-check-gmail.timer")
+    monkeypatch.setattr(
+        "alerts.health.get_server_timers_status",
+        lambda: ServerTimersStatus(
+            (ServerTimerStatus(timer, "enabled", "active", "12:45:00"),)
+        ),
+    )
+
+    report = build_health_report()
+
+    assert report["checks"]["server_timers"] == {
+        "ok": True,
+        "status": "ok",
+        "detail": "Gmail checks: active, next run: 12:45:00",
+    }
+    assert report["labels"]["checks"]["server_timers"] == "Server timers"
 
 
 @pytest.mark.django_db

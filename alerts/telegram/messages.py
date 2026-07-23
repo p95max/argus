@@ -478,6 +478,7 @@ def build_health_message(bot_started_at=None) -> str:
     telegram_errors_recent = summary["alerts"].get("telegram_errors_recent", 0)
     open_errors = summary["open_service_errors"]
     backup_details = checks["backup"]["detail"].split("; ")
+    timer_details = checks["server_timers"]["detail"].split("; ")
     uptime = _("unknown")
     if bot_started_at:
         delta = timezone.now() - bot_started_at
@@ -506,6 +507,8 @@ def build_health_message(bot_started_at=None) -> str:
         f"✅ <b>{_('Last success')}:</b> {_format_dt(last_success)}",
         f"💾 <b>{_('Backups')}:</b>",
         *[f"   {html.escape(detail)}" for detail in backup_details],
+        f"⏱ <b>{_('Server timers')}:</b>",
+        *[f"   {html.escape(detail)}" for detail in timer_details],
         "",
         f"🔴 <b>{_('Open errors')}:</b> {open_errors}",
         f"🆕 <b>{_('New leads')}:</b> {unread}",

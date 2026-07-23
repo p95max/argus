@@ -172,6 +172,22 @@ backup_job_status() {
         "$label" "${result:-unknown}" "${timer_state:-unknown}" "$last_run"
 }
 
+timer_status() {
+    local label="$1"
+    local timer="$2"
+    local enabled
+    local active
+    local next_run
+
+    enabled="$(systemctl is-enabled "$timer" 2>/dev/null || true)"
+    active="$(systemctl is-active "$timer" 2>/dev/null || true)"
+    next_run="$(systemctl show "$timer" --property=NextElapseUSecRealtime --value 2>/dev/null || true)"
+    [[ -n "$next_run" ]] || next_run="not scheduled"
+
+    printf '  %s: %s (enabled: %s, next run: %s)\n' \
+        "$label" "${active:-unknown}" "${enabled:-unknown}" "$next_run"
+}
+
 cd "$PROJECT_DIR"
 HEALTH_BODY="$(mktemp /tmp/argus-health.XXXXXX.json)"
 
@@ -213,6 +229,14 @@ printf 'Ops deployment: %s (%s/%s scripts current)\n' \
     "$([[ "$DEPLOYED_SCRIPTS" == "${#SCRIPTS[@]}" ]] && echo OK || echo FAILED)" \
     "$DEPLOYED_SCRIPTS" "${#SCRIPTS[@]}"
 printf 'Application:    %s\n' "$APPLICATION_STATUS"
+printf 'Server timers:\n'
+timer_status "Gmail checks" "argus-check-gmail.timer"
+timer_status "Unread reminders" "argus-unread-reminders.timer"
+timer_status "Lead cleanup" "argus-cleanup-old-leads.timer"
+timer_status "Automatic deploy" "argus-auto-deploy.timer"
+timer_status "Local backup" "argus-backup-db.timer"
+timer_status "Remote backup" "argus-sync-db-to-neon.timer"
+timer_status "Health monitor" "argus-health-monitor.timer"
 printf 'Backups:\n'
 backup_job_status "Local archive" "argus-backup-db.timer" "argus-backup-db.service"
 backup_job_status "Remote copy" "argus-sync-db-to-neon.timer" "argus-sync-db-to-neon.service"

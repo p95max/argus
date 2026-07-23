@@ -12,6 +12,7 @@ from django.utils.translation import gettext as _
 from .backup_status import BackupJobStatus, BackupStatus, get_backup_status
 from .models import MailboxAccount, MarketplaceAlert, ServiceEvent
 from .seed_data import DEMO_MAILBOX_EMAIL
+from .server_timers import ServerTimerStatus, ServerTimersStatus, get_server_timers_status
 from .telegram.config import get_telegram_config
 
 TELEGRAM_ERROR_LOOKBACK = timedelta(hours=24)
@@ -27,6 +28,7 @@ class HealthCheck:
 def build_health_report(*, include_deploy_checks: bool = False) -> dict:
     now = timezone.now()
     backup_status = get_backup_status()
+    timers_status = get_server_timers_status()
     checks = {
         "database": _check_database(),
         "active_mailbox": _check_active_mailbox(),
@@ -35,6 +37,7 @@ def build_health_report(*, include_deploy_checks: bool = False) -> dict:
         "gmail_recent_check": _check_recent_gmail_check(now),
         "open_service_errors": _check_open_service_errors(),
         "backup": _check_backup_status(backup_status),
+        "server_timers": _check_server_timers(timers_status),
     }
 
     if include_deploy_checks:
@@ -186,6 +189,39 @@ def _backup_job_detail(job: BackupJobStatus) -> str:
     }
 
 
+def _check_server_timers(status: ServerTimersStatus) -> HealthCheck:
+    if not status.is_available:
+        return HealthCheck(
+            True,
+            "unavailable",
+            _("Server timer status is unavailable because systemd is not available."),
+        )
+
+    details = "; ".join(_server_timer_detail(timer) for timer in status.timers)
+    if status.is_healthy:
+        return HealthCheck(True, "ok", details)
+    return HealthCheck(False, "error", details)
+
+
+def _server_timer_detail(timer: ServerTimerStatus) -> str:
+    labels = {
+        "gmail": _("Gmail checks"),
+        "unread": _("Unread reminders"),
+        "cleanup": _("Lead cleanup"),
+        "deploy": _("Automatic deploy"),
+        "backup_local": _("Local archive"),
+        "backup_remote": _("Remote copy"),
+        "health": _("Health monitor"),
+    }
+    state = _("active") if timer.active_state == "active" else timer.active_state
+    next_run = timer.next_run_at or _("not scheduled")
+    return _("%(label)s: %(state)s, next run: %(next_run)s") % {
+        "label": labels[timer.timer.key],
+        "state": state,
+        "next_run": next_run,
+    }
+
+
 def _check_deploy_secrets() -> HealthCheck:
     missing = []
     for name in ("SECRET_KEY", "DATABASE_URL", "GMAIL_OAUTH_TOKEN_FERNET_KEY"):
@@ -281,6 +317,7 @@ def _build_health_labels() -> dict:
             "gmail_recent_check": _("Latest Gmail check"),
             "open_service_errors": _("Open service errors"),
             "backup": _("Backups"),
+            "server_timers": _("Server timers"),
             "secrets": _("Production secrets"),
             "debug": _("Debug mode"),
             "demo_data": _("Demo data"),

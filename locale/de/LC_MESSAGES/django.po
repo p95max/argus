@@ -966,6 +966,30 @@ msgstr "erfolgreich"
 msgid "%(label)s: %(result)s (timer: %(timer)s, %(last_run)s: %(timestamp)s)"
 msgstr "%(label)s: %(result)s (Timer: %(timer)s, %(last_run)s: %(timestamp)s)"
 
+msgid "Server timer status is unavailable because systemd is not available."
+msgstr "Der Status der Server-Timer ist nicht verfügbar, weil systemd nicht verfügbar ist."
+
+msgid "Server timers"
+msgstr "Server-Timer"
+
+msgid "Gmail checks"
+msgstr "Gmail-Prüfungen"
+
+msgid "Unread reminders"
+msgstr "Erinnerungen an ungelesene Anfragen"
+
+msgid "Lead cleanup"
+msgstr "Bereinigung von Anfragen"
+
+msgid "Automatic deploy"
+msgstr "Automatische Bereitstellung"
+
+msgid "Health monitor"
+msgstr "Zustandsüberwachung"
+
+msgid "%(label)s: %(state)s, next run: %(next_run)s"
+msgstr "%(label)s: %(state)s, nächster Lauf: %(next_run)s"
+
 msgid "Argus: deployment"
 msgstr "Argus: Bereitstellung"
 
