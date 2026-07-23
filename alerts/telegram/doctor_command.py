@@ -37,14 +37,14 @@ def build_doctor_script_message() -> str:
         return (
             f"🚨 <b>{title}</b>\n"
             "📌 <b>Status:</b> ERROR\n"
-            f"🧩 <b>Component:</b> <code>{DOCTOR_SCRIPT}</code>\n\n"
+            "\n"
             f"<pre>{DOCTOR_SCRIPT} not found</pre>"
         )
     except subprocess.TimeoutExpired:
         return (
             f"🚨 <b>{title}</b>\n"
             "📌 <b>Status:</b> ERROR\n"
-            "🧩 <b>Component:</b> doctor\n\n"
+            "\n"
             f"<pre>Health check timed out after {DOCTOR_TIMEOUT_SECONDS} seconds.</pre>"
         )
 
@@ -60,7 +60,7 @@ def build_doctor_script_message() -> str:
     return (
         f"{icon} <b>{title}</b>\n"
         f"📌 <b>Status:</b> {status}\n"
-        "🧩 <b>Component:</b> server\n\n"
+        "\n"
         f"<pre>{html.escape(combined_output)}</pre>"
     )
 

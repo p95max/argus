@@ -35,6 +35,7 @@ def test_build_doctor_script_message_uses_environment_label(monkeypatch):
 
     assert "🟢 <b>[PROD] Argus: technical check</b>" in message
     assert "📌 <b>Status:</b> OK" in message
+    assert "Component:" not in message
     assert "Overall status: HEALTHY" in message
     assert "Sync: up to date" in message
 
