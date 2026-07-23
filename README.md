@@ -19,7 +19,7 @@ Argus is a Django 6 control panel for Kleinanzeigen mailbox operations. It reads
 - Full Jazzmin Admin at `/control/`.
 - Mobile staff panel at `/m/`.
 - Public health endpoint at `/health/`.
-- Full health endpoint at `/health/full/` for staff users or `Authorization: Bearer $ARGUS_HEALTH_TOKEN`.
+- Full health endpoint at `/health/full/` for staff users or `Authorization: Bearer $ARGUS_HEALTH_TOKEN`, with database, mailbox, Telegram, Gmail, backup, and systemd timer diagnostics.
 - Multiple Gmail mailboxes with per-mailbox OAuth.
 - Encrypted Gmail refresh tokens in `MailboxAccount.gmail_oauth_token`.
 - Buyer alerts, noise/system alerts, service events, unread reminders, cleanup, and mailbox health tracking.
@@ -186,7 +186,7 @@ Production Django uses the local VPS PostgreSQL instance from `DATABASE_URL`. A 
 
 `argus-sync-db-to-neon.timer` starts daily at 03:15 with a randomized delay of up to 15 minutes. It replaces the remote backup from a consistent local dump, validates it, and compares the `django_migrations` count between both databases. The target is therefore normally no more than about one day behind the primary database.
 
-The first production synchronization completed successfully with `django_migrations=37`; this number will increase as new migrations are added. `ARGUS DOCTOR` verifies that the synchronization timer is enabled and active.
+The first production synchronization completed successfully with `django_migrations=37`; this number will increase as new migrations are added. `ARGUS DOCTOR` and Telegram `/health` show the local archive and remote-copy result, their timer state, and the last run time.
 
 Run or inspect the synchronization manually:
 
@@ -227,6 +227,8 @@ python -m poetry run python manage.py check --deploy --fail-level ERROR
 
 The deploy check fails if local demo data leaks into production, including the `local-demo@example.local` mailbox. It also verifies deploy-sensitive settings such as `DEBUG`, `DATABASE_URL`, and `GMAIL_OAUTH_TOKEN_FERNET_KEY`.
 
+Operational warnings for a stale Gmail check or recent Telegram delivery errors are reported as `WARN`, but do not cancel a deploy. This avoids a false failure when `check_gmail` is waiting behind the shared background-job lock. Database, secrets, service, backup, timer, and demo-data failures remain blocking.
+
 ## Production Operations
 
 Production runs directly on the VPS without Docker. It uses a Python virtual environment, Gunicorn, and systemd services/timers to reduce overhead on a small VPS plan.
@@ -247,6 +249,30 @@ cd /opt/argus
 ./deploy/install-ops.sh
 ```
 
+Run this command after deploying a change under `deploy/scripts/`, `deploy/systemd/`, `deploy/sudoers/`, or `deploy/install-ops.sh`. `/usr/local/bin` helpers and systemd unit files are intentionally installed separately from the Git working tree; `/doctor` reports `Ops deployment: FAILED` while they differ.
+
+### Health And Doctor
+
+`/health/` is intentionally a minimal process liveness endpoint for uptime monitoring. `/health/full/` and the Telegram `/health` command provide operational diagnostics.
+
+Telegram `/health` shows:
+
+- database, active mailboxes, Telegram configuration and recent delivery errors;
+- Gmail check freshness and last successful check;
+- local archive and remote-copy backup result, timer state, and last run;
+- every production timer with a green `enabled + active` status or a red unhealthy status and its next run;
+- open service errors, unread leads, today's events, and bot uptime.
+
+Telegram `/doctor` runs `/usr/local/bin/argus-doctor.sh`. It reports service and timer totals, deployed ops-file consistency, individual server timer states, backup results, failed systemd units, disk usage, and Git synchronization.
+
+Use these commands when doctor reports a failure:
+
+```bash
+sudo systemctl --failed --no-pager -l
+sudo journalctl -u argus-auto-deploy.service -n 120 --no-pager -l
+/usr/local/bin/argus-doctor.sh
+```
+
 ### Gmail Polling Control
 
 Telegram `/polling` shows and manages the real `argus-check-gmail.timer`
@@ -260,7 +286,7 @@ The UI reads:
 systemctl is-enabled argus-check-gmail.timer
 systemctl is-active argus-check-gmail.timer
 systemctl show argus-check-gmail.timer --property=NextElapseUSecRealtime
-systemctl list-timers --all --no-pager argus-check-gmail.timer
+systemctl list-timers --all --no-pager | grep argus-check-gmail.timer
 systemctl cat argus-check-gmail.timer
 ```
 
@@ -314,8 +340,8 @@ sudo journalctl \
 | `/summary` | Show today's lead summary. |
 | `/unread` | Show one report with unread leads. |
 | `/polling` | Manage the Gmail polling timer on the production server. |
-| `/health` | Show DB, Gmail, Telegram, and service-error health. |
-| `/doctor` | Run the production doctor and show systemd, Git, health, and deploy status. |
+| `/health` | Show DB, Gmail, Telegram, backup, timer, and service-error health. |
+| `/doctor` | Run the production doctor and show systemd services, individual timers, backups, Git, and deploy status. |
 | `/deploy` | Queue an immediate production auto-deploy and report queue state, actual start, and final result. |
 
 `/deploy` does not run `git add`, `git commit`, or `git push`. It starts the existing `argus-auto-deploy.service` through the shared queue. The bot immediately reports whether the queue is free or busy, then sends a start notification and one of these final states:
@@ -323,6 +349,8 @@ sudo journalctl \
 - `UPDATED` — a new commit was deployed.
 - `UP TO DATE` — `origin/master` and the local `HEAD` were already equal; services were not redeployed.
 - `FAILED` — the deploy command exited with an error.
+
+Deploy readiness prints non-blocking operational issues as `WARN`. A stale Gmail check can occur while it waits for the same serialized queue as auto-deploy; it is visible in the report but does not abort the deployment.
 
 ## Gmail Flow
 
