@@ -74,9 +74,13 @@ def build_alert_message(alert: MarketplaceAlert) -> str:
 
 @use_argus_telegram_language
 def build_alert_reminder_message(alert: MarketplaceAlert) -> str:
+    event_time = alert.received_at or alert.created_at
     return _fit_telegram_message(
         [
-            _("⏰ <b>Reminder: alert is still unread</b>"),
+            _("⏰ <b>Argus: unread lead reminder</b>"),
+            f"📅 <b>{_('Date')}:</b> {_format_date_from_datetime(event_time)}",
+            f"🕒 <b>{_('Time')}:</b> {_format_time(event_time)}",
+            f"🟠 <b>{_('Status')}:</b> {_('needs attention')}",
             "",
             build_alert_message(alert),
         ]
@@ -264,37 +268,42 @@ def _alert_taken_by_label(alert: MarketplaceAlert) -> str:
 
 @use_argus_telegram_language
 def build_system_message(title: str, details: str = "") -> str:
-    icon = _system_message_icon(title, details)
+    icon, status = _system_message_status(title, details)
+    now = timezone.now()
 
     lines = [
-        f"{icon} <b>{_('Argus: system notice')}</b>",
-        f"📌 {html.escape(title)}",
+        _("⚙️ <b>Argus: technical event</b>"),
+        f"📅 <b>{_('Date')}:</b> {_format_date(timezone.localdate())}",
+        f"🕒 <b>{_('Time')}:</b> {_format_time(now)}",
+        "",
+        f"{icon} <b>{_('Status')}:</b> {status}",
+        f"🧩 <b>{_('Component')}:</b> {html.escape(title)}",
     ]
 
     if details:
         lines.extend(
             [
                 "",
-                f"🧾 {html.escape(_truncate(details, SYSTEM_DETAILS_LIMIT))}",
+                f"🧾 <b>{_('Details')}:</b> {html.escape(_truncate(details, SYSTEM_DETAILS_LIMIT))}",
             ]
         )
 
     return _fit_telegram_message(lines)
 
 
-def _system_message_icon(title: str, details: str = "") -> str:
+def _system_message_status(title: str, details: str = "") -> tuple[str, str]:
     text = f"{title} {details}".lower()
 
     if "error" in text or "failed" in text or "ошибка" in text:
-        return "🔴"
+        return "🔴", _("Error")
 
     if "recovered" in text or "restored" in text or "восстанов" in text:
-        return "🟢"
+        return "🟢", _("Recovered")
 
     if "warning" in text or "partial" in text or "предупреж" in text:
-        return "🟠"
+        return "🟠", _("Warning")
 
-    return "⚙️"
+    return "🔵", _("Information")
 
 
 @use_argus_telegram_language

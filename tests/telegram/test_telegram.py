@@ -95,7 +95,9 @@ def test_build_alert_message_keeps_operational_event_separate_from_buyer_lead(al
 def test_build_system_message_escapes_html():
     message = build_system_message("Gmail error", "<bad>")
 
-    assert "Argus: system notice" in message
+    assert "Argus: technical event" in message
+    assert "🔴 <b>Status:</b> Error" in message
+    assert "🧩 <b>Component:</b> Gmail error" in message
     assert "&lt;bad&gt;" in message
 
 
@@ -382,9 +384,10 @@ def test_send_system_telegram_message_sends_html(monkeypatch):
     assert bot.calls[0]["chat_id"] == "42"
     assert bot.calls[0]["parse_mode"] == "HTML"
     assert bot.calls[0]["disable_web_page_preview"] is True
-    assert "⚙️ <b>Argus: system notice</b>" in bot.calls[0]["text"]
-    assert "📌 Health" in bot.calls[0]["text"]
-    assert "🧾 &lt;bad&gt;" in bot.calls[0]["text"]
+    assert "⚙️ <b>Argus: technical event</b>" in bot.calls[0]["text"]
+    assert "🔵 <b>Status:</b> Information" in bot.calls[0]["text"]
+    assert "🧩 <b>Component:</b> Health" in bot.calls[0]["text"]
+    assert "🧾 <b>Details:</b> &lt;bad&gt;" in bot.calls[0]["text"]
 
 
 @pytest.mark.django_db

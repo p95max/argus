@@ -58,13 +58,14 @@ def test_deploy_notification_lifecycle(monkeypatch, tmp_path):
     assert not pending.exists()
     assert active.exists()
     assert len(sent) == 1
-    assert "deploy started" in sent[0][2]
+    assert "ARGUS: DEPLOYMENT" in sent[0][2]
+    assert "Status: STARTED" in sent[0][2]
     assert "Queue wait:" in sent[0][2]
 
     assert module.handle_finish(0, "updated") == 0
     assert not active.exists()
     assert len(sent) == 2
-    assert "deploy finished" in sent[1][2]
+    assert "ARGUS: DEPLOYMENT" in sent[1][2]
     assert "Status: UPDATED" in sent[1][2]
     assert "HEAD: abc1234" in sent[1][2]
 
@@ -77,7 +78,7 @@ def test_up_to_date_deploy_reports_no_redeploy(monkeypatch, tmp_path):
 
     assert not active.exists()
     assert len(sent) == 1
-    assert "deploy check finished" in sent[0][2]
+    assert "ARGUS: DEPLOYMENT" in sent[0][2]
     assert "Status: UP TO DATE" in sent[0][2]
     assert "HEAD: abc1234" in sent[0][2]
     assert "services were not redeployed" in sent[0][2]
@@ -126,5 +127,6 @@ def test_failed_deploy_sends_failure_notification(monkeypatch, tmp_path):
     assert module.handle_finish(7, "success") == 0
     assert not active.exists()
     assert len(sent) == 1
-    assert "deploy failed" in sent[0]
+    assert "ARGUS: DEPLOYMENT" in sent[0]
+    assert "Status: FAILED" in sent[0]
     assert "Exit status: 7" in sent[0]

@@ -29,7 +29,7 @@ def test_build_alert_reminder_message_caps_prefixed_text():
     message = build_alert_reminder_message(alert)
 
     assert len(message) <= TELEGRAM_SAFE_MESSAGE_LIMIT
-    assert message.startswith("⏰ <b>Reminder")
+    assert message.startswith("⏰ <b>Argus: unread lead reminder</b>")
     assert _does_not_end_inside_html_entity(message)
 
 
@@ -63,7 +63,7 @@ def test_build_unread_reminder_report_uses_telegram_alert_style():
     assert "🆕 <b>Unread:</b> 2" in message
     assert "📂 <b>Cases:</b> 2" in message
     assert "🔥 <b>High/Urgent:</b> 1" in message
-    assert "📱 <a" in message
+    assert "📱 <a" not in message
 
 
 def test_build_unread_reminder_report_rounds_oldest_age():

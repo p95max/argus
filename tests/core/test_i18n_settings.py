@@ -46,10 +46,14 @@ def test_argus_locale_catalogs_translate_core_labels():
     with translation.override(LanguageCode.GERMAN):
         assert gettext("Argus settings") == "Argus Einstellungen"
         assert gettext("Mobile version") == "Mobile Version"
+        assert gettext("Component") == "Komponente"
+        assert gettext("Information") == "Information"
 
     with translation.override(LanguageCode.RUSSIAN):
         assert gettext("Argus settings") == "Настройки Argus"
         assert gettext("Mobile version") == "Мобильная версия"
+        assert gettext("Component") == "Компонент"
+        assert gettext("Warning") == "Предупреждение"
 
 
 @pytest.mark.django_db

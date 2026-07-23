@@ -926,3 +926,18 @@ msgstr "Меню команд Telegram обновлено."
 
 msgid "Telegram command menu could not be updated. Restart the bot to retry."
 msgstr "Не удалось обновить меню команд Telegram. Перезапустите бота и повторите попытку."
+
+msgid "⏰ <b>Argus: unread lead reminder</b>"
+msgstr "⏰ <b>Argus: напоминание о непрочитанном обращении</b>"
+
+msgid "⚙️ <b>Argus: technical event</b>"
+msgstr "⚙️ <b>Argus: техническое событие</b>"
+
+msgid "Component"
+msgstr "Компонент"
+
+msgid "Warning"
+msgstr "Предупреждение"
+
+msgid "Information"
+msgstr "Информация"

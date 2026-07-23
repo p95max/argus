@@ -154,31 +154,36 @@ def problem_fingerprint(problems):
 
 
 def build_problem_message(label, problem_text):
+    now = time.strftime("%Y-%m-%d %H:%M:%S %Z")
     return (
-        f"🔴 [{label}] Argus problem detected\n"
-        "🔴 CRITICAL\n"
-        "Status: FAIL\n\n"
-        "Problems:\n"
-        f"{format_problem_list(problem_text)}\n\n"
-        f"Time: {time.strftime('%Y-%m-%d %H:%M:%S %Z')}"
+        f"🔴 [{label}] ARGUS: TECHNICAL ALERT\n"
+        f"🕒 Time: {now}\n"
+        "📌 Status: CRITICAL\n"
+        "🧩 Component: health monitor\n\n"
+        "⚠️ Problems:\n"
+        f"{format_problem_list(problem_text)}"
     )
 
 
 def build_recovery_message(label):
+    now = time.strftime("%Y-%m-%d %H:%M:%S %Z")
     return (
-        f"🟢 [{label}] Argus recovered\n"
-        "🟢 OK\n"
-        "Status: RECOVERED\n\n"
-        "All monitored services and checks are OK."
+        f"🟢 [{label}] ARGUS: TECHNICAL ALERT\n"
+        f"🕒 Time: {now}\n"
+        "📌 Status: RECOVERED\n"
+        "🧩 Component: health monitor\n\n"
+        "✅ All monitored services and checks are OK."
     )
 
 
 def build_test_message(label):
+    now = time.strftime("%Y-%m-%d %H:%M:%S %Z")
     return (
-        f"🟢 [{label}] Argus monitor test\n"
-        "🟢 OK\n"
-        "Status: TEST\n\n"
-        "Telegram notifications are working."
+        f"🧪 [{label}] ARGUS: TECHNICAL ALERT\n"
+        f"🕒 Time: {now}\n"
+        "📌 Status: TEST\n"
+        "🧩 Component: health monitor\n\n"
+        "✅ Telegram notifications are working."
     )
 
 

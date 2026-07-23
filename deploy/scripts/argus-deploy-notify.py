@@ -127,10 +127,12 @@ def handle_start() -> int:
     env = load_env()
     label = env.get("ARGUS_ENV_LABEL", "PROD")
     text = (
-        f"🚀 [{label}] Argus deploy started\n"
-        f"Requested: {format_time(requested_at)}\n"
-        f"Started: {format_time(started_at)}\n"
-        f"Queue wait: {waited_seconds}s"
+        f"🚀 [{label}] ARGUS: DEPLOYMENT\n"
+        "📌 Status: STARTED\n"
+        "🧩 Component: auto-deploy\n"
+        f"🕒 Requested: {format_time(requested_at)}\n"
+        f"▶️ Started: {format_time(started_at)}\n"
+        f"⏳ Queue wait: {waited_seconds}s"
     )
     send_telegram(
         env.get("TELEGRAM_BOT_TOKEN", ""),
@@ -156,29 +158,33 @@ def handle_finish(status: int, result: str = "success") -> int:
     label = env.get("ARGUS_ENV_LABEL", "PROD")
     if status == 0 and result == "up_to_date":
         text = (
-            f"✅ [{label}] Argus deploy check finished\n"
-            "Status: UP TO DATE\n"
-            f"HEAD: {current_head()}\n"
-            "No new commit was available; services were not redeployed.\n"
-            f"Duration: {duration_seconds}s\n"
-            f"Finished: {format_time(finished_at)}"
+            f"🟢 [{label}] ARGUS: DEPLOYMENT\n"
+            "📌 Status: UP TO DATE\n"
+            "🧩 Component: auto-deploy\n"
+            f"🔖 HEAD: {current_head()}\n"
+            "ℹ️ No new commit was available; services were not redeployed.\n"
+            f"⏱ Duration: {duration_seconds}s\n"
+            f"✅ Finished: {format_time(finished_at)}"
         )
     elif status == 0:
         result_label = "UPDATED" if result == "updated" else "SUCCESS"
         text = (
-            f"✅ [{label}] Argus deploy finished\n"
-            f"Status: {result_label}\n"
-            f"HEAD: {current_head()}\n"
-            f"Duration: {duration_seconds}s\n"
-            f"Finished: {format_time(finished_at)}"
+            f"🟢 [{label}] ARGUS: DEPLOYMENT\n"
+            f"📌 Status: {result_label}\n"
+            "🧩 Component: auto-deploy\n"
+            f"🔖 HEAD: {current_head()}\n"
+            f"⏱ Duration: {duration_seconds}s\n"
+            f"✅ Finished: {format_time(finished_at)}"
         )
     else:
         text = (
-            f"🚨 [{label}] Argus deploy failed\n"
-            f"Exit status: {status}\n"
-            f"Duration: {duration_seconds}s\n"
-            f"Finished: {format_time(finished_at)}\n"
-            "Run /doctor and inspect argus-auto-deploy.service logs."
+            f"🔴 [{label}] ARGUS: DEPLOYMENT\n"
+            "📌 Status: FAILED\n"
+            "🧩 Component: auto-deploy\n"
+            f"❌ Exit status: {status}\n"
+            f"⏱ Duration: {duration_seconds}s\n"
+            f"🕒 Finished: {format_time(finished_at)}\n\n"
+            "💡 Run /doctor and inspect argus-auto-deploy.service logs."
         )
 
     send_telegram(

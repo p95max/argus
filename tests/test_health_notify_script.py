@@ -86,7 +86,9 @@ def test_persistent_failure_is_sent_after_confirmation(monkeypatch):
     assert module.main() == 0
     assert slept == [module.FAILURE_CONFIRM_SECONDS]
     assert len(sent_messages) == 1
-    assert "Status: FAIL" in sent_messages[0]
+    assert "ARGUS: TECHNICAL ALERT" in sent_messages[0]
+    assert "Component: health monitor" in sent_messages[0]
+    assert "Status: CRITICAL" in sent_messages[0]
     assert problem in sent_messages[0]
     assert saved_states[-1]["status"] == "fail"
     assert saved_states[-1]["problem_hash"]

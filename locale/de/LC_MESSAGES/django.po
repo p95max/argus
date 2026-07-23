@@ -917,3 +917,18 @@ msgstr "Telegram-Befehlsmenü aktualisiert."
 
 msgid "Telegram command menu could not be updated. Restart the bot to retry."
 msgstr "Telegram-Befehlsmenü konnte nicht aktualisiert werden. Bot neu starten und erneut versuchen."
+
+msgid "⏰ <b>Argus: unread lead reminder</b>"
+msgstr "⏰ <b>Argus: Erinnerung an eine ungelesene Anfrage</b>"
+
+msgid "⚙️ <b>Argus: technical event</b>"
+msgstr "⚙️ <b>Argus: technisches Ereignis</b>"
+
+msgid "Component"
+msgstr "Komponente"
+
+msgid "Warning"
+msgstr "Warnung"
+
+msgid "Information"
+msgstr "Information"

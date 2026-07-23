@@ -22,7 +22,7 @@ def get_environment_label() -> str:
 
 def build_doctor_script_message() -> str:
     label = html.escape(get_environment_label())
-    title = f"[{label}] Argus Health Check"
+    title = f"[{label}] Argus: technical check"
 
     try:
         result = subprocess.run(
@@ -34,10 +34,17 @@ def build_doctor_script_message() -> str:
             check=False,
         )
     except FileNotFoundError:
-        return f"🚨 <b>{title}</b>\n<pre>{DOCTOR_SCRIPT} not found</pre>"
+        return (
+            f"🚨 <b>{title}</b>\n"
+            "📌 <b>Status:</b> ERROR\n"
+            f"🧩 <b>Component:</b> <code>{DOCTOR_SCRIPT}</code>\n\n"
+            f"<pre>{DOCTOR_SCRIPT} not found</pre>"
+        )
     except subprocess.TimeoutExpired:
         return (
             f"🚨 <b>{title}</b>\n"
+            "📌 <b>Status:</b> ERROR\n"
+            "🧩 <b>Component:</b> doctor\n\n"
             f"<pre>Health check timed out after {DOCTOR_TIMEOUT_SECONDS} seconds.</pre>"
         )
 
@@ -48,8 +55,14 @@ def build_doctor_script_message() -> str:
     if len(combined_output) > DOCTOR_OUTPUT_LIMIT:
         combined_output = "... truncated ...\n" + combined_output[-DOCTOR_OUTPUT_LIMIT:]
 
-    icon = "✅" if result.returncode == 0 else "🚨"
-    return f"{icon} <b>{title}</b>\n<pre>{html.escape(combined_output)}</pre>"
+    icon = "🟢" if result.returncode == 0 else "🔴"
+    status = "OK" if result.returncode == 0 else "ERROR"
+    return (
+        f"{icon} <b>{title}</b>\n"
+        f"📌 <b>Status:</b> {status}\n"
+        "🧩 <b>Component:</b> server\n\n"
+        f"<pre>{html.escape(combined_output)}</pre>"
+    )
 
 
 async def handle_doctor_command(update, context):

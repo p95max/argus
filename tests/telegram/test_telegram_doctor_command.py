@@ -33,7 +33,8 @@ def test_build_doctor_script_message_uses_environment_label(monkeypatch):
 
     message = doctor_command.build_doctor_script_message()
 
-    assert "✅ <b>[PROD] Argus Health Check</b>" in message
+    assert "🟢 <b>[PROD] Argus: technical check</b>" in message
+    assert "📌 <b>Status:</b> OK" in message
     assert "Overall status: HEALTHY" in message
     assert "Sync: up to date" in message
 
@@ -49,4 +50,4 @@ def test_build_doctor_script_message_escapes_environment_label(monkeypatch):
 
     message = doctor_command.build_doctor_script_message()
 
-    assert "[&lt;PROD&gt;] Argus Health Check" in message
+    assert "[&lt;PROD&gt;] Argus: technical check" in message
