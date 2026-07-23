@@ -207,6 +207,27 @@ def test_argus_check_deploy_command_passes_when_ready(settings, healthy_env):
 
 
 @pytest.mark.django_db
+def test_argus_check_deploy_allows_stale_gmail_warning(settings, healthy_env):
+    settings.DEBUG = False
+    settings.DATABASE_URL = "postgres://example"
+    settings.GMAIL_OAUTH_TOKEN_FERNET_KEY = "key"
+    MailboxAccount.objects.create(
+        name="Stale Gmail",
+        email="stale-gmail@example.local",
+        is_active=True,
+        last_checked_at=timezone.now() - timedelta(minutes=20),
+        last_success_at=timezone.now() - timedelta(minutes=20),
+    )
+    stdout = StringIO()
+
+    call_command("argus_check_deploy", stdout=stdout)
+
+    output = stdout.getvalue()
+    assert "Argus deploy status: ok" in output
+    assert "WARN gmail_recent_check: warning" in output
+
+
+@pytest.mark.django_db
 def test_argus_check_deploy_rejects_demo_mailbox(settings, healthy_env):
     settings.DEBUG = False
     settings.DATABASE_URL = "postgres://example"
