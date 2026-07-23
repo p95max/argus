@@ -40,8 +40,8 @@ def test_request_deploy_starts_service_when_queue_is_free(monkeypatch, tmp_path)
     result = deploy_command.request_deploy(chat_id="123", user_id="456")
 
     assert result.ok is True
-    assert "поставлен в общую очередь" in result.message
-    assert "запуск ожидается сейчас" in result.message
+    assert "Queued in the shared background queue." in result.message
+    assert "Shared queue is free: the run is expected now" in result.message
     assert deploy_command.PENDING_REQUEST_FILE.exists()
     assert [
         deploy_command.SUDO_BIN,
@@ -70,9 +70,9 @@ def test_request_deploy_reports_busy_queue_deadline(monkeypatch, tmp_path):
     result = deploy_command.request_deploy(chat_id="123")
 
     assert result.ok is True
-    assert "Общая очередь занята" in result.message
-    assert "Ориентир запуска: до" in result.message
-    assert "тайм-ауту" in result.message
+    assert "Shared queue is busy: the run will start after the current job." in result.message
+    assert "Expected start: by" in result.message
+    assert "timeout" in result.message
 
 
 def test_request_deploy_does_not_enqueue_duplicate_active_service(monkeypatch, tmp_path):
@@ -88,8 +88,8 @@ def test_request_deploy_does_not_enqueue_duplicate_active_service(monkeypatch, t
     result = deploy_command.request_deploy(chat_id="123")
 
     assert result.ok is True
-    assert "уже запущен таймером или вручную" in result.message
-    assert "Новый запуск не добавлен" in result.message
+    assert "Auto-deploy is already running." in result.message
+    assert "A new run was not added" in result.message
     assert not deploy_command.PENDING_REQUEST_FILE.exists()
     assert len(commands) == 1
 
@@ -107,8 +107,8 @@ def test_existing_telegram_request_promises_completion_message(monkeypatch, tmp_
     result = deploy_command.request_deploy(chat_id="123")
 
     assert result.ok is True
-    assert "Telegram-запрос уже поставлен" in result.message
-    assert "отдельное сообщение" in result.message
+    assert "A Telegram deployment request is already queued or running." in result.message
+    assert "A separate message will arrive when it finishes." in result.message
 
 
 def test_request_deploy_removes_request_when_systemctl_fails(monkeypatch, tmp_path):
