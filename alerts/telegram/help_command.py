@@ -1,6 +1,7 @@
 import html
 import logging
 
+from django.utils import translation
 from django.utils.translation import gettext as _
 from telegram import BotCommand
 
@@ -30,6 +31,15 @@ PERMISSION_DENIED_MESSAGE = "This user or chat does not have access to Argus."
 
 @use_argus_telegram_language
 def build_bot_commands() -> list[BotCommand]:
+    return _build_bot_commands()
+
+
+def build_bot_commands_for_language(language: str) -> list[BotCommand]:
+    with translation.override(language):
+        return _build_bot_commands()
+
+
+def _build_bot_commands() -> list[BotCommand]:
     return [
         BotCommand(command=command, description=_(description))
         for command, description in ACTIVE_BOT_COMMANDS

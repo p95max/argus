@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -12,6 +12,7 @@ from ..models import (
     ServiceEvent,
     TelegramSettings,
 )
+from ..telegram.command_menu import refresh_telegram_command_menu
 
 
 class ArgusSettingsAdminForm(forms.ModelForm):
@@ -73,6 +74,17 @@ class ArgusSettingsAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if refresh_telegram_command_menu(obj.language_code):
+            self.message_user(request, _("Telegram command menu updated."))
+        else:
+            self.message_user(
+                request,
+                _("Telegram command menu could not be updated. Restart the bot to retry."),
+                level=messages.WARNING,
+            )
 
     def changelist_view(self, request, extra_context=None):
         settings = ArgusSettings.load()

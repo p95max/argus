@@ -27,6 +27,7 @@ from alerts.telegram.handlers import (
 
 from alerts.telegram.keyboards import (
     build_alert_keyboard,
+    build_unread_report_keyboard,
 )
 from alerts.telegram.i18n import override_argus_telegram_language
 from alerts.gmail_polling import GmailPollingStatus
@@ -216,6 +217,18 @@ def test_alert_keyboard_contains_open_mobile_link(settings, alert):
     assert url == f"http://localhost:8000/m/alerts/{alert.id}/"
 
 
+@pytest.mark.django_db
+def test_unread_report_keyboard_uses_alert_actions_for_one_case(settings, alert):
+    settings.ARGUS_PUBLIC_BASE_URL = "http://localhost:8000"
+
+    keyboard = build_unread_report_keyboard([alert])
+
+    assert keyboard is not None
+    assert keyboard.inline_keyboard[0][0].text == "Status"
+    assert keyboard.inline_keyboard[1][0].text == "Take to work"
+    assert keyboard.inline_keyboard[-1][0].url == f"http://localhost:8000/m/alerts/{alert.id}/"
+
+
 @pytest.mark.django_db(transaction=True)
 def test_async_send_telegram_alert_saves_telegram_delivery(monkeypatch, alert):
     monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
@@ -307,6 +320,25 @@ def test_async_send_telegram_reminder_report_saves_error_for_all_alerts(monkeypa
 
 
 @pytest.mark.django_db(transaction=True)
+def test_async_send_telegram_reminder_report_sends_case_action_keyboard(monkeypatch, settings, alert):
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
+    settings.ARGUS_PUBLIC_BASE_URL = "http://localhost:8000"
+    bot = FakeTelegramBot()
+
+    asyncio.run(
+        async_send_telegram_reminder_report(
+            [alert],
+            chat_id="42",
+            bot=bot,
+        )
+    )
+
+    keyboard = bot.calls[0]["reply_markup"]
+    assert keyboard.inline_keyboard[0][0].text == "Status"
+    assert keyboard.inline_keyboard[-1][0].url == f"http://localhost:8000/m/alerts/{alert.id}/"
+
+
+@pytest.mark.django_db(transaction=True)
 def test_async_send_telegram_reminder_report_rejects_disallowed_chat(monkeypatch, alert):
     monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
 
@@ -376,12 +408,14 @@ def test_build_mailbox_status_message_contains_mailbox_health(alert):
 def test_build_daily_summary_message_contains_today_counters(alert):
     message = build_daily_summary_message()
 
-    assert "Argus: daily summary" in message
+    assert "📊 <b>Argus: daily summary</b>" in message
     assert "Total events today" in message
     assert "Buyer messages" in message
     assert "New" in message
     assert "In work" in message
     assert "Active mailboxes" in message
+    assert "📨 <b>Events</b>" in message
+    assert "📌 <b>Workflow</b>" in message
 
 
 @pytest.mark.django_db

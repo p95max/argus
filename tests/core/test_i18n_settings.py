@@ -79,3 +79,27 @@ def test_argus_settings_admin_is_superuser_only():
     assert model_admin.has_view_permission(request) is True
     assert model_admin.has_add_permission(request) is True
     assert model_admin.has_change_permission(request) is True
+
+
+@pytest.mark.django_db
+def test_argus_settings_admin_refreshes_telegram_menu_after_language_change(monkeypatch):
+    settings = ArgusSettings.load()
+    settings.language_code = LanguageCode.RUSSIAN
+    model_admin = ArgusSettingsAdmin(ArgusSettings, admin.site)
+    request = RequestFactory().post("/control/alerts/argussettings/1/change/")
+    notices = []
+
+    monkeypatch.setattr(
+        "alerts.admin_site.system.refresh_telegram_command_menu",
+        lambda language: language == LanguageCode.RUSSIAN,
+    )
+    monkeypatch.setattr(
+        model_admin,
+        "message_user",
+        lambda request, message, level=None: notices.append((str(message), level)),
+    )
+
+    model_admin.save_model(request, settings, form=None, change=True)
+
+    assert settings.language_code == LanguageCode.RUSSIAN
+    assert notices == [("Telegram command menu updated.", None)]

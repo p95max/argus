@@ -896,3 +896,24 @@ msgstr "Produktionsstatus: systemd, Git, health und deploy"
 
 msgid "start a production deploy and show its progress"
 msgstr "Production-Deploy starten und Fortschritt anzeigen"
+
+msgid "📊 <b>Argus: daily summary</b>"
+msgstr "📊 <b>Argus: Tagesübersicht</b>"
+
+msgid "Events"
+msgstr "Ereignisse"
+
+msgid "Workflow"
+msgstr "Bearbeitung"
+
+msgid "Parser attention"
+msgstr "Parser erfordert Aufmerksamkeit"
+
+msgid "Telegram send errors"
+msgstr "Telegram-Sendefehler"
+
+msgid "Telegram command menu updated."
+msgstr "Telegram-Befehlsmenü aktualisiert."
+
+msgid "Telegram command menu could not be updated. Restart the bot to retry."
+msgstr "Telegram-Befehlsmenü konnte nicht aktualisiert werden. Bot neu starten und erneut versuchen."

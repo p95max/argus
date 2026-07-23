@@ -7,7 +7,7 @@ from telegram import Bot
 
 from ..models import MarketplaceAlert
 from .config import get_telegram_config
-from .keyboards import build_alert_keyboard
+from .keyboards import build_alert_keyboard, build_unread_report_keyboard
 from .messages import (
     build_alert_message,
     build_alert_reminder_message,
@@ -241,10 +241,12 @@ async def async_send_telegram_reminder_report(
     try:
         with override_argus_telegram_language(language):
             text = build_unread_reminder_report_message(alerts)
+            reply_markup = build_unread_report_keyboard(alerts)
         message = await bot.send_message(
             chat_id=target_chat_id,
             text=text,
             parse_mode="HTML",
+            reply_markup=reply_markup,
             disable_web_page_preview=True,
         )
     except Exception as exc:

@@ -8,7 +8,9 @@ from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandle
 from alerts.telegram.config import get_telegram_config
 from alerts.telegram.deploy_command import handle_deploy_command
 from alerts.telegram.doctor_command import handle_doctor_command
-from alerts.telegram.help_command import build_bot_commands, handle_help_command
+from alerts.telegram.command_menu import publish_telegram_command_menu
+from alerts.telegram.help_command import handle_help_command
+from alerts.telegram.i18n import get_argus_telegram_language
 from alerts.telegram.handlers import (
     handle_alert_callback,
     handle_daily_summary_command,
@@ -32,9 +34,12 @@ async def log_telegram_error(update, context):
 
 async def configure_bot_commands(application):
     try:
-        commands = await sync_to_async(build_bot_commands, thread_sensitive=True)()
-        await application.bot.set_my_commands(commands)
-        logger.info("Published %s Telegram bot command descriptions.", len(commands))
+        language = await sync_to_async(
+            get_argus_telegram_language,
+            thread_sensitive=True,
+        )()
+        count = await publish_telegram_command_menu(application.bot, language)
+        logger.info("Published %s Telegram bot command descriptions.", count)
     except Exception:
         logger.exception("Could not publish Telegram bot command descriptions.")
 

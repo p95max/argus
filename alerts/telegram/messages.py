@@ -88,7 +88,6 @@ def build_unread_reminder_report_message(alerts) -> str:
     alerts = list(alerts)
     now = timezone.now()
     cases = _group_unread_reminder_cases(alerts)
-    mobile_url = _build_mobile_url()
     high_total = sum(case["high_count"] for case in cases)
     oldest_minutes = 0
     if cases:
@@ -124,8 +123,6 @@ def build_unread_reminder_report_message(alerts) -> str:
         )
         buyer = _latest_known_buyer_name(case["alerts"])
         mailbox_label = _alert_mailbox_label(latest)
-        link = _mobile_alert_url(latest)
-
         lines.extend(
             [
                 f"{led} <b>{index}. {html.escape(title)}</b>",
@@ -136,7 +133,6 @@ def build_unread_reminder_report_message(alerts) -> str:
                 ),
                 f"👤 <b>{_('Latest')}:</b> {html.escape(buyer)}",
                 f"📬 <b>{_('Mailbox')}:</b> {html.escape(mailbox_label)}",
-                f'📱 <a href="{html.escape(link)}">{_("Open latest")}</a>',
                 "",
             ]
         )
@@ -145,9 +141,6 @@ def build_unread_reminder_report_message(alerts) -> str:
     if hidden_cases > 0:
         lines.append(_("…and %(count)s more cases.") % {"count": hidden_cases})
         lines.append("")
-
-    if mobile_url:
-        lines.append(f'📱 <a href="{html.escape(mobile_url)}">{_("Open mobile admin")}</a>')
 
     return _fit_telegram_message(lines)
 
@@ -438,25 +431,28 @@ def build_daily_summary_message() -> str:
 
     return _fit_telegram_message(
         [
-            _("<b>Argus: daily summary</b>"),
+            _("📊 <b>Argus: daily summary</b>"),
             f"📅 <b>{_('Date')}:</b> {_format_date(today)}",
             f"🕒 <b>{_('Time')}:</b> {_format_time(timezone.now())}",
             "",
-            f"{_('Total events today')}: {counts['total']}",
-            f"{_('Buyer messages')}: {counts['buyer_messages']}",
-            f"{_('Expiring listings')}: {counts['listing_expiring']}",
-            f"{_('System notices')}: {counts['system_notice']}",
-            f"{_('Noise')}: {counts['noise']}",
+            f"📨 <b>{_('Events')}</b>",
+            f"📊 <b>{_('Total events today')}:</b> {counts['total']}",
+            f"👤 <b>{_('Buyer messages')}:</b> {counts['buyer_messages']}",
+            f"⏳ <b>{_('Expiring listings')}:</b> {counts['listing_expiring']}",
+            f"⚙️ <b>{_('System notices')}:</b> {counts['system_notice']}",
+            f"🧹 <b>{_('Noise')}:</b> {counts['noise']}",
             "",
-            f"{_('New')}: {counts['unread']}",
-            f"{_('In work')}: {counts['in_work']}",
-            f"{_('Ignored')}: {counts['ignored']}",
-            f"{_('High priority')}: {counts['high_priority']}",
-            f"Parser attention: {counts['parser_attention']}",
-            f"Telegram send errors: {counts['telegram_errors']}",
+            f"📌 <b>{_('Workflow')}</b>",
+            f"🆕 <b>{_('New')}:</b> {counts['unread']}",
+            f"🛠️ <b>{_('In work')}:</b> {counts['in_work']}",
+            f"🚫 <b>{_('Ignored')}:</b> {counts['ignored']}",
+            f"🔥 <b>{_('High priority')}:</b> {counts['high_priority']}",
+            f"⚠️ <b>{_('Parser attention')}:</b> {counts['parser_attention']}",
+            f"📤 <b>{_('Telegram send errors')}:</b> {counts['telegram_errors']}",
             "",
-            f"{_('Active mailboxes')}: {mailbox_counts['active']}",
-            f"{_('Mailbox errors')}: {mailbox_counts['errors']}",
+            f"📬 <b>{_('Mailboxes')}</b>",
+            f"🟢 <b>{_('Active mailboxes')}:</b> {mailbox_counts['active']}",
+            f"🔴 <b>{_('Mailbox errors')}:</b> {mailbox_counts['errors']}",
         ]
     )
 

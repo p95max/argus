@@ -905,3 +905,24 @@ msgstr "состояние production: systemd, Git, health и deploy"
 
 msgid "start a production deploy and show its progress"
 msgstr "запустить production deploy и показать ход выполнения"
+
+msgid "📊 <b>Argus: daily summary</b>"
+msgstr "📊 <b>Argus: сводка за день</b>"
+
+msgid "Events"
+msgstr "События"
+
+msgid "Workflow"
+msgstr "Работа с обращениями"
+
+msgid "Parser attention"
+msgstr "Требуют внимания парсера"
+
+msgid "Telegram send errors"
+msgstr "Ошибки отправки Telegram"
+
+msgid "Telegram command menu updated."
+msgstr "Меню команд Telegram обновлено."
+
+msgid "Telegram command menu could not be updated. Restart the bot to retry."
+msgstr "Не удалось обновить меню команд Telegram. Перезапустите бота и повторите попытку."

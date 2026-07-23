@@ -148,6 +148,8 @@ There is no public language switcher in `/m/`, Telegram, or the operator UI. The
 
 Only superusers can view or edit `Argus settings`.
 
+Saving a new language also republishes the native Telegram command-menu descriptions through the Bot API. Existing Telegram messages are immutable, so only newly sent alerts, reports, and command responses use the new language.
+
 ## Database
 
 Fresh PostgreSQL setup:

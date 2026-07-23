@@ -196,8 +196,8 @@ def test_unread_command_replies_with_html(monkeypatch):
     monkeypatch.setattr(handlers, "is_allowed_update", lambda update: True)
 
     async def fake_run_db_sync(func, *args, **kwargs):
-        assert func is handlers.build_unread_command_message
-        return "<b>Unread</b>"
+        assert func is handlers.build_unread_command_report
+        return "<b>Unread</b>", "keyboard"
 
     monkeypatch.setattr(handlers, "_run_db_sync", fake_run_db_sync)
 
@@ -205,6 +205,7 @@ def test_unread_command_replies_with_html(monkeypatch):
 
     assert update.effective_message.replies[0]["text"] == "<b>Unread</b>"
     assert update.effective_message.replies[0]["parse_mode"] == "HTML"
+    assert update.effective_message.replies[0]["reply_markup"] == "keyboard"
 
 
 def test_doctor_command_rejects_unknown_chat(monkeypatch):

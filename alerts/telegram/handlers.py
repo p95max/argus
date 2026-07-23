@@ -25,6 +25,7 @@ from .keyboards import (
     CALLBACK_STATUS_UPDATES,
     build_alert_keyboard,
     build_gmail_polling_keyboard,
+    build_unread_report_keyboard,
     _parse_callback_data,
     parse_gmail_polling_callback_data,
 )
@@ -399,11 +400,12 @@ async def handle_unread_command(update, context):
         )
         return
 
-    text = await _run_db_sync(build_unread_command_message)
+    text, reply_markup = await _run_db_sync(build_unread_command_report)
 
     await update.effective_message.reply_text(
         text,
         parse_mode="HTML",
+        reply_markup=reply_markup,
         disable_web_page_preview=True,
     )
 
@@ -412,13 +414,21 @@ async def handle_unread_command(update, context):
 
 @use_argus_telegram_language
 def build_unread_command_message(limit: int = 25) -> str:
+    return build_unread_command_report(limit)[0]
+
+
+@use_argus_telegram_language
+def build_unread_command_report(limit: int = 25):
     alerts = list(
         MarketplaceAlert.objects.select_related("mailbox")
         .filter(alert_status=MarketplaceAlert.AlertStatus.UNREAD)
         .exclude(event_type=MarketplaceAlert.EventType.NOISE)
         .order_by("created_at", "id")[:limit]
     )
-    return build_unread_reminder_report_message(alerts)
+    return (
+        build_unread_reminder_report_message(alerts),
+        build_unread_report_keyboard(alerts),
+    )
 
 
 @use_argus_telegram_language

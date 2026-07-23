@@ -4,8 +4,10 @@ import asyncio
 from alerts.telegram.help_command import (
     ACTIVE_BOT_COMMANDS,
     build_bot_commands,
+    build_bot_commands_for_language,
     handle_help_command,
 )
+from alerts.telegram.command_menu import publish_telegram_command_menu
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,6 +59,28 @@ def test_bot_command_menu_matches_help_command_list():
     assert "progress" in deploy.description
 
 
+def test_bot_command_menu_can_be_built_for_selected_language():
+    commands = build_bot_commands_for_language("ru")
+    help_command = next(command for command in commands if command.command == "help")
+
+    assert help_command.description == "возможности бота и список команд"
+
+
+def test_publish_command_menu_uses_selected_language():
+    class FakeBot:
+        commands = None
+
+        async def set_my_commands(self, commands):
+            self.commands = commands
+
+    bot = FakeBot()
+
+    count = asyncio.run(publish_telegram_command_menu(bot, "ru"))
+
+    assert count == len(ACTIVE_BOT_COMMANDS)
+    assert bot.commands[0].description == "возможности бота и список команд"
+
+
 def test_help_command_rejects_disallowed_update(monkeypatch):
     update = FakeTelegramUpdate(chat_id="99", user_id="100")
     monkeypatch.setattr("alerts.telegram.help_command.is_allowed_update", lambda update: False)
@@ -86,13 +110,10 @@ def test_telegram_bot_uses_dedicated_help_handler_and_publishes_menu():
         ROOT / "alerts" / "management" / "commands" / "run_telegram_bot.py"
     ).read_text()
 
-    assert (
-        "from alerts.telegram.help_command import build_bot_commands, "
-        "handle_help_command"
-    ) in content
+    assert "from alerts.telegram.command_menu import publish_telegram_command_menu" in content
+    assert "await publish_telegram_command_menu(application.bot, language)" in content
     assert 'CommandHandler(\n                "help",\n                handle_help_command,' in content
     assert ".post_init(configure_bot_commands)" in content
-    assert "application.bot.set_my_commands(commands)" in content
 
 
 def test_readme_documents_queue_and_deploy_results():
