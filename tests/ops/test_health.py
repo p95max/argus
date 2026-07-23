@@ -85,8 +85,8 @@ def test_health_report_includes_successful_backup_status(monkeypatch, healthy_en
     assert report["checks"]["backup"] == {
         "ok": True,
         "status": "ok",
-        "detail": "Local archive: success (timer: active, Last run: 2026-07-23 02:30); "
-        "Remote copy: success (timer: active, Last run: 2026-07-23 03:15)",
+        "detail": "🟢 Local archive: success (timer: active, Last run: 2026-07-23 02:30); "
+        "🟢 Remote copy: success (timer: active, Last run: 2026-07-23 03:15)",
     }
     assert report["labels"]["checks"]["backup"] == "Backups"
 
@@ -102,6 +102,22 @@ def test_health_report_keeps_local_health_ok_without_systemd(monkeypatch, health
 
     assert report["checks"]["backup"]["ok"] is True
     assert report["checks"]["backup"]["status"] == "unavailable"
+
+
+@pytest.mark.django_db
+def test_health_report_marks_failed_backup_red(monkeypatch, healthy_env):
+    backup = BackupJob("local", "local.timer", "local.service")
+    monkeypatch.setattr(
+        "alerts.health.get_backup_status",
+        lambda: BackupStatus(
+            (BackupJobStatus(backup, "enabled", "active", "failed", "2026-07-23 02:30"),)
+        ),
+    )
+
+    report = build_health_report()
+
+    assert report["checks"]["backup"]["ok"] is False
+    assert report["checks"]["backup"]["detail"].startswith("🔴 Local archive: failed")
 
 
 @pytest.mark.django_db
