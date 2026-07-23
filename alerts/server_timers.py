@@ -72,6 +72,12 @@ def get_server_timers_status() -> ServerTimersStatus:
             ["show", timer.unit, "--property=NextElapseUSecRealtime"]
         )
         next_run_at = _parse_properties(properties.stdout).get("NextElapseUSecRealtime", "")
+        if not next_run_at:
+            listed_timers = _run_systemctl(
+                ["list-timers", "--all", "--no-legend", "--no-pager", timer.unit]
+            )
+            if listed_timers.returncode == 0:
+                next_run_at = listed_timers.stdout
         errors = [
             result.stderr or result.stdout
             for result, allowed_codes in (
