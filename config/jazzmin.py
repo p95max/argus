@@ -35,7 +35,7 @@ JAZZMIN_SETTINGS = {
     "show_sidebar": True,
     "navigation_expanded": True,
     "hide_apps": [],
-    "hide_models": ["alerts.adminloginlog"],
+    "hide_models": [],
     "order_with_respect_to": [
         "auth",
         "argus_mail",
@@ -44,14 +44,6 @@ JAZZMIN_SETTINGS = {
         "argus_system",
     ],
     "custom_links": {
-        "auth": [
-            {
-                "name": _("Access logs"),
-                "url": "admin:alerts_adminloginlog_changelist",
-                "icon": "fas fa-history",
-                "permissions": ["alerts.view_adminloginlog"],
-            },
-        ],
         "Quick access": [
             {
                 "name": _("Mobile version"),

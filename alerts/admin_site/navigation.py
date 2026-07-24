@@ -10,7 +10,7 @@ ADMIN_SECTIONS = (
         {"MarketplaceAlert", "NoiseAlert", "LeadFlag"},
     ),
     ("argus_settings", _("Settings"), {"ArgusSettings", "TelegramSettings"}),
-    ("argus_system", _("System"), {"ServiceEvent"}),
+    ("argus_system", _("System"), {"ServiceEvent", "AdminLoginLog"}),
 )
 
 
@@ -40,8 +40,6 @@ def configure_admin_navigation():
             for _, _, model_names in ADMIN_SECTIONS
             for model_name in model_names
         }
-        sectioned_models.add("AdminLoginLog")
-
         alerts_app["models"] = [
             model
             for model in alerts_app["models"]
