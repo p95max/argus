@@ -322,6 +322,32 @@ class ServiceEvent(TimestampedModel):
         return f"{self.get_event_type_display()}: {self.title}"
 
 
+class AdminLoginLog(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_("user"),
+        on_delete=models.CASCADE,
+        related_name="admin_login_logs",
+    )
+    logged_in_at = models.DateTimeField(_("Attempt time"), default=timezone.now, db_index=True)
+    logged_out_at = models.DateTimeField(_("Logout time"), null=True, blank=True)
+    ip_address = models.GenericIPAddressField(_("IP address"), null=True, blank=True)
+    user_agent = models.CharField(_("user agent"), max_length=512, blank=True)
+    path = models.CharField(_("Path"), max_length=500)
+    session_key = models.CharField(max_length=64, blank=True, db_index=True, editable=False)
+
+    class Meta:
+        ordering = ["-logged_in_at"]
+        verbose_name = _("Access log")
+        verbose_name_plural = _("Access logs")
+
+    def __str__(self):
+        return _("%(user)s at %(time)s") % {
+            "user": self.user,
+            "time": self.logged_in_at,
+        }
+
+
 class TelegramSettings(TimestampedModel):
     quiet_hours_enabled = models.BooleanField(_("quiet hours enabled"), default=False)
     quiet_hours_start = models.TimeField(_("quiet hours start"), default=time(22, 0))

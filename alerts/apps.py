@@ -14,3 +14,4 @@ class AlertsConfig(AppConfig):
             raise ImproperlyConfigured(
                 "GMAIL_OAUTH_TOKEN_FERNET_KEY must be configured when DJANGO_DEBUG=False."
             )
+        from . import signals  # noqa: F401

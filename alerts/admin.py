@@ -1,4 +1,5 @@
 from .admin_site.alerts import MarketplaceAlertAdmin, NoiseAlertAdmin
+from .admin_site.login_logs import AdminLoginLogAdmin
 from .admin_site.mailboxes import MailboxAccountAdmin
 from .admin_site.mailbox_fetch_period import configure_mailbox_fetch_period_admin
 from .admin_site.system import (
@@ -19,6 +20,7 @@ __all__ = [
     "NeedsAttentionFilter",
     "status_badge",
     "ArgusSettingsAdmin",
+    "AdminLoginLogAdmin",
     "TelegramSettingsAdmin",
     "MailboxAccountAdmin",
     "LeadFlagAdmin",

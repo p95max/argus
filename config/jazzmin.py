@@ -55,6 +55,7 @@ JAZZMIN_SETTINGS = {
         "alerts.leadflag": "fas fa-flag",
         "alerts.processedemail": "fas fa-check-double",
         "alerts.serviceevent": "fas fa-heartbeat",
+        "alerts.adminloginlog": "fas fa-history",
         "alerts.telegramsettings": "fas fa-paper-plane",
         "auth": "fas fa-user-shield",
         "auth.group": "fas fa-users",

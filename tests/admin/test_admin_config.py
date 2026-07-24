@@ -14,6 +14,7 @@ from alerts.admin import (
 )
 from alerts.apps import AlertsConfig
 from alerts.models import (
+    AdminLoginLog,
     ArgusSettings,
     LeadFlag,
     MailboxAccount,
@@ -38,6 +39,7 @@ def test_admin_section_names_are_human_friendly():
         assert ProcessedEmail._meta.verbose_name_plural == "Processed emails"
         assert LeadFlag._meta.verbose_name_plural == "Lead priority rules"
         assert ServiceEvent._meta.verbose_name_plural == "System log"
+        assert AdminLoginLog._meta.verbose_name_plural == "Access logs"
         assert TelegramSettings._meta.verbose_name_plural == "Telegram settings"
 
 
