@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import logging
 import subprocess
 import time
 import urllib.error
@@ -13,6 +14,7 @@ ENV_FILE = PROJECT_DIR / ".env.local"
 PENDING_REQUEST_FILE = Path("/var/tmp/argus-telegram-deploy-request.json")
 ACTIVE_REQUEST_FILE = Path("/var/tmp/argus-telegram-deploy-active.json")
 DEPLOY_RESULTS = ("success", "updated", "up_to_date")
+logger = logging.getLogger(__name__)
 
 
 def load_env() -> dict[str, str]:
@@ -115,8 +117,9 @@ def handle_start() -> int:
     request["started_at"] = started_at
     try:
         write_json(ACTIVE_REQUEST_FILE, request)
-    except OSError as exc:
-        print(f"Deploy notify: could not update active request: {exc}")
+    except OSError:
+        # Deployment notifications are best-effort and must not stop the deployment.
+        logger.exception("Deploy notify: could not update active request.")
 
     requested_at = request.get("requested_at")
     try:

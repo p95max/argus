@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 
 from django.utils import timezone
@@ -5,6 +6,7 @@ from django.utils import timezone
 from alerts.models import MailboxAccount, MarketplaceAlert
 from alerts.telegram.messages import (
     TELEGRAM_SAFE_MESSAGE_LIMIT,
+    _alert_mailbox_label,
     _truncate_html_message,
     build_alert_message,
     build_alert_reminder_message,
@@ -31,6 +33,16 @@ def test_build_alert_reminder_message_caps_prefixed_text():
     assert len(message) <= TELEGRAM_SAFE_MESSAGE_LIMIT
     assert message.startswith("⏰ <b>Argus: unread lead reminder</b>")
     assert _does_not_end_inside_html_entity(message)
+
+
+def test_alert_mailbox_label_avoids_sync_db_access_in_an_async_context():
+    alert = _make_alert()
+    del alert._telegram_mailbox_label
+
+    async def get_label():
+        return _alert_mailbox_label(alert)
+
+    assert asyncio.run(get_label()) == "Unknown"
 
 
 def test_build_system_message_caps_escaped_details():

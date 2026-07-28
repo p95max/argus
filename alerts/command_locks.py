@@ -29,10 +29,7 @@ def command_lock(name: str, *, timeout: int | None = None):
             lock_file.write(f"pid={os.getpid()}\ncreated_at={int(time.time())}\n")
         yield
     finally:
-        try:
-            lock_path.unlink()
-        except FileNotFoundError:
-            pass
+        lock_path.unlink(missing_ok=True)
 
 
 def _remove_stale_lock(lock_path: Path, timeout: int) -> None:
@@ -42,7 +39,4 @@ def _remove_stale_lock(lock_path: Path, timeout: int) -> None:
         return
 
     if time.time() - stat.st_mtime > timeout:
-        try:
-            lock_path.unlink()
-        except FileNotFoundError:
-            pass
+        lock_path.unlink(missing_ok=True)

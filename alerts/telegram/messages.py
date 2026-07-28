@@ -250,8 +250,11 @@ def _alert_mailbox_label(alert: MarketplaceAlert) -> str:
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        pass
+        is_async_context = False
     else:
+        is_async_context = True
+
+    if is_async_context:
         return _("Unknown")
 
     mailbox = alert.mailbox
