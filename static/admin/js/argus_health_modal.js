@@ -44,10 +44,10 @@
     function mergeLabels(labels) {
         return {
             ...FALLBACK_LABELS,
-            ...(labels || {}),
+            ...labels,
             checks: {
                 ...FALLBACK_LABELS.checks,
-                ...((labels || {}).checks || {}),
+                ...labels?.checks,
             },
         };
     }
@@ -78,7 +78,7 @@
 
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) {
-            return escapeHtml(value);
+            return String(value);
         }
 
         return date.toLocaleString(localeCode(), {
@@ -109,6 +109,22 @@
         }
 
         return labels.status_error;
+    }
+
+    function createElement(tagName, { className, text, attributes } = {}) {
+        const element = document.createElement(tagName);
+        if (className) {
+            element.className = className;
+        }
+        if (text !== undefined) {
+            element.textContent = String(text);
+        }
+        if (attributes) {
+            Object.entries(attributes).forEach(([name, value]) => {
+                element.setAttribute(name, String(value));
+            });
+        }
+        return element;
     }
 
     function ensureModal() {
@@ -230,127 +246,135 @@
 
     function renderSummary(summary, labels) {
         if (!summary) {
-            return "";
+            return null;
         }
 
         const mailboxes = summary.mailboxes || {};
         const alerts = summary.alerts || {};
         const openErrors = summary.open_service_errors ?? labels.empty;
 
-        return `
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="info-box bg-gradient-info">
-                        <span class="info-box-icon"><i class="fas fa-envelope"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">${escapeHtml(labels.mailboxes)}</span>
-                            <span class="info-box-number">
-                                ${escapeHtml(interpolate(labels.mailbox_active_total, {
-                                    active: mailboxes.active ?? labels.empty,
-                                    total: mailboxes.total ?? labels.empty,
-                                }))}
-                            </span>
-                            <span class="progress-description">
-                                ${escapeHtml(labels.connection_errors)}: ${escapeHtml(mailboxes.errors ?? labels.empty)}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="info-box bg-gradient-secondary">
-                        <span class="info-box-icon"><i class="fas fa-bell"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">${escapeHtml(labels.leads)}</span>
-                            <span class="info-box-number">
-                                ${escapeHtml(interpolate(labels.new_leads, {
-                                    count: alerts.unread ?? labels.empty,
-                                }))}
-                            </span>
-                            <span class="progress-description">
-                                ${escapeHtml(labels.today)}: ${escapeHtml(alerts.today ?? labels.empty)}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="info-box bg-gradient-warning">
-                        <span class="info-box-icon"><i class="fas fa-exclamation-triangle"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">${escapeHtml(labels.open_errors)}</span>
-                            <span class="info-box-number">${escapeHtml(openErrors)}</span>
-                            <span class="progress-description">${escapeHtml(labels.error_critical)}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        const row = createElement("div", { className: "row" });
+        const boxes = [
+            {
+                background: "bg-gradient-info",
+                icon: "fas fa-envelope",
+                title: labels.mailboxes,
+                value: interpolate(labels.mailbox_active_total, {
+                    active: mailboxes.active ?? labels.empty,
+                    total: mailboxes.total ?? labels.empty,
+                }),
+                description: `${labels.connection_errors}: ${mailboxes.errors ?? labels.empty}`,
+            },
+            {
+                background: "bg-gradient-secondary",
+                icon: "fas fa-bell",
+                title: labels.leads,
+                value: interpolate(labels.new_leads, { count: alerts.unread ?? labels.empty }),
+                description: `${labels.today}: ${alerts.today ?? labels.empty}`,
+            },
+            {
+                background: "bg-gradient-warning",
+                icon: "fas fa-exclamation-triangle",
+                title: labels.open_errors,
+                value: openErrors,
+                description: labels.error_critical,
+            },
+        ];
+
+        boxes.forEach((box) => {
+            const column = createElement("div", { className: "col-md-4" });
+            const infoBox = createElement("div", { className: `info-box ${box.background}` });
+            const icon = createElement("span", { className: "info-box-icon" });
+            icon.append(createElement("i", { className: box.icon }));
+            const content = createElement("div", { className: "info-box-content" });
+            content.append(
+                createElement("span", { className: "info-box-text", text: box.title }),
+                createElement("span", { className: "info-box-number", text: box.value }),
+                createElement("span", { className: "progress-description", text: box.description })
+            );
+            infoBox.append(icon, content);
+            column.append(infoBox);
+            row.append(column);
+        });
+
+        return row;
     }
 
     function renderChecks(checks, labels) {
         if (!checks) {
-            return "";
+            return null;
         }
 
-        const rows = Object.entries(checks)
-            .map(([key, check]) => {
-                const label = labels.checks[key] || key;
-                return `
-                    <tr>
-                        <td>${escapeHtml(label)}</td>
-                        <td>
-                            <span class="${badgeClass(check.status, check.ok)}">
-                                ${escapeHtml(humanStatus(check.status, check.ok, labels))}
-                            </span>
-                        </td>
-                        <td>${escapeHtml(check.detail || labels.empty)}</td>
-                    </tr>
-                `;
-            })
-            .join("");
+        const wrapper = createElement("div", { className: "table-responsive" });
+        const table = createElement("table", { className: "table table-sm table-hover" });
+        const headerRow = createElement("tr");
+        [labels.component, labels.status, labels.details].forEach((label) => {
+            headerRow.append(createElement("th", { text: label }));
+        });
+        const thead = createElement("thead");
+        thead.append(headerRow);
+        const tbody = createElement("tbody");
 
-        return `
-            <div class="table-responsive">
-                <table class="table table-sm table-hover">
-                    <thead>
-                        <tr>
-                            <th>${escapeHtml(labels.component)}</th>
-                            <th>${escapeHtml(labels.status)}</th>
-                            <th>${escapeHtml(labels.details)}</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        `;
+        Object.entries(checks).forEach(([key, check]) => {
+            const row = createElement("tr");
+            const label = labels.checks[key] || key;
+            const statusCell = createElement("td");
+            statusCell.append(
+                createElement("span", {
+                    className: badgeClass(check.status, check.ok),
+                    text: humanStatus(check.status, check.ok, labels),
+                })
+            );
+            row.append(
+                createElement("td", { text: label }),
+                statusCell,
+                createElement("td", { text: check.detail || labels.empty })
+            );
+            tbody.append(row);
+        });
+
+        table.append(thead, tbody);
+        wrapper.append(table);
+        return wrapper;
     }
 
     function renderReport(report) {
         const labels = mergeLabels(report.labels);
-        const overallBadge = `
-            <span class="${badgeClass(report.status, report.ok)}">
-                ${escapeHtml(report.ok ? labels.service_ok : labels.service_degraded)}
-            </span>
-        `;
+        const fragment = document.createDocumentFragment();
+        const overall = createElement("div", { className: "mb-3" });
+        overall.append(
+            createElement("span", {
+                className: badgeClass(report.status, report.ok),
+                text: report.ok ? labels.service_ok : labels.service_degraded,
+            }),
+            createElement("span", {
+                className: "text-muted ml-2",
+                text: `${labels.checked_at}: ${formatDate(report.generated_at, labels)}`,
+            })
+        );
+        fragment.append(overall);
 
-        return `
-            <div class="mb-3">
-                ${overallBadge}
-                <span class="text-muted ml-2">
-                    ${escapeHtml(labels.checked_at)}: ${formatDate(report.generated_at, labels)}
-                </span>
-            </div>
-            ${renderSummary(report.summary, labels)}
-            ${renderChecks(report.checks, labels)}
-        `;
+        const summary = renderSummary(report.summary, labels);
+        const checks = renderChecks(report.checks, labels);
+        if (summary) {
+            fragment.append(summary);
+        }
+        if (checks) {
+            fragment.append(checks);
+        }
+        return fragment;
     }
 
     function renderError(error, labels) {
-        return `
-            <div class="alert alert-danger mb-0">
-                ${escapeHtml(labels.load_error)}
-                <div class="small mt-2">${escapeHtml(error.message || error)}</div>
-            </div>
-        `;
+        const alert = createElement("div", { className: "alert alert-danger mb-0" });
+        alert.append(
+            document.createTextNode(String(labels.load_error)),
+            createElement("div", {
+                className: "small mt-2",
+                text: error.message || error,
+            })
+        );
+        return alert;
     }
 
     async function openHealthModal(url) {
@@ -360,7 +384,7 @@
         let labels = FALLBACK_LABELS;
 
         jsonLink.href = url;
-        body.innerHTML = `<div class="text-muted">${escapeHtml(labels.loading)}</div>`;
+        body.replaceChildren(createElement("div", { className: "text-muted", text: labels.loading }));
         showModal();
 
         try {
@@ -378,9 +402,9 @@
                 throw new Error(payload.detail || `HTTP ${response.status}`);
             }
 
-            body.innerHTML = renderReport(payload);
+            body.replaceChildren(renderReport(payload));
         } catch (error) {
-            body.innerHTML = renderError(error, labels);
+            body.replaceChildren(renderError(error, labels));
         }
     }
 
