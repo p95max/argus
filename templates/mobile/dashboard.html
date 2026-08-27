@@ -180,6 +180,15 @@
                         <span class="badge">{{ alert.get_event_type_display }}</span>
                         {% for flag in alert.flags.all %}<span class="badge {% if flag.category == 'risk' %}danger{% endif %}">{{ flag.name }}</span>{% endfor %}
                     </div>
+                    {% if alert.buyer_name %}
+                        <div class="info-row">
+                            <span class="info-icon">👤</span>
+                            <span class="info-content">
+                                <span class="info-label">{% trans "Buyer" %}</span>
+                                <strong>{{ alert.buyer_name }}</strong>
+                            </span>
+                        </div>
+                    {% endif %}
                     {% if alert.taken_by or alert.taken_by_label %}
                         <div class="info-row work-owner">
                             <span class="info-icon">👷</span>
