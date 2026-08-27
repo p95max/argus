@@ -26,30 +26,8 @@ def build_alert_keyboard(alert: MarketplaceAlert) -> InlineKeyboardMarkup:
         [
             [
                 InlineKeyboardButton(
-                    _("Status"),
-                    callback_data=_callback_data(alert.id, CALLBACK_STATUS_ACTION),
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    _("Take to work"),
-                    callback_data=_callback_data(alert.id, "in_work"),
-                ),
-                InlineKeyboardButton(
-                    _("Release"),
-                    callback_data=_callback_data(alert.id, "unread"),
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    _("Ignore"),
-                    callback_data=_callback_data(alert.id, "ignored"),
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    _("Open mobile"),
-                    url=_mobile_alert_url(alert),
+                    "📱 Обращения",
+                    url=_mobile_listings_url(),
                 ),
             ],
         ]
