@@ -10,6 +10,7 @@
 {% block content %}
     <section class="alert-detail-navigation">
         <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">&larr; {% trans "Back" %}</a>
+        <a class="link-button small-action" href="{% url 'mobile_listings' %}">🚗 Объявления</a>
     </section>
 
     <section>
@@ -122,15 +123,30 @@
                 <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <input type="hidden" name="status" value="in_work">
+                    <input type="hidden" name="status" value="archived">
                     <button
                         class="small-action"
                         type="submit"
-                        {% if alert.alert_status == 'in_work' %}disabled{% endif %}
+                        {% if alert.alert_status == 'archived' %}disabled{% endif %}
                     >
-                        🛠️ {% trans "Take to work" %}
+                        ✅ Обращение обработано
                     </button>
                 </form>
+
+                {% if alert.alert_status != 'archived' %}
+                    <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="status" value="in_work">
+                        <button
+                            class="small-action"
+                            type="submit"
+                            {% if alert.alert_status == 'in_work' %}disabled{% endif %}
+                        >
+                            🛠️ {% trans "Take to work" %}
+                        </button>
+                    </form>
+                {% endif %}
 
                 <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
                     {% csrf_token %}
