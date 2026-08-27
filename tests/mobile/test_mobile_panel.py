@@ -158,6 +158,8 @@ def test_mobile_system_notice_can_be_sent_from_detail(client, staff_user, alert,
     assert "Отправить в системные уведомления" in detail_response.content.decode("utf-8")
     assert response.status_code == 302
     assert sent_alerts == [alert]
+    alert.refresh_from_db()
+    assert alert.alert_status == MarketplaceAlert.AlertStatus.ARCHIVED
 
 
 @pytest.mark.django_db

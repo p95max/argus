@@ -269,21 +269,64 @@ def mobile_send_system_notice(request, alert_id):
 
     from .telegram.sender import send_telegram_alert
 
+    previous_assignment = (
+        alert.alert_status,
+        alert.taken_by,
+        alert.taken_by_label,
+        alert.taken_at,
+    )
+
+    def restore_previous_assignment():
+        (
+            alert.alert_status,
+            alert.taken_by,
+            alert.taken_by_label,
+            alert.taken_at,
+        ) = previous_assignment
+        alert.save(
+            update_fields=[
+                "alert_status",
+                "taken_by",
+                "taken_by_label",
+                "taken_at",
+                "updated_at",
+            ]
+        )
+
+    alert.alert_status = MarketplaceAlert.AlertStatus.ARCHIVED
+    alert.taken_by = None
+    alert.taken_by_label = ""
+    alert.taken_at = None
+    alert.save(
+        update_fields=[
+            "alert_status",
+            "taken_by",
+            "taken_by_label",
+            "taken_at",
+            "updated_at",
+        ]
+    )
+
     try:
         sent_message = send_telegram_alert(alert)
     except Exception as exc:
+        restore_previous_assignment()
         messages.error(
             request,
             _("Could not send system notification: %(error)s") % {"error": exc},
         )
     else:
         if sent_message is None:
+            restore_previous_assignment()
             messages.warning(
                 request,
-                _("System notification was not sent because notifications are temporarily disabled."),
+                _(
+                    "System notification was not sent because notifications are "
+                    "temporarily disabled."
+                ),
             )
         else:
-            messages.success(request, _("System notification sent."))
+            messages.success(request, _("System notification sent and case resolved."))
 
     return redirect(_safe_next_url(request))
 
