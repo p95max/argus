@@ -109,7 +109,7 @@
             {% endif %}
 
             <div class="actions compact-actions">
-                {% if alert.event_type == 'system_notice' %}
+                {% if alert.event_type == 'system_notice' and alert.alert_status != 'archived' and not alert.telegram_sent_at %}
                     <form method="post" action="{% url 'mobile_send_system_notice' alert.id %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">

@@ -172,6 +172,23 @@ def test_mobile_rejects_sending_non_system_notice(client, staff_user, alert):
 
 
 @pytest.mark.django_db
+def test_mobile_does_not_resend_resolved_system_notice(client, staff_user, alert, monkeypatch):
+    alert.event_type = MarketplaceAlert.EventType.SYSTEM_NOTICE
+    alert.alert_status = MarketplaceAlert.AlertStatus.ARCHIVED
+    alert.save(update_fields=["event_type", "alert_status", "updated_at"])
+    client.force_login(staff_user)
+
+    monkeypatch.setattr(
+        "alerts.telegram.sender.send_telegram_alert",
+        lambda sent_alert: pytest.fail("A resolved system notice must not be resent."),
+    )
+
+    response = client.post(reverse("mobile_send_system_notice", args=[alert.id]))
+
+    assert response.status_code == 302
+
+
+@pytest.mark.django_db
 def test_mobile_panel_shows_system_events_tab(client, staff_user, alert):
     ServiceEvent.objects.create(
         mailbox=alert.mailbox,

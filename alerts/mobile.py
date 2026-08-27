@@ -266,6 +266,12 @@ def mobile_send_system_notice(request, alert_id):
     alert = get_object_or_404(MarketplaceAlert, id=alert_id)
     if alert.event_type != MarketplaceAlert.EventType.SYSTEM_NOTICE:
         raise PermissionDenied("Only system notices can be sent as system notifications.")
+    if alert.alert_status == MarketplaceAlert.AlertStatus.ARCHIVED:
+        messages.info(request, _("This case is already resolved."))
+        return redirect(_safe_next_url(request))
+    if alert.telegram_sent_at:
+        messages.info(request, _("This system notification has already been sent."))
+        return redirect(_safe_next_url(request))
 
     from .telegram.sender import send_telegram_alert
 
