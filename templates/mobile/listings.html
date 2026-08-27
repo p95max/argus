@@ -29,7 +29,7 @@
                         {% if group.open_count %}
                             <span class="status-pill warn"><span class="status-dot"></span>{{ group.open_count }} активных</span>
                         {% else %}
-                            <span class="status-pill ok"><span class="status-dot"></span>активно</span>
+                            <span class="status-pill ok"><span class="status-dot"></span>закрыто</span>
                         {% endif %}
                     </span>
                 </summary>
@@ -40,6 +40,15 @@
                         {% if group.processed_count %}<span class="badge ok">✅ {{ group.processed_count }} обработано</span>{% endif %}
                         {% if group.listing_id %}<span class="badge">ID {{ group.listing_id }}</span>{% endif %}
                     </div>
+
+                    {% if group.open_count %}
+                        <div class="actions compact-actions">
+                            <form method="post" action="{% url 'mobile_close_listing' group.representative_alert_id %}">
+                                {% csrf_token %}
+                                <button class="small-action" type="submit">🔒 Закрыть объявление</button>
+                            </form>
+                        </div>
+                    {% endif %}
 
                     {% for alert in group.alerts %}
                         <article class="card nested-card alert-card{% if alert.alert_status == 'archived' %} resolved-alert-card{% endif %}">
