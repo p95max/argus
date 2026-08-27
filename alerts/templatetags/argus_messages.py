@@ -1,6 +1,8 @@
 import re
 
 from django import template
+from django.utils.html import conditional_escape, format_html
+from django.utils.safestring import mark_safe
 
 
 register = template.Library()
@@ -41,3 +43,28 @@ def compact_buyer_message(value: str) -> str:
             text = text[:position].strip()
 
     return text.strip(" -:·")
+
+
+@register.filter(needs_autoescape=True)
+def highlight_risk_flags(value: str, autoescape=True):
+    """Highlight risk-flag sentences without making stored classifier text HTML-aware."""
+    text = str(value or "")
+    if not text:
+        return ""
+
+    escape = conditional_escape if autoescape else lambda item: item
+    pattern = re.compile(
+        r"(?P<prefix>(?:Есть\s+)?risk flags?:|Найден(?:ы)?\s+risk flag:)\s*(?P<body>[^.]+\.)",
+        flags=re.IGNORECASE,
+    )
+
+    parts = []
+    position = 0
+    for match in pattern.finditer(text):
+        parts.append(str(escape(text[position:match.start()])))
+        risk_text = f"🚩 {match.group(0)}"
+        parts.append(str(format_html('<span class="risk-flag-text">{}</span>', risk_text)))
+        position = match.end()
+
+    parts.append(str(escape(text[position:])))
+    return mark_safe("".join(parts))
