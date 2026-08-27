@@ -16,6 +16,21 @@ def _require_staff(user):
         raise PermissionDenied("Mobile control panel is available only for staff users.")
 
 
+def _same_listing_queryset(alert):
+    queryset = MarketplaceAlert.objects.filter(
+        mailbox_id=alert.mailbox_id,
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+    )
+
+    if alert.listing_id:
+        return queryset.filter(listing_id=alert.listing_id)
+    if alert.listing_title:
+        return queryset.filter(listing_title=alert.listing_title)
+    if alert.subject:
+        return queryset.filter(subject=alert.subject)
+    return queryset.filter(id=alert.id)
+
+
 @login_required
 def mobile_listings(request):
     _require_staff(request.user)
@@ -75,20 +90,7 @@ def mobile_close_listing(request, alert_id):
         id=alert_id,
         event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
     )
-
-    same_listing = MarketplaceAlert.objects.filter(
-        mailbox_id=alert.mailbox_id,
-        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
-    )
-
-    if alert.listing_id:
-        same_listing = same_listing.filter(listing_id=alert.listing_id)
-    elif alert.listing_title:
-        same_listing = same_listing.filter(listing_title=alert.listing_title)
-    elif alert.subject:
-        same_listing = same_listing.filter(subject=alert.subject)
-    else:
-        same_listing = same_listing.filter(id=alert.id)
+    same_listing = _same_listing_queryset(alert)
 
     same_listing.update(
         alert_status=MarketplaceAlert.AlertStatus.ARCHIVED,
@@ -98,4 +100,39 @@ def mobile_close_listing(request, alert_id):
     )
     same_listing.filter(id=alert.id).update(taken_by_label=LISTING_CLOSED_MARKER)
 
+    return redirect("mobile_listings")
+
+
+@login_required
+@require_POST
+def mobile_reopen_listing(request, alert_id):
+    _require_staff(request.user)
+
+    alert = get_object_or_404(
+        MarketplaceAlert,
+        id=alert_id,
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+    )
+    same_listing = _same_listing_queryset(alert)
+    same_listing.filter(taken_by_label=LISTING_CLOSED_MARKER).update(taken_by_label="")
+
+    return redirect("mobile_listings")
+
+
+@login_required
+@require_POST
+def mobile_delete_listing(request, alert_id):
+    _require_staff(request.user)
+
+    alert = get_object_or_404(
+        MarketplaceAlert,
+        id=alert_id,
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+    )
+    same_listing = _same_listing_queryset(alert)
+
+    if not same_listing.filter(taken_by_label=LISTING_CLOSED_MARKER).exists():
+        raise PermissionDenied("Only closed listings can be deleted.")
+
+    same_listing.delete()
     return redirect("mobile_listings")
