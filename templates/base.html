@@ -25,33 +25,35 @@
 </head>
 <body>
 <header>
-    {% block header %}
-        <h1>{% block header_title %}Argus{% endblock %}</h1>
-        {% block header_actions %}
-            <div class="header-actions">
-                <button
-                    id="theme-toggle"
-                    class="icon-button"
-                    type="button"
-                    aria-label="Включить светлую тему"
-                    title="Включить светлую тему"
-                >☀️</button>
+    <div class="header-content">
+        {% block header %}
+            <h1>{% block header_title %}Argus{% endblock %}</h1>
+            {% block header_actions %}
+                <div class="header-actions">
+                    <button
+                        id="theme-toggle"
+                        class="icon-button"
+                        type="button"
+                        aria-label="Включить светлую тему"
+                        title="Включить светлую тему"
+                    >☀️</button>
 
-                {% if admin_alert_changelist_url %}
-                <a
-                    class="icon-button"
-                    href="{{ admin_alert_changelist_url }}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="{% trans 'Admin' %}"
-                    title="{% trans 'Admin' %}"
-                >
-                    ⚙️
-                </a>
-                {% endif %}
-            </div>
+                    {% if admin_alert_changelist_url %}
+                    <a
+                        class="icon-button"
+                        href="{{ admin_alert_changelist_url }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="{% trans 'Admin' %}"
+                        title="{% trans 'Admin' %}"
+                    >
+                        ⚙️
+                    </a>
+                    {% endif %}
+                </div>
+            {% endblock %}
         {% endblock %}
-    {% endblock %}
+    </div>
 </header>
 <main>
     {% block messages %}
