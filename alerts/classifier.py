@@ -11,6 +11,16 @@ class ClassificationResult:
     reason: str
 
 
+BOILERPLATE_MARKERS = (
+    "Beantworte diese Nachricht",
+    "Schütze dich vor Betrug",
+    "Dein Team von Kleinanzeigen",
+    "Allgemeine Nutzungsbedingungen",
+    "Datenschutzerklärung",
+    "Impressum",
+)
+
+
 CLASSIFICATION_RULES = (
     {
         "code": "inspection_request",
@@ -47,6 +57,22 @@ CLASSIFICATION_RULES = (
         "priority": MarketplaceAlert.Priority.NORMAL,
         "patterns": (r"\bscheckheft\b", r"\bserviceheft\b", r"\bservice historie\b", r"\bwartung\b"),
         "reason": "интерес к сервисной истории",
+    },
+    {
+        "code": "installment_payment",
+        "priority": MarketplaceAlert.Priority.NORMAL,
+        "patterns": (
+            r"\bratenzahlung\b",
+            r"\bauf raten\b",
+            r"\bin raten (?:zahlen|bezahlen)\b",
+            r"\braten (?:zahlen|bezahlen)\b",
+            r"\bmonatlich\s+\d+(?:[.,]\d+)?\s*€?\s*(?:zahlen|bezahlen)?\b",
+            r"\bfinanzierung (?:möglich|machbar)\b",
+            r"\bfinanzieren\b",
+            r"\bрассроч",
+            r"\bчастями\b",
+        ),
+        "reason": "запрос рассрочки/оплаты частями",
     },
     {
         "code": "courier_shipping",
@@ -92,12 +118,44 @@ CLASSIFICATION_RULES = (
     },
 )
 
-RISK_FLAG_CODES = {"courier_shipping", "risky_payment", "external_messenger", "export_request"}
+RISK_FLAG_CODES = {
+    "installment_payment",
+    "courier_shipping",
+    "risky_payment",
+    "external_messenger",
+    "export_request",
+}
 LOW_QUALITY_FLAG_CODES = {"last_price", "aggressive_bargain", "odd_style"}
 
 
+def _compact_buyer_text(value: str) -> str:
+    """Strip Kleinanzeigen wrapper text before classification."""
+    text = " ".join(str(value or "").split())
+    if not text:
+        return ""
+
+    patterns = (
+        r"Antwort von\s+[^\s:]+\s+(.*?)(?=\s+Beantworte diese Nachricht|\s+Schütze dich vor Betrug|\s+Dein Team von Kleinanzeigen|$)",
+        r"Nachricht von\s+[^\s:]+\s+(.*?)(?=\s+Beantworte diese Nachricht|\s+Schütze dich vor Betrug|\s+Dein Team von Kleinanzeigen|$)",
+        r"(?:Nachricht|Message)\s*:\s*(.*?)(?=\s+Beantworte diese Nachricht|\s+Antworten\b|\s+Schütze dich vor Betrug|$)",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE | re.S)
+        if match:
+            candidate = match.group(1).strip(" -:·")
+            if candidate:
+                return candidate
+
+    for marker in BOILERPLATE_MARKERS:
+        position = text.lower().find(marker.lower())
+        if position != -1:
+            text = text[:position].strip()
+
+    return text.strip(" -:·")
+
+
 def classify_marketplace_message(text: str) -> ClassificationResult:
-    normalized = (text or "").lower()
+    normalized = _compact_buyer_text(text).lower()
     matched_codes = []
     matched_reasons = []
     matched_priorities = []
@@ -121,13 +179,26 @@ def classify_marketplace_message(text: str) -> ClassificationResult:
             reason="Правила классификации не нашли сильных сигналов.",
         )
 
-    reason = "Найдены признаки: " + ", ".join(matched_reasons) + "."
-    risk_codes = [code for code in matched_codes if code in RISK_FLAG_CODES]
-    if risk_codes:
-        reason += " Есть risk flags: " + ", ".join(risk_codes) + "."
+    regular_reasons = [
+        reason
+        for code, reason in zip(matched_codes, matched_reasons)
+        if code not in RISK_FLAG_CODES
+    ]
+    risk_reasons = [
+        reason
+        for code, reason in zip(matched_codes, matched_reasons)
+        if code in RISK_FLAG_CODES
+    ]
+
+    parts = []
+    if regular_reasons:
+        parts.append("Найдены признаки: " + ", ".join(regular_reasons) + ".")
+    if risk_reasons:
+        prefix = "🚩 Найден risk flag: " if len(risk_reasons) == 1 else "🚩 Найдены risk flags: "
+        parts.append(prefix + ", ".join(risk_reasons) + ".")
 
     return ClassificationResult(
         priority=priority,
         flag_codes=tuple(dict.fromkeys(matched_codes)),
-        reason=reason,
+        reason=" ".join(parts),
     )

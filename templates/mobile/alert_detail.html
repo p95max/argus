@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n argus_messages %}
 
 {% block title %}Argus alert #{{ alert.id }}{% endblock %}
 {% block header_title %}📋 {% blocktrans with id=alert.id %}Lead #{{ id }}{% endblocktrans %}{% endblock %}
@@ -10,6 +10,7 @@
 {% block content %}
     <section class="alert-detail-navigation">
         <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">&larr; {% trans "Back" %}</a>
+        <a class="link-button small-action" href="{% url 'mobile_listings' %}">🚗 Объявления</a>
     </section>
 
     <section>
@@ -85,7 +86,7 @@
                     <span class="info-icon">🧠</span>
                     <span class="info-content">
                         <span class="info-label">{% trans "Classification" %}</span>
-                        <span>{{ alert.classification_reason }}</span>
+                        <span>{{ alert.classification_reason|highlight_risk_flags }}</span>
                     </span>
                 </div>
             {% endif %}
@@ -95,7 +96,7 @@
                     <div class="buyer-message-header">
                         <span>💬 {% trans "Buyer message" %}</span>
                     </div>
-                    <div class="buyer-message-body">{{ alert.message_text|linebreaksbr }}</div>
+                    <div class="buyer-message-body">{{ alert.message_text|compact_buyer_message|linebreaksbr }}</div>
                 </div>
             {% elif alert.normalized_body %}
                 <div class="buyer-message">
@@ -113,49 +114,30 @@
                     <form method="post" action="{% url 'mobile_send_system_notice' alert.id %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button class="small-action" type="submit">
-                            📨 Отправить в системные уведомления
-                        </button>
+                        <button class="small-action" type="submit">📨 Отправить в системные уведомления</button>
                     </form>
                 {% endif %}
 
                 <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <input type="hidden" name="status" value="in_work">
-                    <button
-                        class="small-action"
-                        type="submit"
-                        {% if alert.alert_status == 'in_work' %}disabled{% endif %}
-                    >
-                        🛠️ {% trans "Take to work" %}
-                    </button>
+                    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="status" value="archived">
+                    <button class="small-action" type="submit" {% if alert.alert_status == 'archived' %}disabled{% endif %}>✅ Обращение обработано</button>
+                </form>
+
+                {% if alert.alert_status != 'archived' %}
+                    <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                        {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="status" value="in_work">
+                        <button class="small-action" type="submit" {% if alert.alert_status == 'in_work' %}disabled{% endif %}>🛠️ {% trans "Take to work" %}</button>
+                    </form>
+                {% endif %}
+
+                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="status" value="unread">
+                    <button class="small-action" type="submit" {% if alert.alert_status == 'unread' %}disabled{% endif %}>↩️ {% trans "Release" %}</button>
                 </form>
 
                 <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <input type="hidden" name="status" value="unread">
-                    <button
-                        class="small-action"
-                        type="submit"
-                        {% if alert.alert_status == 'unread' %}disabled{% endif %}
-                    >
-                        ↩️ {% trans "Release" %}
-                    </button>
-                </form>
-
-                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                    <input type="hidden" name="status" value="ignored">
-                    <button
-                        class="small-action"
-                        type="submit"
-                        {% if alert.alert_status == 'ignored' %}disabled{% endif %}
-                    >
-                        🚫 {% trans "Ignore" %}
-                    </button>
+                    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="status" value="ignored">
+                    <button class="small-action" type="submit" {% if alert.alert_status == 'ignored' %}disabled{% endif %}>🚫 {% trans "Ignore" %}</button>
                 </form>
             </div>
         </article>
@@ -163,69 +145,18 @@
 
     <section>
         <details class="card collapsible-card">
-            <summary class="collapsible-summary">
-                <span class="summary-title">
-                    📬 {% trans "Mailbox" %}
-
-                    {% if alert.mailbox.connection_status == 'error' %}
-                        <span class="status-pill danger">
-                            <span class="status-dot"></span>
-                            {% trans "Error" %}
-                        </span>
-                    {% elif alert.mailbox.connection_status == 'connected' %}
-                        <span class="status-pill ok">
-                            <span class="status-dot"></span>
-                            OK
-                        </span>
-                    {% else %}
-                        <span class="status-pill muted">
-                            <span class="status-dot"></span>
-                            {{ alert.mailbox.get_connection_status_display }}
-                        </span>
-                    {% endif %}
-                </span>
-            </summary>
-
+            <summary class="collapsible-summary"><span class="summary-title">📬 {% trans "Mailbox" %} {% if alert.mailbox.connection_status == 'error' %}<span class="status-pill danger"><span class="status-dot"></span>{% trans "Error" %}</span>{% elif alert.mailbox.connection_status == 'connected' %}<span class="status-pill ok"><span class="status-dot"></span>OK</span>{% else %}<span class="status-pill muted"><span class="status-dot"></span>{{ alert.mailbox.get_connection_status_display }}</span>{% endif %}</span></summary>
             <div class="collapsible-content">
                 {% trans "not yet" as not_yet %}
                 <article class="card nested-card">
-                    <div class="title">{{ alert.mailbox.name }}</div>
-                    <div class="meta">{{ alert.mailbox.email }}</div>
-
-                    <div class="badges">
-                        <span class="badge {% if alert.mailbox.is_active %}ok{% else %}warn{% endif %}">
-                            {% if alert.mailbox.is_active %}{% trans "active" %}{% else %}{% trans "disabled" %}{% endif %}
-                        </span>
-
-                        <span class="badge {% if alert.mailbox.connection_status == 'error' %}danger{% elif alert.mailbox.connection_status == 'connected' %}ok{% else %}warn{% endif %}">
-                            {{ alert.mailbox.get_connection_status_display }}
-                        </span>
-                    </div>
-
-                    <div class="small">
-                        {% trans "Last check" %}:
-                        {{ alert.mailbox.last_checked_at|date:"d.m.Y H:i"|default:not_yet }}
-                    </div>
-
-                    {% if alert.mailbox.last_error %}
-                        <div class="small">{% trans "Error" %}: {{ alert.mailbox.last_error }}</div>
-                    {% endif %}
+                    <div class="title">{{ alert.mailbox.name }}</div><div class="meta">{{ alert.mailbox.email }}</div>
+                    <div class="badges"><span class="badge {% if alert.mailbox.is_active %}ok{% else %}warn{% endif %}">{% if alert.mailbox.is_active %}{% trans "active" %}{% else %}{% trans "disabled" %}{% endif %}</span><span class="badge {% if alert.mailbox.connection_status == 'error' %}danger{% elif alert.mailbox.connection_status == 'connected' %}ok{% else %}warn{% endif %}">{{ alert.mailbox.get_connection_status_display }}</span></div>
+                    <div class="small">{% trans "Last check" %}: {{ alert.mailbox.last_checked_at|date:"d.m.Y H:i"|default:not_yet }}</div>
+                    {% if alert.mailbox.last_error %}<div class="small">{% trans "Error" %}: {{ alert.mailbox.last_error }}</div>{% endif %}
                 </article>
             </div>
         </details>
     </section>
 
-    <section>
-        <div class="actions compact-actions">
-            <a class="link-button small-action" href="{{ admin_alert_url }}">
-                ℹ️ {% trans "Full information" %}
-            </a>
-
-            {% if can_manage_mailboxes %}
-                <a class="link-button small-action" href="{{ admin_mailbox_url }}">
-                    ⚙️ {% trans "Settings" %}
-                </a>
-            {% endif %}
-        </div>
-    </section>
+    <section><div class="actions compact-actions"><a class="link-button small-action" href="{{ admin_alert_url }}">ℹ️ {% trans "Full information" %}</a>{% if can_manage_mailboxes %}<a class="link-button small-action" href="{{ admin_mailbox_url }}">⚙️ {% trans "Settings" %}</a>{% endif %}</div></section>
 {% endblock %}

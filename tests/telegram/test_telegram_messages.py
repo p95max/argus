@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from alerts.models import MailboxAccount, MarketplaceAlert
 from alerts.telegram.messages import (
+    ALERT_MESSAGE_BODY_LIMIT,
     TELEGRAM_SAFE_MESSAGE_LIMIT,
     _alert_mailbox_label,
     _truncate_html_message,
@@ -15,13 +16,54 @@ from alerts.telegram.messages import (
 )
 
 
-def test_build_alert_message_caps_escaped_body_text():
+def test_build_alert_message_is_compact_and_mobile_friendly():
+    alert = _make_alert(message_text="Ist die Steuerkette schon einmal gemacht worden?")
+    alert.listing_title = "Skoda Octavia 1.4 tsi 122 ps, tüv neu"
+    alert.buyer_name = "Thomas"
+    alert._telegram_flag_names = "TÜV / HU"
+    alert._telegram_mailbox_label = "XR 128 RED (ivan.komarov8887@gmail.com)"
+
+    message = build_alert_message(alert)
+
+    assert message.startswith("🚗 <b>Skoda Octavia 1.4 tsi 122 ps, tüv neu</b>")
+    assert "👤 Thomas" in message
+    assert "💬 Ist die Steuerkette schon einmal gemacht worden?" in message
+    assert "🏷️ TÜV / HU" in message
+    assert "📬 ivan.komarov8887@gmail.com" in message
+    assert "🆔" not in message
+    assert "Priority" not in message
+    assert "Status" not in message
+    assert "Reason" not in message
+    assert "Buyer message" not in message
+
+
+def test_build_alert_message_extracts_actual_kleinanzeigen_buyer_message():
+    body = (
+        'Nutzer-Anfrage zu deiner Anzeige "Skoda Octavia" '
+        "Ein Interessent hat eine Anfrage gesendet. "
+        "Nachricht von thomas Ist die Steuerkette schon einmal gemacht worden "
+        "Beantworte diese Nachricht einfach mit der Antworten-Funktion. "
+        "Schütze dich vor Betrug."
+    )
+    alert = _make_alert(message_text=body)
+    alert.buyer_name = "Interessent"
+
+    message = build_alert_message(alert)
+
+    assert "👤 thomas" in message
+    assert "💬 Ist die Steuerkette schon einmal gemacht worden" in message
+    assert "Beantworte diese Nachricht" not in message
+    assert "Schütze dich vor Betrug" not in message
+
+
+def test_build_alert_message_caps_body_without_overflowing_telegram_limit():
     alert = _make_alert(message_text="&" * 1200)
 
     message = build_alert_message(alert)
 
     assert len(message) <= TELEGRAM_SAFE_MESSAGE_LIMIT
-    assert message.endswith("...")
+    assert "..." in message
+    assert len(alert.message_text) > ALERT_MESSAGE_BODY_LIMIT
     assert _does_not_end_inside_html_entity(message)
 
 

@@ -522,6 +522,11 @@ summary:focus-visible {
     color: var(--accent);
 }
 
+.risk-flag-text {
+    color: var(--danger);
+    font-weight: 700;
+}
+
 .alert-meta-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

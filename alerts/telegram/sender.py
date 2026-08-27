@@ -457,10 +457,4 @@ async def _async_send_alert_message(
 def _preload_alert_message_fields(alert: MarketplaceAlert) -> None:
     alert._telegram_flag_names = ", ".join(alert.flags.values_list("name", flat=True))
     mailbox = alert.mailbox
-    if mailbox.name and mailbox.email:
-        alert._telegram_mailbox_label = f"{mailbox.name} ({mailbox.email})"
-    else:
-        alert._telegram_mailbox_label = (
-            mailbox.name or mailbox.email or telegram_gettext("Unknown")
-        )
-
+    alert._telegram_mailbox_label = mailbox.name or telegram_gettext("Unknown")
