@@ -11,6 +11,16 @@
     {% block styles %}
         <style>{% include "mobile/styles.css" %}</style>
     {% endblock %}
+    <script>
+        (() => {
+            const savedTheme = localStorage.getItem("argus-theme");
+            const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+
+            if (savedTheme === "light" || (!savedTheme && prefersLight)) {
+                document.documentElement.classList.add("light-theme");
+            }
+        })();
+    </script>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -18,7 +28,16 @@
     {% block header %}
         <h1>{% block header_title %}Argus{% endblock %}</h1>
         {% block header_actions %}
-            {% if admin_alert_changelist_url %}
+            <div class="header-actions">
+                <button
+                    id="theme-toggle"
+                    class="icon-button"
+                    type="button"
+                    aria-label="Включить светлую тему"
+                    title="Включить светлую тему"
+                >☀️</button>
+
+                {% if admin_alert_changelist_url %}
                 <a
                     class="icon-button"
                     href="{{ admin_alert_changelist_url }}"
@@ -29,7 +48,8 @@
                 >
                     ⚙️
                 </a>
-            {% endif %}
+                {% endif %}
+            </div>
         {% endblock %}
     {% endblock %}
 </header>
@@ -79,5 +99,28 @@
         </script>
     {% endif %}
 </main>
+<script>
+    (() => {
+        const toggle = document.getElementById("theme-toggle");
+        if (!toggle) {
+            return;
+        }
+
+        const root = document.documentElement;
+        const setTheme = (isLight) => {
+            root.classList.toggle("light-theme", isLight);
+            localStorage.setItem("argus-theme", isLight ? "light" : "dark");
+            toggle.textContent = isLight ? "🌙" : "☀️";
+            toggle.setAttribute(
+                "aria-label",
+                isLight ? "Включить тёмную тему" : "Включить светлую тему"
+            );
+            toggle.title = toggle.getAttribute("aria-label");
+        };
+
+        setTheme(root.classList.contains("light-theme"));
+        toggle.addEventListener("click", () => setTheme(!root.classList.contains("light-theme")));
+    })();
+</script>
 </body>
 </html>
