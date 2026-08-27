@@ -49,6 +49,22 @@ CLASSIFICATION_RULES = (
         "reason": "интерес к сервисной истории",
     },
     {
+        "code": "installment_payment",
+        "priority": MarketplaceAlert.Priority.NORMAL,
+        "patterns": (
+            r"\bratenzahlung\b",
+            r"\bauf raten\b",
+            r"\bin raten (?:zahlen|bezahlen)\b",
+            r"\braten (?:zahlen|bezahlen)\b",
+            r"\bmonatlich\s+\d+(?:[.,]\d+)?\s*€?\s*(?:zahlen|bezahlen)?\b",
+            r"\bfinanzierung (?:möglich|machbar)\b",
+            r"\bfinanzieren\b",
+            r"\bрассроч",
+            r"\bчастями\b",
+        ),
+        "reason": "запрос рассрочки/оплаты частями",
+    },
+    {
         "code": "courier_shipping",
         "priority": MarketplaceAlert.Priority.NORMAL,
         "patterns": (r"\bkurier\b", r"\bspedition\b", r"\babholung durch\b", r"\bversand\b"),
@@ -92,7 +108,13 @@ CLASSIFICATION_RULES = (
     },
 )
 
-RISK_FLAG_CODES = {"courier_shipping", "risky_payment", "external_messenger", "export_request"}
+RISK_FLAG_CODES = {
+    "installment_payment",
+    "courier_shipping",
+    "risky_payment",
+    "external_messenger",
+    "export_request",
+}
 LOW_QUALITY_FLAG_CODES = {"last_price", "aggressive_bargain", "odd_style"}
 
 
