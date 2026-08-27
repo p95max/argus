@@ -2,11 +2,13 @@ from collections import OrderedDict
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .models import MarketplaceAlert
+
+
+LISTING_CLOSED_MARKER = "__listing_closed__"
 
 
 def _require_staff(user):
@@ -40,9 +42,12 @@ def mobile_listings(request):
                 "open_count": 0,
                 "processed_count": 0,
                 "representative_alert_id": alert.id,
+                "is_closed": False,
             },
         )
         group["alerts"].append(alert)
+        if alert.taken_by_label == LISTING_CLOSED_MARKER:
+            group["is_closed"] = True
         if alert.alert_status == MarketplaceAlert.AlertStatus.ARCHIVED:
             group["processed_count"] += 1
         elif alert.alert_status != MarketplaceAlert.AlertStatus.IGNORED:
@@ -85,11 +90,12 @@ def mobile_close_listing(request, alert_id):
     else:
         same_listing = same_listing.filter(id=alert.id)
 
-    same_listing.exclude(alert_status=MarketplaceAlert.AlertStatus.ARCHIVED).update(
+    same_listing.update(
         alert_status=MarketplaceAlert.AlertStatus.ARCHIVED,
         taken_by=None,
         taken_by_label="",
         taken_at=None,
     )
+    same_listing.filter(id=alert.id).update(taken_by_label=LISTING_CLOSED_MARKER)
 
     return redirect("mobile_listings")
