@@ -122,6 +122,41 @@ summary:focus-visible {
     border-color: var(--line-accent);
 }
 
+.resolved-alert-card {
+    background: #20252a;
+    border-color: #4b5660;
+}
+
+.resolved-alert-card .title,
+.resolved-alert-card .meta-label,
+.resolved-alert-card .alert-mailbox span:not(.meta-label),
+.resolved-alert-card .alert-date span:not(.meta-label) {
+    color: var(--muted);
+}
+
+.system-notice-card {
+    background: linear-gradient(135deg, #1d2931, var(--panel-accent));
+    border-color: rgba(54, 194, 163, .65);
+}
+
+.system-notice-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.system-notice-icon {
+    flex: 0 0 auto;
+    font-size: 32px;
+    line-height: 1;
+    filter: drop-shadow(0 0 7px rgba(54, 194, 163, .35));
+}
+
+.resolved-alert-card.system-notice-card {
+    background: #20252a;
+    border-color: #4b5660;
+}
+
 .alert-card-link {
     position: absolute;
     inset: 0;

@@ -184,13 +184,16 @@
                 </div>
             {% endif %}
             {% for alert in alerts %}
-                <article class="card alert-card">
+                <article class="card alert-card{% if view_mode == 'all' and alert.alert_status == 'archived' %} resolved-alert-card{% endif %}{% if alert.event_type == 'system_notice' %} system-notice-card{% endif %}">
                     <a
                         class="alert-card-link"
                         href="{% url 'mobile_alert_detail' alert.id %}"
                         aria-label="{% blocktrans with id=alert.id %}Open lead #{{ id }}{% endblocktrans %}"
                     ></a>
-                    <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
+                    <div class="title{% if alert.event_type == 'system_notice' %} system-notice-title{% endif %}">
+                        {% if alert.event_type == 'system_notice' %}<span class="system-notice-icon" aria-hidden="true">⚙️</span>{% endif %}
+                        {{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}
+                    </div>
                     <div class="alert-meta-grid">
                         <div class="alert-mailbox">
                             <span class="meta-label">📬 {% trans "Mailbox" %}</span>
