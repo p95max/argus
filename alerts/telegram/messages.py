@@ -1,5 +1,6 @@
 import asyncio
 import html
+import re
 from datetime import timedelta
 
 from django.conf import settings
@@ -17,7 +18,7 @@ from .quiet_hours import quiet_hours_allows_alert
 TELEGRAM_HARD_MESSAGE_LIMIT = 4096
 TELEGRAM_SAFE_MESSAGE_LIMIT = 4000
 ALERT_REASON_LIMIT = 260
-ALERT_MESSAGE_BODY_LIMIT = 1200
+ALERT_MESSAGE_BODY_LIMIT = 700
 SYSTEM_DETAILS_LIMIT = 1200
 STATUS_TITLE_LIMIT = 70
 REMINDER_REPORT_CASE_LIMIT = 12
@@ -34,42 +35,65 @@ def should_send_telegram_for_alert(alert: MarketplaceAlert, at_time=None) -> boo
 def build_alert_message(alert: MarketplaceAlert) -> str:
     title = alert.listing_title or alert.subject or alert.get_event_type_display()
     buyer = alert.buyer_name or _("Unknown")
-    message = alert.message_text or alert.normalized_body or alert.raw_body or _("Text not found")
+    source_message = alert.message_text or alert.normalized_body or alert.raw_body or _("Text not found")
+    buyer, message = _compact_buyer_message(source_message, buyer)
     flags = _alert_flag_names(alert)
     event_time = alert.received_at or alert.created_at
-    mailbox_label = _alert_mailbox_label(alert)
+    mailbox_label = _compact_mailbox_label(_alert_mailbox_label(alert))
     taken_by = _alert_taken_by_label(alert)
 
-    lines = [
-        _build_alert_header(alert),
-        f"📬 <b>{_('Mailbox')}:</b> {html.escape(mailbox_label)}",
-        f"📅 <b>{_('Date')}:</b> {_format_date_from_datetime(event_time)}",
-        f"🕒 <b>{_('Time')}:</b> {_format_time(event_time)}",
-        f"🆔 <b>ID:</b> {alert.id}",
-        f"📌 <b>{_('Status')}:</b> {html.escape(alert.get_alert_status_display())}",
-    ]
-    if taken_by:
-        lines.append(f"👷 <b>{_('In work by')}:</b> {html.escape(taken_by)}")
+    lines = [f"🚗 <b>{html.escape(_truncate(title, 100))}</b>", ""]
+
     if alert.event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
-        lines.append(f"👤 <b>{_('Buyer')}:</b> {html.escape(buyer)}")
+        lines.append(f"👤 {html.escape(buyer)}")
+
+    lines.append(f"💬 {html.escape(_truncate(message, ALERT_MESSAGE_BODY_LIMIT))}")
+    lines.append("")
+
+    if flags and flags != _("none"):
+        lines.append(f"🏷️ {html.escape(_truncate(flags, 120))}")
+
+    if taken_by:
+        lines.append(f"🛠️ {html.escape(taken_by)}")
+
     lines.extend(
         [
-            f"🚗 <b>{_('Listing')}:</b> {html.escape(title)}",
-            f"{_priority_emoji(alert)} <b>{_('Priority')}:</b> {html.escape(alert.get_priority_display())}",
-            f"🏷️ <b>{_('Type')}:</b> {html.escape(alert.get_event_type_display())}",
-            f"🚩 <b>{_('Flags')}:</b> {html.escape(flags)}",
+            f"📬 {html.escape(_truncate(mailbox_label, 80))}",
+            f"🕒 {_format_date_from_datetime(event_time)} {_format_time(event_time)}",
         ]
     )
-    if alert.classification_reason:
-        reason = html.escape(_truncate(alert.classification_reason, ALERT_REASON_LIMIT))
-        lines.append(f"🧾 <b>{_('Reason')}:</b> {reason}")
-    lines.extend(
-        [
-            "",
-            f"💬 {html.escape(_truncate(message, ALERT_MESSAGE_BODY_LIMIT))}",
-        ]
-    )
+
     return _fit_telegram_message(lines)
+
+
+def _compact_buyer_message(message: str, buyer: str) -> tuple[str, str]:
+    text = " ".join(str(message or "").split())
+    if not text:
+        return buyer, _("Text not found")
+
+    match = re.search(
+        r"Nachricht von\s+([^\s]+)\s+(.*?)\s+Beantworte diese Nachricht",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return buyer, text
+
+    parsed_buyer = match.group(1).strip()
+    parsed_message = match.group(2).strip()
+    generic_buyer_names = {"", "unknown", "unbekannt", "неизвестно", "interessent"}
+    if str(buyer or "").strip().lower() in generic_buyer_names and parsed_buyer:
+        buyer = parsed_buyer
+
+    return buyer, parsed_message or text
+
+
+def _compact_mailbox_label(label: str) -> str:
+    value = str(label or "").strip()
+    match = re.search(r"\(([^()]+@[^()]+)\)\s*$", value)
+    if match:
+        return match.group(1).strip()
+    return value
 
 
 @use_argus_telegram_language
