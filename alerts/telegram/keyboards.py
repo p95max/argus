@@ -58,29 +58,22 @@ def build_alert_keyboard(alert: MarketplaceAlert) -> InlineKeyboardMarkup:
 
 @use_argus_telegram_language
 def build_unread_report_keyboard(alerts: list[MarketplaceAlert]) -> InlineKeyboardMarkup | None:
-    from .messages import _group_unread_reminder_cases, _truncate
+    from .messages import _group_unread_reminder_cases
 
     cases = _group_unread_reminder_cases(alerts)
     if not cases:
         return None
 
-    if len(cases) == 1:
-        return build_alert_keyboard(cases[0]["latest"])
-
-    rows = []
-    for index, case in enumerate(cases[:5], start=1):
-        latest = case["latest"]
-        title = latest.listing_title or latest.subject or latest.get_event_type_display()
-        rows.append(
+    return InlineKeyboardMarkup(
+        [
             [
                 InlineKeyboardButton(
-                    f"📱 {index}. {_truncate(title, 44)}",
-                    url=_mobile_alert_url(latest),
+                    "📱 Обращения",
+                    url=_mobile_listings_url(),
                 ),
-            ]
-        )
-
-    return InlineKeyboardMarkup(rows)
+            ],
+        ]
+    )
 
 
 @use_argus_telegram_language
@@ -131,6 +124,14 @@ def _polling_callback_data(action: str) -> str:
 
 def _mobile_alert_url(alert: MarketplaceAlert) -> str:
     path = reverse("mobile_alert_detail", args=[alert.id])
+    base_url = getattr(settings, "ARGUS_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if base_url:
+        return f"{base_url}{path}"
+    return path
+
+
+def _mobile_listings_url() -> str:
+    path = reverse("mobile_listings")
     base_url = getattr(settings, "ARGUS_PUBLIC_BASE_URL", "").strip().rstrip("/")
     if base_url:
         return f"{base_url}{path}"
