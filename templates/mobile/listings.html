@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n argus_messages %}
 
 {% block title %}Argus · Объявления{% endblock %}
 {% block header_title %}🚗 Объявления{% endblock %}
@@ -57,7 +57,7 @@
                             </div>
                             {% if alert.message_text %}
                                 <div class="buyer-message">
-                                    <div class="buyer-message-body">{{ alert.message_text|truncatechars:240 }}</div>
+                                    <div class="buyer-message-body">{{ alert.message_text|compact_buyer_message|truncatechars:240 }}</div>
                                 </div>
                             {% endif %}
 
