@@ -22,12 +22,12 @@
 
     <section>
         {% for group in listing_groups %}
-            <details class="card collapsible-card" {% if group.open_count %}open{% endif %}>
+            <details class="card collapsible-card listing-card" {% if group.open_count %}open{% endif %}>
                 <summary class="collapsible-summary">
                     <span class="summary-title">
                         🚗 {{ group.title }}
                         {% if group.is_closed %}
-                            <span class="status-pill ok"><span class="status-dot"></span>закрыто</span>
+                            <span class="status-pill danger"><span class="status-dot"></span>закрыто</span>
                         {% elif group.open_count %}
                             <span class="status-pill warn"><span class="status-dot"></span>{{ group.open_count }} активных</span>
                         {% else %}
@@ -43,59 +43,134 @@
                         {% if group.listing_id %}<span class="badge">ID {{ group.listing_id }}</span>{% endif %}
                     </div>
 
-                    {% if not group.is_closed %}
-                        <div class="actions compact-actions">
-                            <form method="post" action="{% url 'mobile_close_listing' group.representative_alert_id %}">
+                    {% if group.is_closed %}
+                        <div class="listing-action-box listing-action-box-success">
+                            <div class="listing-action-title">↻ Активировать объявление</div>
+                            <div class="small">Объявление снова станет активным, новые обращения будут учитываться.</div>
+                            <form method="post" action="{% url 'mobile_reopen_listing' group.representative_alert_id %}" onsubmit="return confirm('Активировать объявление снова?')">
                                 {% csrf_token %}
-                                <button class="small-action" type="submit">🔒 Закрыть объявление</button>
+                                <button class="listing-action-button listing-action-button-success" type="submit">↻ Активировать объявление</button>
+                            </form>
+                        </div>
+
+                        <div class="listing-action-box listing-action-box-danger">
+                            <div class="listing-action-title">🗑 Удалить объявление и все обращения</div>
+                            <div class="small">Это действие нельзя отменить. Объявление и все связанные обращения будут удалены навсегда.</div>
+                            <form method="post" action="{% url 'mobile_delete_listing' group.representative_alert_id %}" onsubmit="return confirm('Удалить объявление и все связанные обращения навсегда?')">
+                                {% csrf_token %}
+                                <button class="listing-action-button listing-action-button-danger" type="submit">🗑 Удалить навсегда</button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <div class="listing-action-box listing-action-box-danger">
+                            <div class="listing-action-title">🔒 Закрыть объявление</div>
+                            <div class="small">Объявление будет закрыто, все текущие обращения перейдут в архив.</div>
+                            <form method="post" action="{% url 'mobile_close_listing' group.representative_alert_id %}" onsubmit="return confirm('Закрыть объявление и отправить все его обращения в архив?')">
+                                {% csrf_token %}
+                                <button class="listing-action-button listing-action-button-danger" type="submit">🔒 Закрыть объявление</button>
                             </form>
                         </div>
                     {% endif %}
 
-                    {% for alert in group.alerts %}
-                        <article class="card nested-card alert-card{% if alert.alert_status == 'archived' %} resolved-alert-card{% endif %}">
-                            <a class="alert-card-link" href="{% url 'mobile_alert_detail' alert.id %}" aria-label="Открыть обращение #{{ alert.id }}"></a>
-                            <div class="title">📋 Обращение #{{ alert.id }}</div>
-                            <div class="meta">
-                                {% if alert.buyer_name %}👤 {{ alert.buyer_name }} · {% endif %}
-                                {{ alert.created_at|date:"d.m.Y H:i" }}
-                            </div>
-                            <div class="badges">
-                                <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">{{ alert.get_alert_status_display }}</span>
-                                {% for flag in alert.flags.all %}
-                                    <span class="badge {% if flag.category == 'risk' %}danger{% endif %}">{{ flag.name }}</span>
-                                {% endfor %}
-                            </div>
-                            {% if alert.message_text %}
-                                <div class="buyer-message">
-                                    <div class="buyer-message-body">{{ alert.message_text|compact_buyer_message|truncatechars:240 }}</div>
+                    <div class="listing-alerts" data-page-size="10">
+                        {% for alert in group.alerts %}
+                            <article class="card nested-card alert-card{% if alert.alert_status == 'archived' %} resolved-alert-card{% endif %}" data-listing-alert>
+                                <a class="alert-card-link" href="{% url 'mobile_alert_detail' alert.id %}" aria-label="Открыть обращение #{{ alert.id }}"></a>
+                                <div class="title">📋 Обращение #{{ alert.id }}</div>
+                                <div class="meta">
+                                    {% if alert.buyer_name %}👤 {{ alert.buyer_name }} · {% endif %}
+                                    {{ alert.created_at|date:"d.m.Y H:i" }}
                                 </div>
-                            {% endif %}
+                                <div class="badges">
+                                    <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">{{ alert.get_alert_status_display }}</span>
+                                    {% for flag in alert.flags.all %}
+                                        <span class="badge {% if flag.category == 'risk' %}danger{% endif %}">{{ flag.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% if alert.message_text %}
+                                    <div class="buyer-message">
+                                        <div class="buyer-message-body">{{ alert.message_text|compact_buyer_message|truncatechars:240 }}</div>
+                                    </div>
+                                {% endif %}
 
-                            <div class="actions compact-actions">
-                                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                    <input type="hidden" name="status" value="archived">
-                                    <button class="small-action" type="submit" {% if alert.alert_status == 'archived' %}disabled{% endif %}>
-                                        ✅ Обращение обработано
-                                    </button>
-                                </form>
-                                {% if alert.alert_status != 'archived' %}
+                                <div class="actions compact-actions">
                                     <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
                                         {% csrf_token %}
                                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                        <input type="hidden" name="status" value="in_work">
-                                        <button class="small-action" type="submit" {% if alert.alert_status == 'in_work' %}disabled{% endif %}>🛠️ В работу</button>
+                                        <input type="hidden" name="status" value="archived">
+                                        <button class="small-action" type="submit" {% if alert.alert_status == 'archived' %}disabled{% endif %}>
+                                            ✅ Обращение обработано
+                                        </button>
                                     </form>
-                                {% endif %}
-                            </div>
-                        </article>
-                    {% endfor %}
+                                    {% if alert.alert_status != 'archived' %}
+                                        <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                            <input type="hidden" name="status" value="in_work">
+                                            <button class="small-action" type="submit" {% if alert.alert_status == 'in_work' %}disabled{% endif %}>🛠️ В работу</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+
+                    {% if group.alerts|length > 10 %}
+                        <div class="listing-pagination" data-listing-pagination>
+                            <button class="small-action" type="button" data-page-prev>←</button>
+                            <span class="small" data-page-label></span>
+                            <button class="small-action" type="button" data-page-next>→</button>
+                        </div>
+                    {% endif %}
                 </div>
             </details>
         {% empty %}
             <div class="empty">Обращений покупателей по объявлениям пока нет.</div>
         {% endfor %}
     </section>
+
+    <script>
+        (() => {
+            document.querySelectorAll('.listing-card').forEach((card) => {
+                const container = card.querySelector('.listing-alerts');
+                const pagination = card.querySelector('[data-listing-pagination]');
+                if (!container || !pagination) return;
+
+                const items = Array.from(container.querySelectorAll('[data-listing-alert]'));
+                const pageSize = Number(container.dataset.pageSize || 10);
+                const pageCount = Math.ceil(items.length / pageSize);
+                const prev = pagination.querySelector('[data-page-prev]');
+                const next = pagination.querySelector('[data-page-next]');
+                const label = pagination.querySelector('[data-page-label]');
+                let page = 1;
+
+                const render = () => {
+                    const start = (page - 1) * pageSize;
+                    const end = start + pageSize;
+                    items.forEach((item, index) => {
+                        item.hidden = index < start || index >= end;
+                    });
+                    label.textContent = `Страница ${page} / ${pageCount}`;
+                    prev.disabled = page <= 1;
+                    next.disabled = page >= pageCount;
+                };
+
+                prev.addEventListener('click', () => {
+                    if (page > 1) {
+                        page -= 1;
+                        render();
+                    }
+                });
+
+                next.addEventListener('click', () => {
+                    if (page < pageCount) {
+                        page += 1;
+                        render();
+                    }
+                });
+
+                render();
+            });
+        })();
+    </script>
 {% endblock %}
