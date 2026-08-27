@@ -10,14 +10,9 @@
     </section>
 
     <section>
-        <article class="card">
-            <div class="title">Обращения по объявлениям</div>
-            <div class="badges">
-                <span class="badge">🚗 {{ listing_count }} объявлений</span>
-                <span class="badge">💬 {{ alert_count }} обращений</span>
-            </div>
-            <div class="small">Каждое объявление содержит свою историю обращений покупателей.</div>
-        </article>
+        <div class="badges">
+            <span class="badge">💬 {{ alert_count }} обращений</span>
+        </div>
     </section>
 
     <section>
@@ -26,6 +21,7 @@
                 <summary class="collapsible-summary">
                     <span class="summary-title">
                         🚗 {{ group.title }}
+                        <span class="status-pill muted">💬 {{ group.alerts|length }}</span>
                         {% if group.is_closed %}
                             <span class="status-pill danger"><span class="status-dot"></span>закрыто</span>
                         {% elif group.open_count %}
@@ -38,7 +34,6 @@
 
                 <div class="collapsible-content">
                     <div class="badges">
-                        <span class="badge">💬 {{ group.alerts|length }} всего</span>
                         {% if group.processed_count %}<span class="badge ok">✅ {{ group.processed_count }} обработано</span>{% endif %}
                         {% if group.listing_id %}<span class="badge">ID {{ group.listing_id }}</span>{% endif %}
                     </div>
