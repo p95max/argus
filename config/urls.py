@@ -9,7 +9,7 @@ from django.conf import settings
 from alerts import mobile
 from alerts.health import build_health_report
 from alerts.mobile_archive import mobile_clear_archived_alerts
-from alerts.mobile_listings import mobile_listings
+from alerts.mobile_listings import mobile_close_listing, mobile_listings
 from alerts.mobile_service_log import mobile_clear_service_events, mobile_dashboard
 
 
@@ -41,6 +41,11 @@ urlpatterns = [
     ),
     path("m/", mobile_dashboard, name="mobile_dashboard"),
     path("m/listings/", mobile_listings, name="mobile_listings"),
+    path(
+        "m/listings/<int:alert_id>/close/",
+        mobile_close_listing,
+        name="mobile_close_listing",
+    ),
     path("m/alerts/<int:alert_id>/", mobile.mobile_alert_detail, name="mobile_alert_detail"),
     path(
         "m/alerts/<int:alert_id>/status/",
