@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n argus_messages %}
 
 {% block title %}Argus alert #{{ alert.id }}{% endblock %}
 {% block header_title %}📋 {% blocktrans with id=alert.id %}Lead #{{ id }}{% endblocktrans %}{% endblock %}
@@ -96,7 +96,7 @@
                     <div class="buyer-message-header">
                         <span>💬 {% trans "Buyer message" %}</span>
                     </div>
-                    <div class="buyer-message-body">{{ alert.message_text|linebreaksbr }}</div>
+                    <div class="buyer-message-body">{{ alert.message_text|compact_buyer_message|linebreaksbr }}</div>
                 </div>
             {% elif alert.normalized_body %}
                 <div class="buyer-message">
