@@ -81,7 +81,9 @@ def mobile_dashboard(request):
     view_mode = request.GET.get("view", "attention")
     base_alerts = alerts
 
-    if view_mode == "today":
+    if view_mode == "all":
+        alerts = alerts.exclude(alert_status=MarketplaceAlert.AlertStatus.ARCHIVED)
+    elif view_mode == "today":
         alerts = alerts.filter(created_at__date=today)
     elif view_mode == "mine":
         alerts = alerts.filter(
@@ -116,7 +118,10 @@ def mobile_dashboard(request):
     settings = TelegramSettings.load()
 
     alert_counts = base_alerts.aggregate(
-        total=Count("id"),
+        total=Count(
+            "id",
+            filter=~Q(alert_status=MarketplaceAlert.AlertStatus.ARCHIVED),
+        ),
         today=Count("id", filter=Q(created_at__date=today)),
         attention=Count("id", filter=needs_attention_alert_q()),
         unread=Count("id", filter=Q(alert_status=MarketplaceAlert.AlertStatus.UNREAD)),
