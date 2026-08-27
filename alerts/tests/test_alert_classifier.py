@@ -1,3 +1,5 @@
+"""Tests for marketplace-message classification rules."""
+
 from alerts.classifier import classify_marketplace_message
 
 
