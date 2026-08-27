@@ -2,15 +2,21 @@ from collections import OrderedDict
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import render
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from .models import MarketplaceAlert
 
 
+def _require_staff(user):
+    if not user.is_active or not user.is_staff:
+        raise PermissionDenied("Mobile control panel is available only for staff users.")
+
+
 @login_required
 def mobile_listings(request):
-    if not request.user.is_active or not request.user.is_staff:
-        raise PermissionDenied("Mobile control panel is available only for staff users.")
+    _require_staff(request.user)
 
     alerts = (
         MarketplaceAlert.objects.filter(event_type=MarketplaceAlert.EventType.BUYER_MESSAGE)
@@ -33,6 +39,7 @@ def mobile_listings(request):
                 "alerts": [],
                 "open_count": 0,
                 "processed_count": 0,
+                "representative_alert_id": alert.id,
             },
         )
         group["alerts"].append(alert)
@@ -51,3 +58,38 @@ def mobile_listings(request):
             "alert_count": sum(len(group["alerts"]) for group in listing_groups),
         },
     )
+
+
+@login_required
+@require_POST
+def mobile_close_listing(request, alert_id):
+    _require_staff(request.user)
+
+    alert = get_object_or_404(
+        MarketplaceAlert,
+        id=alert_id,
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+    )
+
+    same_listing = MarketplaceAlert.objects.filter(
+        mailbox_id=alert.mailbox_id,
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+    )
+
+    if alert.listing_id:
+        same_listing = same_listing.filter(listing_id=alert.listing_id)
+    elif alert.listing_title:
+        same_listing = same_listing.filter(listing_title=alert.listing_title)
+    elif alert.subject:
+        same_listing = same_listing.filter(subject=alert.subject)
+    else:
+        same_listing = same_listing.filter(id=alert.id)
+
+    same_listing.exclude(alert_status=MarketplaceAlert.AlertStatus.ARCHIVED).update(
+        alert_status=MarketplaceAlert.AlertStatus.ARCHIVED,
+        taken_by=None,
+        taken_by_label="",
+        taken_at=None,
+    )
+
+    return redirect("mobile_listings")
