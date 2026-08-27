@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Argus · Объявления{% endblock %}
+{% block header_title %}🚗 Объявления{% endblock %}
+
+{% block content %}
+    <section class="alert-detail-navigation">
+        <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← {% trans "Back" %}</a>
+    </section>
+
+    <section>
+        <article class="card">
+            <div class="title">Обращения по объявлениям</div>
+            <div class="badges">
+                <span class="badge">🚗 {{ listing_count }} объявлений</span>
+                <span class="badge">💬 {{ alert_count }} обращений</span>
+            </div>
+            <div class="small">Каждое объявление содержит свою историю обращений покупателей.</div>
+        </article>
+    </section>
+
+    <section>
+        {% for group in listing_groups %}
+            <details class="card collapsible-card" {% if group.open_count %}open{% endif %}>
+                <summary class="collapsible-summary">
+                    <span class="summary-title">
+                        🚗 {{ group.title }}
+                        {% if group.open_count %}
+                            <span class="status-pill warn"><span class="status-dot"></span>{{ group.open_count }} активных</span>
+                        {% else %}
+                            <span class="status-pill ok"><span class="status-dot"></span>обработано</span>
+                        {% endif %}
+                    </span>
+                </summary>
+
+                <div class="collapsible-content">
+                    <div class="badges">
+                        <span class="badge">💬 {{ group.alerts|length }} всего</span>
+                        {% if group.processed_count %}<span class="badge ok">✅ {{ group.processed_count }} обработано</span>{% endif %}
+                        {% if group.listing_id %}<span class="badge">ID {{ group.listing_id }}</span>{% endif %}
+                    </div>
+
+                    {% for alert in group.alerts %}
+                        <article class="card nested-card alert-card{% if alert.alert_status == 'archived' %} resolved-alert-card{% endif %}">
+                            <a class="alert-card-link" href="{% url 'mobile_alert_detail' alert.id %}" aria-label="Открыть обращение #{{ alert.id }}"></a>
+                            <div class="title">📋 Обращение #{{ alert.id }}</div>
+                            <div class="meta">
+                                {% if alert.buyer_name %}👤 {{ alert.buyer_name }} · {% endif %}
+                                {{ alert.created_at|date:"d.m.Y H:i" }}
+                            </div>
+                            <div class="badges">
+                                <span class="badge {% if alert.alert_status == 'unread' %}danger{% elif alert.alert_status == 'in_work' %}warn{% else %}ok{% endif %}">{{ alert.get_alert_status_display }}</span>
+                                {% for flag in alert.flags.all %}
+                                    <span class="badge {% if flag.category == 'risk' %}danger{% endif %}">{{ flag.name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% if alert.message_text %}
+                                <div class="buyer-message">
+                                    <div class="buyer-message-body">{{ alert.message_text|truncatechars:240 }}</div>
+                                </div>
+                            {% endif %}
+
+                            <div class="actions compact-actions">
+                                <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <input type="hidden" name="status" value="archived">
+                                    <button class="small-action" type="submit" {% if alert.alert_status == 'archived' %}disabled{% endif %}>
+                                        ✅ Обращение обработано
+                                    </button>
+                                </form>
+                                {% if alert.alert_status != 'archived' %}
+                                    <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <input type="hidden" name="status" value="in_work">
+                                        <button class="small-action" type="submit" {% if alert.alert_status == 'in_work' %}disabled{% endif %}>🛠️ В работу</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            </details>
+        {% empty %}
+            <div class="empty">Обращений покупателей по объявлениям пока нет.</div>
+        {% endfor %}
+    </section>
+{% endblock %}
