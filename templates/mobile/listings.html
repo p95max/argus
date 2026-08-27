@@ -129,6 +129,68 @@
         {% endfor %}
     </section>
 
+    <style>
+        .listing-action-box {
+            display: grid;
+            gap: 9px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+        }
+        .listing-action-box-danger {
+            border-color: rgba(255, 107, 107, .45);
+            background: rgba(255, 107, 107, .06);
+        }
+        .listing-action-box-success {
+            border-color: rgba(54, 194, 163, .42);
+            background: rgba(54, 194, 163, .06);
+        }
+        .listing-action-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+        }
+        .listing-action-box-danger .listing-action-title {
+            color: var(--danger);
+        }
+        .listing-action-box-success .listing-action-title {
+            color: var(--accent);
+        }
+        .listing-action-box form {
+            display: block;
+            width: 100%;
+        }
+        .listing-action-button {
+            width: 100%;
+            min-height: 42px;
+            border-radius: 7px;
+            border: 0;
+            font-weight: 700;
+            color: #fff;
+        }
+        .listing-action-button-danger {
+            background: #dc2626;
+        }
+        .listing-action-button-success {
+            background: #15945e;
+        }
+        .listing-alerts {
+            display: grid;
+            gap: 10px;
+        }
+        .listing-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding-top: 2px;
+        }
+        .listing-pagination .small {
+            min-width: 105px;
+            text-align: center;
+        }
+    </style>
+
     <script>
         (() => {
             document.querySelectorAll('.listing-card').forEach((card) => {
