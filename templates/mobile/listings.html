@@ -26,10 +26,12 @@
                 <summary class="collapsible-summary">
                     <span class="summary-title">
                         🚗 {{ group.title }}
-                        {% if group.open_count %}
+                        {% if group.is_closed %}
+                            <span class="status-pill ok"><span class="status-dot"></span>закрыто</span>
+                        {% elif group.open_count %}
                             <span class="status-pill warn"><span class="status-dot"></span>{{ group.open_count }} активных</span>
                         {% else %}
-                            <span class="status-pill ok"><span class="status-dot"></span>закрыто</span>
+                            <span class="status-pill ok"><span class="status-dot"></span>активно</span>
                         {% endif %}
                     </span>
                 </summary>
@@ -41,7 +43,7 @@
                         {% if group.listing_id %}<span class="badge">ID {{ group.listing_id }}</span>{% endif %}
                     </div>
 
-                    {% if group.open_count %}
+                    {% if not group.is_closed %}
                         <div class="actions compact-actions">
                             <form method="post" action="{% url 'mobile_close_listing' group.representative_alert_id %}">
                                 {% csrf_token %}
