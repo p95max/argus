@@ -260,6 +260,36 @@ def mobile_update_alert_status(request, alert_id):
 
 @login_required
 @require_POST
+def mobile_send_system_notice(request, alert_id):
+    _require_staff(request.user)
+
+    alert = get_object_or_404(MarketplaceAlert, id=alert_id)
+    if alert.event_type != MarketplaceAlert.EventType.SYSTEM_NOTICE:
+        raise PermissionDenied("Only system notices can be sent as system notifications.")
+
+    from .telegram.sender import send_telegram_alert
+
+    try:
+        sent_message = send_telegram_alert(alert)
+    except Exception as exc:
+        messages.error(
+            request,
+            _("Could not send system notification: %(error)s") % {"error": exc},
+        )
+    else:
+        if sent_message is None:
+            messages.warning(
+                request,
+                _("System notification was not sent because notifications are temporarily disabled."),
+            )
+        else:
+            messages.success(request, _("System notification sent."))
+
+    return redirect(_safe_next_url(request))
+
+
+@login_required
+@require_POST
 def mobile_toggle_quiet_hours(request):
     _require_staff(request.user)
 

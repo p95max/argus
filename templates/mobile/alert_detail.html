@@ -3,11 +3,15 @@
 
 {% block title %}Argus alert #{{ alert.id }}{% endblock %}
 {% block header_title %}📋 {% blocktrans with id=alert.id %}Lead #{{ id }}{% endblocktrans %}{% endblock %}
-{% block header_actions %}
+{% comment %}{% block header_actions %}
     <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← {% trans "Back" %}</a>
-{% endblock %}
+{% endblock %}{% endcomment %}
 
 {% block content %}
+    <section class="alert-detail-navigation">
+        <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">&larr; {% trans "Back" %}</a>
+    </section>
+
     <section>
         <article class="card alert-card">
             <div class="title">
@@ -105,6 +109,16 @@
             {% endif %}
 
             <div class="actions compact-actions">
+                {% if alert.event_type == 'system_notice' %}
+                    <form method="post" action="{% url 'mobile_send_system_notice' alert.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="small-action" type="submit">
+                            📨 Отправить в системные уведомления
+                        </button>
+                    </form>
+                {% endif %}
+
                 <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.get_full_path }}">

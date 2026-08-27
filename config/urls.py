@@ -46,6 +46,11 @@ urlpatterns = [
         name="mobile_update_alert_status",
     ),
     path(
+        "m/alerts/<int:alert_id>/send-system-notice/",
+        mobile.mobile_send_system_notice,
+        name="mobile_send_system_notice",
+    ),
+    path(
         "m/alerts/archive/clear/",
         mobile_clear_archived_alerts,
         name="mobile_clear_archived_alerts",

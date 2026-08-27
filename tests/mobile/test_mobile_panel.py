@@ -140,6 +140,36 @@ def test_mobile_alert_detail_links_to_full_admin(client, staff_user, alert):
 
 
 @pytest.mark.django_db
+def test_mobile_system_notice_can_be_sent_from_detail(client, staff_user, alert, monkeypatch):
+    alert.event_type = MarketplaceAlert.EventType.SYSTEM_NOTICE
+    alert.save(update_fields=["event_type", "updated_at"])
+    client.force_login(staff_user)
+
+    sent_alerts = []
+    monkeypatch.setattr(
+        "alerts.telegram.sender.send_telegram_alert",
+        lambda sent_alert: sent_alerts.append(sent_alert) or object(),
+    )
+
+    detail_response = client.get(reverse("mobile_alert_detail", args=[alert.id]))
+    response = client.post(reverse("mobile_send_system_notice", args=[alert.id]))
+
+    assert detail_response.status_code == 200
+    assert "Отправить в системные уведомления" in detail_response.content.decode("utf-8")
+    assert response.status_code == 302
+    assert sent_alerts == [alert]
+
+
+@pytest.mark.django_db
+def test_mobile_rejects_sending_non_system_notice(client, staff_user, alert):
+    client.force_login(staff_user)
+
+    response = client.post(reverse("mobile_send_system_notice", args=[alert.id]))
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
 def test_mobile_panel_shows_system_events_tab(client, staff_user, alert):
     ServiceEvent.objects.create(
         mailbox=alert.mailbox,

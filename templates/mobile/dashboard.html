@@ -185,6 +185,11 @@
             {% endif %}
             {% for alert in alerts %}
                 <article class="card alert-card">
+                    <a
+                        class="alert-card-link"
+                        href="{% url 'mobile_alert_detail' alert.id %}"
+                        aria-label="{% blocktrans with id=alert.id %}Open lead #{{ id }}{% endblocktrans %}"
+                    ></a>
                     <div class="title">{{ alert.listing_title|default:alert.subject|default:alert.get_event_type_display }}</div>
                     <div class="alert-meta-grid">
                         <div class="alert-mailbox">
@@ -269,7 +274,6 @@
                             </button>
                         </form>
 
-                        <a class="link-button" href="{% url 'mobile_alert_detail' alert.id %}">📋 {% trans "Open" %}</a>
                     </div>
                 </article>
             {% empty %}
