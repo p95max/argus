@@ -83,6 +83,7 @@ def parse_views_count(page_html: str) -> int | None:
     """Extract the public view count from known structured/text page variants."""
 
     patterns = (
+        r'<[^>]+\bid\s*=\s*["\']viewad-cntr-num["\'][^>]*>\s*(\d[\d.\s,]*)\s*</',
         r'"(?:viewCount|views)"\s*:\s*"?(\d[\d.\s,]*)"?',
         r"(\d[\d.\s,]*)\s*(?:mal\s+angesehen|aufrufe|views)",
     )

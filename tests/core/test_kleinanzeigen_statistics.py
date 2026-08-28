@@ -43,6 +43,7 @@ def test_only_direct_https_kleinanzeigen_listing_urls_are_accepted(url):
 
 def test_views_parser_handles_structured_and_visible_counts():
     assert parse_views_count('{"viewCount": "1.284"}') == 1284
+    assert parse_views_count('<div id="viewad-cntr"><span id="viewad-cntr-num">101</span></div>') == 101
     assert parse_views_count("Bereits 427 mal angesehen") == 427
     assert parse_views_count("No public count") is None
 
