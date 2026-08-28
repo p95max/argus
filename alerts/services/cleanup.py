@@ -4,7 +4,7 @@ from django.db import transaction
 from django.db.models import Count, F, Max, Q, QuerySet
 from django.utils import timezone
 
-from .models import MarketplaceAlert
+from ..models import MarketplaceAlert
 
 
 DEFAULT_CLEANUP_OLD_LEADS_DAYS = 30

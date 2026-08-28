@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import re
 
-from .models import MarketplaceAlert
+from ..models import MarketplaceAlert
 
 
 @dataclass(frozen=True)

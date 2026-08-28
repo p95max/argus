@@ -10,7 +10,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from django.utils import timezone
 
-from .models import Listing, ListingViewStat
+from ..models import Listing, ListingViewStat
 
 
 KLEINANZEIGEN_HOSTS = {"kleinanzeigen.de", "www.kleinanzeigen.de"}

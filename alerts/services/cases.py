@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.db.models import Count, Max, Q
 
-from .models import LeadFlag, MarketplaceAlert
+from ..models import LeadFlag, MarketplaceAlert
 
 
 def build_case_summaries(limit: int = 30):

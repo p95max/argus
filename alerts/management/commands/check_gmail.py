@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from alerts.command_locks import CommandAlreadyRunning, command_lock
 from alerts.gmail.gmail import check_mailbox
-from alerts.kleinanzeigen import refresh_listing_view_stats
+from alerts.services.kleinanzeigen import refresh_listing_view_stats
 from alerts.models import MailboxAccount, ServiceEvent
 
 

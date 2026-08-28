@@ -10,12 +10,12 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from .attention import filter_needs_attention, needs_attention_alert_q
-from .command_locks import CommandAlreadyRunning, command_lock
-from .gmail.gmail import check_mailbox
-from .health import build_health_report
-from .models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
-from .permissions import can_manage_mailboxes, can_view_mailbox_operations
+from ...services.attention import filter_needs_attention, needs_attention_alert_q
+from ...command_locks import CommandAlreadyRunning, command_lock
+from ...gmail.gmail import check_mailbox
+from ...monitoring.health import build_health_report
+from ...models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
+from ...permissions import can_manage_mailboxes, can_view_mailbox_operations
 
 
 MOBILE_ALERTS_PER_PAGE = 5
@@ -278,7 +278,7 @@ def mobile_send_system_notice(request, alert_id):
         messages.info(request, _("This system notification has already been sent."))
         return redirect(_safe_next_url(request))
 
-    from .telegram.sender import send_telegram_alert
+    from ...telegram.sender import send_telegram_alert
 
     previous_assignment = (
         alert.alert_status,

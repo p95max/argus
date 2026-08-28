@@ -2,7 +2,7 @@ import logging
 
 from django.utils import timezone
 
-from .models import MailboxAccount, MarketplaceAlert, ServiceEvent
+from ..models import MailboxAccount, MarketplaceAlert, ServiceEvent
 
 
 logger = logging.getLogger(__name__)
@@ -190,7 +190,7 @@ def record_mailbox_recovery(mailbox: MailboxAccount, previous_error: str = "") -
 
 
 def _send_service_event_to_telegram(event: ServiceEvent) -> None:
-    from .telegram.config import get_telegram_config
+    from ..telegram.config import get_telegram_config
 
     config = get_telegram_config()
     if not config.bot_token or not config.default_chat_id:
@@ -198,7 +198,7 @@ def _send_service_event_to_telegram(event: ServiceEvent) -> None:
         event.save(update_fields=["telegram_error", "updated_at"])
         return
 
-    from .telegram.sender import send_system_telegram_alert
+    from ..telegram.sender import send_system_telegram_alert
 
     try:
         send_system_telegram_alert(event.title, details=_build_event_details(event))

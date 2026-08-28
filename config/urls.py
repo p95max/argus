@@ -6,10 +6,10 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from django.conf import settings
-from alerts import mobile
-from alerts.health import build_health_report
-from alerts.mobile_archive import mobile_clear_archived_alerts
-from alerts.mobile_listings import (
+from alerts.monitoring.health import build_health_report
+from alerts.views.mobile import dashboard as mobile
+from alerts.views.mobile.archive import mobile_clear_archived_alerts
+from alerts.views.mobile.listings import (
     mobile_close_listing,
     mobile_create_listing,
     mobile_delete_listing,
@@ -18,7 +18,7 @@ from alerts.mobile_listings import (
     mobile_reopen_listing,
     mobile_validate_kleinanzeigen_url,
 )
-from alerts.mobile_service_log import mobile_clear_service_events, mobile_dashboard
+from alerts.views.mobile.service_log import mobile_clear_service_events, mobile_dashboard
 
 
 def health_check(request):

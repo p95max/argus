@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from alerts.command_locks import CommandAlreadyRunning, command_lock
-from alerts.cleanup import DEFAULT_CLEANUP_OLD_LEADS_DAYS, cleanup_old_leads
+from alerts.services.cleanup import DEFAULT_CLEANUP_OLD_LEADS_DAYS, cleanup_old_leads
 
 
 class Command(BaseCommand):

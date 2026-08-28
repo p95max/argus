@@ -2,7 +2,7 @@ import html
 
 from django.utils import timezone
 
-from ..health import build_health_report
+from ..monitoring.health import build_health_report
 from .i18n import use_argus_telegram_language
 from .permissions import is_allowed_update
 

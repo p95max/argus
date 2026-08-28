@@ -7,8 +7,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from . import mobile
-from .models import ServiceEvent
+from . import dashboard
+from ...models import ServiceEvent
 
 
 def _safe_next_url(request):
@@ -27,7 +27,7 @@ def _safe_next_url(request):
 def mobile_dashboard(request):
     if request.method == "POST":
         return _clear_service_events(request)
-    return mobile.mobile_dashboard(request)
+    return dashboard.mobile_dashboard(request)
 
 
 @login_required

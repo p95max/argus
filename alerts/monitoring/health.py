@@ -10,10 +10,10 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from .backup_status import BackupJobStatus, BackupStatus, get_backup_status
-from .models import MailboxAccount, MarketplaceAlert, ServiceEvent
-from .seed_data import DEMO_MAILBOX_EMAIL
+from ..models import MailboxAccount, MarketplaceAlert, ServiceEvent
+from ..seed_data import DEMO_MAILBOX_EMAIL
 from .server_timers import ServerTimerStatus, ServerTimersStatus, get_server_timers_status
-from .telegram.config import get_telegram_config
+from ..telegram.config import get_telegram_config
 
 TELEGRAM_ERROR_LOOKBACK = timedelta(hours=24)
 

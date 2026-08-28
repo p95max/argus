@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 
-from .models import MarketplaceAlert
+from ..models import MarketplaceAlert
 
 
 DEFAULT_MIN_AGE_MINUTES = 30

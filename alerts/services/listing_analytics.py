@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from .models import Listing
+from ..models import Listing
 
 
 @dataclass(frozen=True)

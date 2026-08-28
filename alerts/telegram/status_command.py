@@ -8,7 +8,7 @@ from django.utils.translation import gettext as _
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from ..gmail_polling import get_gmail_polling_status
-from ..mobile_listings import LISTING_CLOSED_MARKER, _build_listing_group_keys
+from ..views.mobile.listings import LISTING_CLOSED_MARKER, _build_listing_group_keys
 from ..models import MailboxAccount, MarketplaceAlert
 from .i18n import use_argus_telegram_language
 from .permissions import is_allowed_update

@@ -8,14 +8,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from .kleinanzeigen import (
+from ...services.kleinanzeigen import (
     KleinanzeigenURLValidationError,
     ListingViewCheck,
     validate_kleinanzeigen_url,
     verify_listing_url,
 )
-from .listing_analytics import get_listing_analytics
-from .models import Listing, ListingViewStat, MarketplaceAlert
+from ...services.listing_analytics import get_listing_analytics
+from ...models import Listing, ListingViewStat, MarketplaceAlert
 
 
 LISTING_CLOSED_MARKER = "__listing_closed__"

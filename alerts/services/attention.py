@@ -1,6 +1,6 @@
 from django.db.models import Q, QuerySet
 
-from .models import MailboxAccount, MarketplaceAlert
+from ..models import MailboxAccount, MarketplaceAlert
 
 
 def terminal_alert_status_q() -> Q:

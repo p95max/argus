@@ -2,7 +2,7 @@ import json
 
 from django.core.management.base import BaseCommand, CommandError
 
-from alerts.health import build_health_report
+from alerts.monitoring.health import build_health_report
 
 
 NON_BLOCKING_WARNING_CHECKS = {

@@ -18,7 +18,7 @@ from googleapiclient.errors import HttpError
 
 from ..crypto import decrypt_text, encrypt_text
 from ..models import LeadFlag, MailboxAccount, MarketplaceAlert, ProcessedEmail
-from ..parser import parse_kleinanzeigen_email
+from ..services.parser import parse_kleinanzeigen_email
 
 
 GMAIL_SCOPES = [
@@ -289,7 +289,7 @@ def check_mailbox(
         mailbox.last_error = ""
         mailbox.save(update_fields=["connection_status", "last_success_at", "last_error", "updated_at"])
         if was_in_error:
-            from ..service_health import record_mailbox_recovery
+            from ..services.service_health import record_mailbox_recovery
 
             record_mailbox_recovery(mailbox, previous_error=previous_error)
         return MailboxCheckResult(fetched=len(messages), created=created, duplicates=duplicates)
@@ -297,7 +297,7 @@ def check_mailbox(
         mailbox.connection_status = MailboxAccount.ConnectionStatus.ERROR
         mailbox.last_error = str(exc)
         mailbox.save(update_fields=["connection_status", "last_error", "updated_at"])
-        from ..service_health import record_mailbox_error
+        from ..services.service_health import record_mailbox_error
 
         record_mailbox_error(mailbox, exc)
         raise
@@ -370,7 +370,7 @@ def _send_telegram_if_enabled(alert: MarketplaceAlert | None) -> None:
 
 
 def _record_parser_service_event(alert_id: int) -> None:
-    from ..service_health import record_parser_error
+    from ..services.service_health import record_parser_error
 
     try:
         alert = MarketplaceAlert.objects.select_related("mailbox").get(id=alert_id)

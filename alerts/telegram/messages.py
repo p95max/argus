@@ -9,9 +9,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from ..health import build_health_report
+from ..monitoring.health import build_health_report
 from ..gmail_polling import GmailPollingStatus, get_gmail_polling_status
-from ..listing_analytics import ListingAnalytics, get_listing_analytics
+from ..services.listing_analytics import ListingAnalytics, get_listing_analytics
 from ..models import Listing, MailboxAccount, MarketplaceAlert
 from .i18n import use_argus_telegram_language
 from .quiet_hours import quiet_hours_allows_alert

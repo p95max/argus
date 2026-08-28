@@ -7,7 +7,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from .models import MarketplaceAlert
+from ...models import MarketplaceAlert
 
 
 def _safe_next_url(request):

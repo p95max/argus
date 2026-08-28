@@ -3,7 +3,7 @@ from html import unescape
 from html.parser import HTMLParser
 import re
 
-from .models import MarketplaceAlert
+from ..models import MarketplaceAlert
 from .classifier import classify_marketplace_message
 
 

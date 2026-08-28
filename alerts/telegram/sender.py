@@ -143,7 +143,7 @@ async def async_send_telegram_alert(
                 "updated_at",
             ]
         )
-        from ..service_health import record_telegram_send_error
+        from ..services.service_health import record_telegram_send_error
 
         await sync_to_async(record_telegram_send_error, thread_sensitive=True)(alert, exc)
 
@@ -420,7 +420,7 @@ async def _async_send_alert_message(
         error = str(exc)
         alert.telegram_error = error
         await alert.asave(update_fields=["telegram_error", "updated_at"])
-        from ..service_health import record_telegram_send_error
+        from ..services.service_health import record_telegram_send_error
 
         await sync_to_async(record_telegram_send_error, thread_sensitive=True)(alert, exc)
 

@@ -2,7 +2,7 @@ import logging
 
 from django.core.management.base import BaseCommand, CommandError
 
-from alerts.reminders import (
+from alerts.services.reminders import (
     DEFAULT_MIN_AGE_MINUTES,
     DEFAULT_REMINDER_INTERVAL_MINUTES,
     unread_alerts_due_for_reminder,

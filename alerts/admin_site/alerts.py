@@ -3,7 +3,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from ..cleanup import close_cases_for_alerts
+from ..services.cleanup import close_cases_for_alerts
 from ..models import LeadFlag, MailboxAccount, MarketplaceAlert, NoiseAlert
 from .ui import NeedsAttentionFilter, status_badge
 
