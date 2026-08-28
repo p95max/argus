@@ -17,6 +17,16 @@ BOILERPLATE_MARKERS = (
     "Impressum",
 )
 
+SECURITY_NOTICE_MARKERS = (
+    "kontakt mit verdächtigem konto",
+    "kontakt mit verdaechtigem konto",
+    "zugang von",
+    "nutzerkonto eingeschränkt",
+    "nutzerkonto eingeschraenkt",
+    "verdächtiges konto",
+    "verdaechtiges konto",
+)
+
 
 @register.filter
 def compact_buyer_message(value: str) -> str:
@@ -43,6 +53,29 @@ def compact_buyer_message(value: str) -> str:
             text = text[:position].strip()
 
     return text.strip(" -:·")
+
+
+@register.filter
+def is_security_system_notice(alert) -> bool:
+    """Detect high-value Kleinanzeigen account-security notices without changing event routing."""
+    if getattr(alert, "event_type", "") != "system_notice":
+        return False
+
+    text = " ".join(
+        str(value or "")
+        for value in (
+            getattr(alert, "subject", ""),
+            getattr(alert, "message_text", ""),
+            getattr(alert, "normalized_body", ""),
+        )
+    ).casefold()
+
+    has_security_marker = any(marker in text for marker in SECURITY_NOTICE_MARKERS)
+    has_restriction_context = (
+        ("eingeschränkt" in text or "eingeschraenkt" in text)
+        and ("konto" in text or "zugang" in text)
+    )
+    return has_security_marker or has_restriction_context
 
 
 @register.filter(needs_autoescape=True)
