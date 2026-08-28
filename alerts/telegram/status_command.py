@@ -1,8 +1,11 @@
 import html
 from collections import OrderedDict
 
+from django.conf import settings
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from ..mobile_listings import LISTING_CLOSED_MARKER, _build_listing_group_keys
 from ..models import MailboxAccount, MarketplaceAlert
@@ -40,6 +43,7 @@ async def handle_ads_status_command(update, context):
     await update.effective_message.reply_text(
         text,
         parse_mode="HTML",
+        reply_markup=build_ads_status_keyboard(),
         disable_web_page_preview=True,
     )
 
@@ -121,13 +125,30 @@ def build_ads_status_message() -> str:
             stats.append(f"📦 {group['archived']}")
         if group["ignored"]:
             stats.append(f"🚫 {group['ignored']}")
-        lines.append(f"• {html.escape(title)} · {' · '.join(stats)}")
+        lines.append(f"• {html.escape(title)}")
+        lines.append(f"· {' · '.join(stats)}")
 
     hidden = len(active_groups) - STATUS_LISTING_LIMIT
     if hidden > 0:
         lines.append(f"… +{hidden}")
 
     return "\n".join(lines)
+
+
+def build_ads_status_keyboard():
+    url = _build_mobile_listings_url()
+    if not url:
+        return None
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton(text="🚗 Объявления", url=url)]]
+    )
+
+
+def _build_mobile_listings_url() -> str:
+    base_url = getattr(settings, "ARGUS_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    return f"{base_url}{reverse('mobile_listings')}"
 
 
 def _format_time(value) -> str:
