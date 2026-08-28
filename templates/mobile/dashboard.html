@@ -10,7 +10,8 @@
     {% trans "Delete the entire system log, including open errors?" as confirm_clear_all %}
 
     <section class="dashboard-overview">
-        <article class="card">
+        <article class="card gmail-overview-card">
+            <div class="gmail-overview-content">
             <div class="title">Gmail</div>
             <div class="badges">
                 <span class="badge {% if gmail_summary.status == 'OK' %}ok{% elif gmail_summary.status == 'ERROR' %}danger{% else %}warn{% endif %}">
@@ -20,13 +21,14 @@
             </div>
             <div class="small">{% trans "Last check" %}: {{ gmail_summary.last_checked_at|date:"H:i"|default:not_yet }}</div>
             <div class="small">{% trans "Last success" %}: {{ gmail_summary.last_success_at|date:"H:i"|default:not_yet }}</div>
+            </div>
 
             {% if can_manage_mailboxes and mailboxes %}
-                <div class="actions compact-actions">
+                <div class="actions compact-actions gmail-check-action">
                     <form method="post" action="{% url 'mobile_check_gmail_now' %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button class="small-action" type="submit" aria-label="{% trans 'Check now' %}" title="{% trans 'Check now' %}">🔄</button>
+                        <button class="small-action gmail-check-button" type="submit" aria-label="{% trans 'Check now' %}" title="{% trans 'Check now' %}">🔄</button>
                     </form>
                 </div>
             {% endif %}
@@ -61,6 +63,33 @@
         }
         .dashboard-overview > .card {
             margin: 0;
+        }
+        .gmail-overview-card {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 12px;
+        }
+        .gmail-overview-content {
+            display: grid;
+            gap: 7px;
+            min-width: 0;
+        }
+        .gmail-check-action {
+            align-self: stretch;
+            margin: 0;
+        }
+        .gmail-check-action form {
+            display: flex;
+            height: 100%;
+        }
+        .gmail-check-button {
+            display: grid;
+            place-items: center;
+            min-width: 58px;
+            min-height: 58px;
+            padding: 0;
+            font-size: 24px;
         }
         .dashboard-listings-card {
             display: grid;
