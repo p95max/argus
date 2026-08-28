@@ -103,24 +103,12 @@ def build_ads_status_message() -> str:
             {
                 "title": alert.listing_title or alert.subject or str(_("Listing")),
                 "total": 0,
-                "unread": 0,
-                "in_work": 0,
-                "archived": 0,
-                "ignored": 0,
                 "is_closed": False,
             },
         )
         group["total"] += 1
         if alert.taken_by_label == LISTING_CLOSED_MARKER:
             group["is_closed"] = True
-        if alert.alert_status == MarketplaceAlert.AlertStatus.UNREAD:
-            group["unread"] += 1
-        elif alert.alert_status == MarketplaceAlert.AlertStatus.IN_WORK:
-            group["in_work"] += 1
-        elif alert.alert_status == MarketplaceAlert.AlertStatus.ARCHIVED:
-            group["archived"] += 1
-        elif alert.alert_status == MarketplaceAlert.AlertStatus.IGNORED:
-            group["ignored"] += 1
 
     active_groups = [group for group in grouped.values() if not group["is_closed"]]
     lines = [f"🚗 <b>{html.escape(str(_('Listing')))}: {len(active_groups)}</b>"]
@@ -129,19 +117,15 @@ def build_ads_status_message() -> str:
         lines.append("🟢 0")
         return "\n".join(lines)
 
-    for group in active_groups[:STATUS_LISTING_LIMIT]:
+    for index, group in enumerate(active_groups[:STATUS_LISTING_LIMIT], start=1):
         title = _truncate(group["title"], STATUS_TITLE_LIMIT)
-        stats = [f"💬 {group['total']}"]
-        if group["unread"]:
-            stats.append(f"🆕 {group['unread']}")
-        if group["in_work"]:
-            stats.append(f"🛠 {group['in_work']}")
-        if group["archived"]:
-            stats.append(f"📦 {group['archived']}")
-        if group["ignored"]:
-            stats.append(f"🚫 {group['ignored']}")
-        lines.append(f"• {html.escape(title)}")
-        lines.append(f"· {' · '.join(stats)}")
+        lines.extend(
+            [
+                "",
+                f"{index}. {html.escape(title)}",
+                f"· Всего обращений: 💬 {group['total']}",
+            ]
+        )
 
     hidden = len(active_groups) - STATUS_LISTING_LIMIT
     if hidden > 0:
