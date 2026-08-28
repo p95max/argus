@@ -1,5 +1,7 @@
 import pytest
+from django.utils import timezone
 
+from alerts.gmail_polling import GmailPollingStatus
 from alerts.mobile_listings import LISTING_CLOSED_MARKER
 from alerts.models import MailboxAccount, MarketplaceAlert
 from alerts.telegram.status_command import (
@@ -10,17 +12,32 @@ from alerts.telegram.status_command import (
 
 
 @pytest.mark.django_db
-def test_mailboxes_status_message_contains_only_mailbox_status():
+def test_mailboxes_status_message_contains_only_mailbox_status(monkeypatch):
+    now = timezone.now()
     MailboxAccount.objects.create(
         name="Main",
         email="main@example.com",
         connection_status=MailboxAccount.ConnectionStatus.CONNECTED,
+        last_checked_at=now,
+        last_success_at=now,
+    )
+    monkeypatch.setattr(
+        "alerts.telegram.status_command.get_gmail_polling_status",
+        lambda: GmailPollingStatus(
+            enabled_state="enabled",
+            active_state="active",
+            interval_raw="15min",
+        ),
     )
 
     message = build_mailboxes_status_message()
 
     assert "Mailbox status" in message
-    assert "Main" in message
+    assert "🟢 Main\n" in message
+    assert f"Main · {timezone.localtime(now).strftime('%H:%M')}" not in message
+    assert "Последняя успешная синхронизация:" in message
+    assert "Текущий интервал:" in message
+    assert "15" in message
     assert "Listing:" not in message
 
 
