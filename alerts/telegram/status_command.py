@@ -14,14 +14,29 @@ STATUS_LISTING_LIMIT = 12
 STATUS_TITLE_LIMIT = 52
 
 
-async def handle_status_command(update, context):
+async def handle_mailboxes_status_command(update, context):
     if not is_allowed_update(update):
         await update.effective_message.reply_text(PERMISSION_DENIED_MESSAGE)
         return
 
     from .handlers import _run_db_sync
 
-    text = await _run_db_sync(build_status_message)
+    text = await _run_db_sync(build_mailboxes_status_message)
+    await update.effective_message.reply_text(
+        text,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+
+
+async def handle_ads_status_command(update, context):
+    if not is_allowed_update(update):
+        await update.effective_message.reply_text(PERMISSION_DENIED_MESSAGE)
+        return
+
+    from .handlers import _run_db_sync
+
+    text = await _run_db_sync(build_ads_status_message)
     await update.effective_message.reply_text(
         text,
         parse_mode="HTML",
@@ -30,15 +45,7 @@ async def handle_status_command(update, context):
 
 
 @use_argus_telegram_language
-def build_status_message() -> str:
-    sections = [
-        _build_compact_mailbox_status(),
-        _build_active_listing_status(),
-    ]
-    return "\n\n".join(section for section in sections if section)
-
-
-def _build_compact_mailbox_status() -> str:
+def build_mailboxes_status_message() -> str:
     mailboxes = list(MailboxAccount.objects.filter(is_active=True).order_by("email"))
     lines = [f"📬 <b>{html.escape(str(_('Mailbox status')))}</b>"]
 
@@ -60,7 +67,8 @@ def _build_compact_mailbox_status() -> str:
     return "\n".join(lines)
 
 
-def _build_active_listing_status() -> str:
+@use_argus_telegram_language
+def build_ads_status_message() -> str:
     alerts = list(
         MarketplaceAlert.objects.filter(event_type=MarketplaceAlert.EventType.BUYER_MESSAGE)
         .select_related("mailbox")
