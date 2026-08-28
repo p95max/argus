@@ -91,9 +91,8 @@
 
                     <details class="listing-statistics-details" {% if not group.statistics or group.statistics.views_count is None %}open{% endif %}>
                         <summary class="listing-statistics-summary">
-                            <span>📊 Статистика просмотров</span>
+                            <span>📊 Статистика просмотров{% if group.statistics and group.statistics.views_count is not None %} · 👁 ВСЕГО — {{ group.statistics.views_count }} просмотров{% endif %}</span>
                             {% if group.statistics and group.statistics.views_count is not None %}
-                                <strong>👁 {{ group.statistics.views_count }} просмотров</strong>
                                 {% if group.statistics.views_delta_24h is not None %}
                                     <span class="badge">{% if group.statistics.views_delta_24h >= 0 %}+{% endif %}{{ group.statistics.views_delta_24h }} за 24 ч</span>
                                 {% endif %}

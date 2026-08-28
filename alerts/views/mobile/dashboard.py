@@ -11,6 +11,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from ...services.attention import filter_needs_attention, needs_attention_alert_q
+from ...services.listing_analytics import get_listing_analytics
 from ...command_locks import CommandAlreadyRunning, command_lock
 from ...gmail.gmail import check_mailbox
 from ...monitoring.health import build_health_report
@@ -176,6 +177,7 @@ def mobile_dashboard(request):
         "last_success_at": mailbox_status["last_success_at"],
         "today_alerts": alert_counts["today"],
     }
+    listing_analytics = get_listing_analytics()
     health_report = build_health_report()
 
     context = {
@@ -185,6 +187,7 @@ def mobile_dashboard(request):
         "mailboxes": mailboxes,
         "mailbox_status": mailbox_status,
         "gmail_summary": gmail_summary,
+        "listing_analytics": listing_analytics,
         "health_report": health_report,
         "view_mode": view_mode,
         "alert_counts": alert_counts,
