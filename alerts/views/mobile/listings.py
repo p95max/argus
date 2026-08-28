@@ -11,6 +11,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ...services.kleinanzeigen import (
     KleinanzeigenURLValidationError,
     ListingViewCheck,
+    VIEW_COUNTER_REFRESH_INTERVAL,
     validate_kleinanzeigen_url,
     verify_listing_url,
 )
@@ -182,6 +183,13 @@ def _save_listing_from_request(
         listing.views_error = ""
     listing.save()
 
+    if (
+        not url_changed
+        and listing.views_checked_at
+        and listing.views_checked_at >= timezone.now() - VIEW_COUNTER_REFRESH_INTERVAL
+    ):
+        return ListingViewCheck(listing.views_count, listing.views_error)
+
     try:
         result = verify_listing_url(validated.normalized_url)
     except Exception:
@@ -196,7 +204,8 @@ def _save_listing_from_request(
             ListingViewStat.objects.create(listing=listing, views_count=result.views_count)
     else:
         listing.views_error = result.error
-        listing.save(update_fields=["views_error", "updated_at"])
+        listing.views_checked_at = timezone.now()
+        listing.save(update_fields=["views_error", "views_checked_at", "updated_at"])
     return result
 
 
@@ -210,20 +219,11 @@ def mobile_validate_kleinanzeigen_url(request):
     except KleinanzeigenURLValidationError:
         return JsonResponse({"valid": False, "error": "invalid_listing_url"})
 
-    try:
-        result = verify_listing_url(validated.normalized_url)
-    except Exception:
-        result = ListingViewCheck(None, "listing_unavailable")
-    payload = {
+    return JsonResponse({
         "valid": True,
         "listing_id": validated.listing_id,
-        "status": "verified" if result.verified else "valid_unverified",
-    }
-    if result.verified:
-        payload["views"] = result.views_count
-    else:
-        payload["error"] = result.error
-    return JsonResponse(payload)
+        "status": "valid",
+    })
 
 
 @login_required

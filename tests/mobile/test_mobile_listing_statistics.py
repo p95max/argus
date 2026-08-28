@@ -2,7 +2,6 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from alerts.kleinanzeigen import ListingViewCheck
 from alerts.models import Listing, MailboxAccount, MarketplaceAlert
 
 
@@ -15,12 +14,8 @@ def staff_user(db):
 
 
 @pytest.mark.django_db
-def test_live_listing_url_validation_returns_saved_public_views(client, staff_user, monkeypatch):
+def test_live_listing_url_validation_checks_syntax_without_fetching_views(client, staff_user):
     client.force_login(staff_user)
-    monkeypatch.setattr(
-        "alerts.mobile_listings.verify_listing_url",
-        lambda value: ListingViewCheck(247),
-    )
 
     response = client.get(
         reverse("mobile_validate_kleinanzeigen_url"),
@@ -30,8 +25,7 @@ def test_live_listing_url_validation_returns_saved_public_views(client, staff_us
     assert response.json() == {
         "valid": True,
         "listing_id": "1234567890-216-1234",
-        "status": "verified",
-        "views": 247,
+        "status": "valid",
     }
 
 

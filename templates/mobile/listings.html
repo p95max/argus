@@ -335,10 +335,10 @@
                             } else if (result.status === 'verified') {
                                 urlStatus.textContent = `Ссылка проверена · 👁 ${result.views}`;
                             } else {
-                                urlStatus.textContent = 'Ссылка корректна, но статистика временно недоступна.';
+                                urlStatus.textContent = 'Ссылка корректна. Просмотры обновятся после сохранения.';
                             }
                         } catch (_) {
-                            urlStatus.textContent = 'Ссылка корректна, но статистика временно недоступна.';
+                            urlStatus.textContent = 'Ссылка корректна. Просмотры обновятся после сохранения.';
                         }
                     }, 500);
                 });

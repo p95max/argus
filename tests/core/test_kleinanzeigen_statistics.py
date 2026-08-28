@@ -6,6 +6,9 @@ from django.utils import timezone
 from alerts.kleinanzeigen import (
     KleinanzeigenURLValidationError,
     ListingViewCheck,
+    VIEW_COUNTER_REFRESH_INTERVAL,
+    fetch_listing_views,
+    parse_view_counter_response,
     parse_views_count,
     refresh_listing_view_stats,
     validate_kleinanzeigen_url,
@@ -48,6 +51,43 @@ def test_views_parser_handles_structured_and_visible_counts():
     assert parse_views_count("No public count") is None
 
 
+def test_view_counter_response_parser_handles_the_public_num_visits_payload():
+    assert parse_view_counter_response(b'{"numVisits": 118}') == 118
+    assert parse_view_counter_response(b'{"numVisits": "101"}') == 101
+    assert parse_view_counter_response(b'{"count": 118}') is None
+
+
+def test_fetch_uses_the_view_counter_when_the_page_has_no_static_counter():
+    class Response:
+        status = 200
+
+        def __init__(self, payload):
+            self.payload = payload
+
+        def read(self, _size):
+            return self.payload
+
+        def close(self):
+            pass
+
+    class Opener:
+        def __init__(self):
+            self.urls = []
+            self.responses = iter([Response(b"<html></html>"), Response(b'{"numVisits": 118}')])
+
+        def open(self, request, timeout):
+            self.urls.append(request.full_url)
+            return next(self.responses)
+
+    opener = Opener()
+
+    assert fetch_listing_views(VALID_URL, opener=opener) == 118
+    assert opener.urls == [
+        VALID_URL,
+        "https://www.kleinanzeigen.de/s-vac-inc-get.json?adId=1234567890",
+    ]
+
+
 def test_temporary_verification_error_keeps_url_syntactically_valid(monkeypatch):
     monkeypatch.setattr(
         "alerts.kleinanzeigen.fetch_listing_views",
@@ -65,7 +105,13 @@ def test_snapshot_is_created_only_when_the_view_count_changes():
     listing = Listing.objects.create(title="VW Golf", kleinanzeigen_url=VALID_URL)
 
     refresh_listing_view_stats(fetcher=lambda _: ListingViewCheck(100))
+    listing.refresh_from_db()
+    listing.views_checked_at = timezone.now() - VIEW_COUNTER_REFRESH_INTERVAL
+    listing.save(update_fields=["views_checked_at"])
     refresh_listing_view_stats(fetcher=lambda _: ListingViewCheck(100))
+    listing.refresh_from_db()
+    listing.views_checked_at = timezone.now() - VIEW_COUNTER_REFRESH_INTERVAL
+    listing.save(update_fields=["views_checked_at"])
     refresh_listing_view_stats(fetcher=lambda _: ListingViewCheck(101))
 
     assert list(listing.view_stats.values_list("views_count", flat=True)) == [101, 100]
