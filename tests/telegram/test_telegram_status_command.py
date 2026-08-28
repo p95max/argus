@@ -3,6 +3,7 @@ import pytest
 from alerts.mobile_listings import LISTING_CLOSED_MARKER
 from alerts.models import MailboxAccount, MarketplaceAlert
 from alerts.telegram.status_command import (
+    build_ads_status_keyboard,
     build_ads_status_message,
     build_mailboxes_status_message,
 )
@@ -48,10 +49,7 @@ def test_ads_status_message_contains_active_listing_stats_only():
     message = build_ads_status_message()
 
     assert "Listing: 1" in message
-    assert "VW Golf" in message
-    assert "💬 2" in message
-    assert "🆕 1" in message
-    assert "🛠 1" in message
+    assert "• VW Golf\n· 💬 2 · 🆕 1 · 🛠 1" in message
     assert "Mailbox status" not in message
 
 
@@ -83,3 +81,20 @@ def test_ads_status_message_excludes_closed_listing():
     assert "Listing: 1" in message
     assert "Active car" in message
     assert "Closed car" not in message
+
+
+def test_ads_status_keyboard_links_to_mobile_listings(settings):
+    settings.ARGUS_PUBLIC_BASE_URL = "https://argus.example.com"
+
+    keyboard = build_ads_status_keyboard()
+
+    assert keyboard is not None
+    button = keyboard.inline_keyboard[0][0]
+    assert button.text == "🚗 Объявления"
+    assert button.url == "https://argus.example.com/m/listings/"
+
+
+def test_ads_status_keyboard_is_hidden_without_public_base_url(settings):
+    settings.ARGUS_PUBLIC_BASE_URL = ""
+
+    assert build_ads_status_keyboard() is None
