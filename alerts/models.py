@@ -233,9 +233,17 @@ class NoiseAlert(MarketplaceAlert):
 
 
 class Listing(TimestampedModel):
-    """A user-managed Kleinanzeigen listing with optional public view statistics."""
+    """A Kleinanzeigen listing tracker optionally bound to a marketplace listing."""
 
     title = models.CharField(_("listing title"), max_length=255)
+    source_alert = models.OneToOneField(
+        MarketplaceAlert,
+        verbose_name=_("source listing alert"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="view_statistics",
+    )
     mailbox = models.ForeignKey(
         MailboxAccount,
         verbose_name=_("mailbox"),

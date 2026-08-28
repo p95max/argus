@@ -113,13 +113,26 @@ def mobile_listings(request):
             group["open_count"] += 1
 
     listing_groups = list(grouped.values())
-    configured_listings = list(Listing.objects.select_related("mailbox").all())
+    trackers_by_alert_id = {
+        listing.source_alert_id: listing
+        for listing in Listing.objects.select_related("mailbox").exclude(source_alert__isnull=True)
+    }
+    for group in listing_groups:
+        group["statistics"] = next(
+            (
+                trackers_by_alert_id[alert.id]
+                for alert in group["alerts"]
+                if alert.id in trackers_by_alert_id
+            ),
+            None,
+        )
+
     analytics = get_listing_analytics()
     deltas = {
         item.listing_id: item.views_delta_24h
         for item in (analytics.listings if analytics else ())
     }
-    for listing in configured_listings:
+    for listing in trackers_by_alert_id.values():
         listing.views_delta_24h = deltas.get(listing.id)
 
     return render(
@@ -129,18 +142,26 @@ def mobile_listings(request):
             "listing_groups": listing_groups,
             "listing_count": len(listing_groups),
             "alert_count": sum(len(group["alerts"]) for group in listing_groups),
-            "configured_listings": configured_listings,
         },
     )
 
 
-def _save_listing_from_request(request, listing: Listing) -> ListingViewCheck | None:
-    title = (request.POST.get("title") or "").strip()
+def _save_listing_from_request(
+    request,
+    listing: Listing,
+    *,
+    title: str | None = None,
+    mailbox=None,
+    is_active: bool | None = None,
+) -> ListingViewCheck | None:
+    title = (title if title is not None else request.POST.get("title") or "").strip()
     if not title:
         raise ValueError("title_required")
 
     listing.title = title
-    listing.is_active = request.POST.get("is_active") == "on"
+    if mailbox is not None:
+        listing.mailbox = mailbox
+    listing.is_active = request.POST.get("is_active") == "on" if is_active is None else is_active
     raw_url = (request.POST.get("kleinanzeigen_url") or "").strip()
     if not raw_url:
         listing.kleinanzeigen_url = ""
@@ -220,6 +241,43 @@ def mobile_create_listing(request):
         messages.warning(request, "Ссылка сохранена, но статистика пока недоступна.")
     else:
         messages.success(request, "Объявление сохранено.")
+    return redirect("mobile_listings")
+
+
+@login_required
+@require_POST
+def mobile_configure_listing_statistics(request, alert_id):
+    """Save a Kleinanzeigen URL directly on the selected marketplace listing card."""
+    _require_staff(request.user)
+
+    alert = get_object_or_404(
+        MarketplaceAlert.objects.select_related("mailbox"),
+        id=alert_id,
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+    )
+    listing, _ = Listing.objects.get_or_create(
+        source_alert=alert,
+        defaults={
+            "title": alert.listing_title or alert.subject or str(alert.id),
+            "mailbox": alert.mailbox,
+            "is_active": True,
+        },
+    )
+    try:
+        result = _save_listing_from_request(
+            request,
+            listing,
+            title=alert.listing_title or alert.subject or str(alert.id),
+            mailbox=alert.mailbox,
+            is_active=True,
+        )
+    except KleinanzeigenURLValidationError:
+        messages.error(request, "Укажите корректную ссылку Kleinanzeigen.")
+    else:
+        if result is not None and not result.verified:
+            messages.warning(request, "Ссылка сохранена, но статистика пока недоступна.")
+        else:
+            messages.success(request, "Ссылка Kleinanzeigen привязана к объявлению.")
     return redirect("mobile_listings")
 
 
