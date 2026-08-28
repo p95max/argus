@@ -8,6 +8,7 @@
 {% endblock %}{% endcomment %}
 
 {% block content %}
+    {% with security_notice=alert|is_security_system_notice %}
     <section class="alert-detail-navigation">
         <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">&larr; {% trans "Back" %}</a>
         <a class="link-button small-action" href="{% url 'mobile_listings' %}">🚗 Объявления</a>
@@ -43,6 +44,10 @@
                 </span>
 
                 <span class="badge">{{ alert.get_event_type_display }}</span>
+
+                {% if security_notice %}
+                    <span class="badge danger">🚨 Подозрительный аккаунт</span>
+                {% endif %}
 
                 <span class="badge {% if alert.parse_status == 'error' %}danger{% elif alert.parse_status == 'partial' %}warn{% else %}ok{% endif %}">
                     {{ alert.get_parse_status_display }}
@@ -81,7 +86,15 @@
                 </div>
             {% endif %}
 
-            {% if alert.classification_reason %}
+            {% if security_notice %}
+                <div class="info-row classification-note">
+                    <span class="info-icon">🚨</span>
+                    <span class="info-content">
+                        <span class="info-label">Предупреждение безопасности</span>
+                        <span class="risk-flag-text">Kleinanzeigen ограничил подозрительный аккаунт, который ранее контактировал по этому объявлению. Рекомендуется не продолжать сделку вне платформы и не передавать платёжные данные.</span>
+                    </span>
+                </div>
+            {% elif alert.classification_reason %}
                 <div class="info-row classification-note">
                     <span class="info-icon">🧠</span>
                     <span class="info-content">
@@ -94,14 +107,36 @@
             {% if alert.message_text %}
                 <div class="buyer-message">
                     <div class="buyer-message-header">
-                        <span>💬 {% trans "Buyer message" %}</span>
+                        {% if alert.event_type == 'system_notice' %}
+                            {% if security_notice %}
+                                <span>🚨 Предупреждение Kleinanzeigen</span>
+                            {% else %}
+                                <span>⚠️ Системное уведомление Kleinanzeigen</span>
+                            {% endif %}
+                        {% else %}
+                            <span>💬 {% trans "Buyer message" %}</span>
+                        {% endif %}
                     </div>
-                    <div class="buyer-message-body">{{ alert.message_text|compact_buyer_message|linebreaksbr }}</div>
+                    <div class="buyer-message-body">
+                        {% if alert.event_type == 'system_notice' %}
+                            {{ alert.message_text|linebreaksbr }}
+                        {% else %}
+                            {{ alert.message_text|compact_buyer_message|linebreaksbr }}
+                        {% endif %}
+                    </div>
                 </div>
             {% elif alert.normalized_body %}
                 <div class="buyer-message">
                     <div class="buyer-message-header">
-                        <span>💬 {% trans "Email text" %}</span>
+                        {% if alert.event_type == 'system_notice' %}
+                            {% if security_notice %}
+                                <span>🚨 Предупреждение Kleinanzeigen</span>
+                            {% else %}
+                                <span>⚠️ Системное уведомление Kleinanzeigen</span>
+                            {% endif %}
+                        {% else %}
+                            <span>💬 {% trans "Email text" %}</span>
+                        {% endif %}
                     </div>
                     <div class="buyer-message-body">{{ alert.normalized_body|linebreaksbr }}</div>
                 </div>
@@ -159,4 +194,5 @@
     </section>
 
     <section><div class="actions compact-actions"><a class="link-button small-action" href="{{ admin_alert_url }}">ℹ️ {% trans "Full information" %}</a>{% if can_manage_mailboxes %}<a class="link-button small-action" href="{{ admin_mailbox_url }}">⚙️ {% trans "Settings" %}</a>{% endif %}</div></section>
+    {% endwith %}
 {% endblock %}

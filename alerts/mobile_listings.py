@@ -41,23 +41,55 @@ def _same_listing_queryset(alert):
     return queryset.filter(id=alert.id)
 
 
+def _normalize_listing_title(value):
+    """Normalize a listing title for conservative fallback grouping."""
+    return " ".join((value or "").split()).casefold()
+
+
+def _build_listing_group_keys(alerts):
+    """Map title-only alerts to a listing ID only when that title identifies one listing."""
+    title_listing_ids = {}
+    for alert in alerts:
+        if not alert.listing_id:
+            continue
+        title = _normalize_listing_title(alert.listing_title or alert.subject)
+        if title:
+            title_listing_ids.setdefault((alert.mailbox_id, title), set()).add(alert.listing_id)
+
+    keys = {}
+    for alert in alerts:
+        if alert.listing_id:
+            keys[alert.id] = (alert.mailbox_id, f"id:{alert.listing_id}")
+            continue
+
+        title_value = alert.listing_title or alert.subject
+        title = _normalize_listing_title(title_value)
+        matching_ids = title_listing_ids.get((alert.mailbox_id, title), set())
+        if title and len(matching_ids) == 1:
+            listing_id = next(iter(matching_ids))
+            keys[alert.id] = (alert.mailbox_id, f"id:{listing_id}")
+        elif title:
+            keys[alert.id] = (alert.mailbox_id, f"title:{title}")
+        else:
+            keys[alert.id] = (alert.mailbox_id, f"alert:{alert.id}")
+    return keys
+
+
 @login_required
 def mobile_listings(request):
     _require_staff(request.user)
 
-    alerts = (
+    alerts = list(
         MarketplaceAlert.objects.filter(event_type=MarketplaceAlert.EventType.BUYER_MESSAGE)
         .select_related("mailbox", "taken_by")
         .prefetch_related("flags")
         .order_by("-received_at", "-created_at", "-id")
     )
+    group_keys = _build_listing_group_keys(alerts)
 
     grouped = OrderedDict()
     for alert in alerts:
-        key = (
-            alert.mailbox_id,
-            alert.listing_id or alert.listing_title or alert.subject or f"alert-{alert.id}",
-        )
+        key = group_keys[alert.id]
         group = grouped.setdefault(
             key,
             {
@@ -70,6 +102,8 @@ def mobile_listings(request):
                 "is_closed": False,
             },
         )
+        if not group["listing_id"] and alert.listing_id:
+            group["listing_id"] = alert.listing_id
         group["alerts"].append(alert)
         if alert.taken_by_label == LISTING_CLOSED_MARKER:
             group["is_closed"] = True

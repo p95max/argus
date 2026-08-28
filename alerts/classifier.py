@@ -75,6 +75,18 @@ CLASSIFICATION_RULES = (
         "reason": "запрос рассрочки/оплаты частями",
     },
     {
+        "code": "suspected_scam",
+        "priority": MarketplaceAlert.Priority.HIGH,
+        "patterns": (
+            r"\beurosender\b",
+            r"\bnicht persönlich\b[\s\S]{0,350}\bspedition\b",
+            r"\bim ausland\b[\s\S]{0,350}\büberweisung\b",
+            r"\bspedition\b[\s\S]{0,250}\babholen\b",
+            r"\bbevollmächtigt\b[\s\S]{0,250}\bkaufvertrag\b",
+        ),
+        "reason": "подозрение на скам — передать в службу поддержки",
+    },
+    {
         "code": "courier_shipping",
         "priority": MarketplaceAlert.Priority.NORMAL,
         "patterns": (r"\bkurier\b", r"\bspedition\b", r"\babholung durch\b", r"\bversand\b"),
@@ -83,7 +95,13 @@ CLASSIFICATION_RULES = (
     {
         "code": "risky_payment",
         "priority": MarketplaceAlert.Priority.NORMAL,
-        "patterns": (r"\bpaypal freunde\b", r"\bwestern union\b", r"\büberweisung vorab\b", r"\bvorkasse\b"),
+        "patterns": (
+            r"\bpaypal freunde\b",
+            r"\bwestern union\b",
+            r"\büberweisung vorab\b",
+            r"\bvorkasse\b",
+            r"\bper überweisung (?:zu )?zahlen\b",
+        ),
         "reason": "рискованный способ оплаты",
     },
     {
@@ -120,6 +138,7 @@ CLASSIFICATION_RULES = (
 
 RISK_FLAG_CODES = {
     "installment_payment",
+    "suspected_scam",
     "courier_shipping",
     "risky_payment",
     "external_messenger",
@@ -184,11 +203,14 @@ def classify_marketplace_message(text: str) -> ClassificationResult:
         for code, reason in zip(matched_codes, matched_reasons)
         if code not in RISK_FLAG_CODES
     ]
-    risk_reasons = [
-        reason
+    risk_pairs = [
+        (code, reason)
         for code, reason in zip(matched_codes, matched_reasons)
         if code in RISK_FLAG_CODES
     ]
+    if "suspected_scam" in matched_codes:
+        risk_pairs = [pair for pair in risk_pairs if pair[0] == "suspected_scam"]
+    risk_reasons = [reason for _, reason in risk_pairs]
 
     parts = []
     if regular_reasons:

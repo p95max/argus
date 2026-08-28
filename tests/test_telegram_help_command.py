@@ -33,15 +33,18 @@ def test_help_lists_all_registered_commands():
 
     assert list(command_descriptions) == [
         "help",
-        "status",
-        "mailboxes",
+        "mailboxes_status",
+        "ads_status",
         "summary",
         "unread",
+        "checkmail",
         "polling",
         "health",
         "doctor",
         "deploy",
     ]
+    assert command_descriptions["mailboxes_status"] == "mailbox status"
+    assert command_descriptions["ads_status"] == "active ads status and statistics"
     assert "production server" in command_descriptions["polling"]
     assert "production deploy" in command_descriptions["deploy"]
     assert "progress" in command_descriptions["deploy"]
@@ -101,6 +104,9 @@ def test_help_command_replies_with_html_for_allowed_update(monkeypatch):
     assert len(update.effective_message.replies) == 1
     reply = update.effective_message.replies[0]
     assert "<b>Argus: what the bot can do</b>" in reply["text"]
+    assert "/mailboxes_status" in reply["text"]
+    assert "/ads_status" in reply["text"]
+    assert "/status" not in reply["text"]
     assert reply["parse_mode"] == "HTML"
     assert reply["disable_web_page_preview"] is True
 
@@ -112,7 +118,11 @@ def test_telegram_bot_uses_dedicated_help_handler_and_publishes_menu():
 
     assert "from alerts.telegram.command_menu import publish_telegram_command_menu" in content
     assert "await publish_telegram_command_menu(application.bot, language)" in content
-    assert 'CommandHandler(\n                "help",\n                handle_help_command,' in content
+    assert 'CommandHandler("help", handle_help_command)' in content
+    assert 'CommandHandler("mailboxes_status", handle_mailboxes_status_command)' in content
+    assert 'CommandHandler("ads_status", handle_ads_status_command)' in content
+    assert 'CommandHandler("status",' not in content
+    assert 'CommandHandler("mailboxes",' not in content
     assert ".post_init(configure_bot_commands)" in content
 
 
