@@ -129,6 +129,8 @@ def normalize_body(body: str) -> str:
 def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail:
     raw_subject = subject or ""
     raw_body = body or ""
+    direct_reply = _looks_like_kleinanzeigen_direct_reply(raw_subject, raw_body)
+    direct_reply_buyer = _parse_direct_reply_buyer_name(raw_body) if direct_reply else ""
     normalized_body = normalize_body(raw_body)
     combined = f"{raw_subject}\n{normalized_body}".strip()
     combined_lower = _normalize_matching_text(combined).lower()
@@ -137,7 +139,7 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
         event_type = MarketplaceAlert.EventType.NOISE
     elif _matches_any(combined_lower, LISTING_OPERATION_PATTERNS):
         event_type = MarketplaceAlert.EventType.LISTING_EXPIRING
-    elif _matches_any(combined_lower, BUYER_MESSAGE_PATTERNS):
+    elif direct_reply or _matches_any(combined_lower, BUYER_MESSAGE_PATTERNS):
         event_type = MarketplaceAlert.EventType.BUYER_MESSAGE
     elif _matches_any(combined_lower, GENERIC_SYSTEM_PATTERNS):
         event_type = MarketplaceAlert.EventType.SYSTEM_NOTICE
@@ -151,8 +153,11 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
     buyer_name = ""
     message_text = ""
     if event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
-        buyer_name = _parse_buyer_name(raw_subject, normalized_body)
-        message_text = _parse_message_text(combined)
+        buyer_name = direct_reply_buyer or _parse_buyer_name(raw_subject, normalized_body)
+        if direct_reply:
+            message_text = _clean_value(normalized_body)
+        else:
+            message_text = _parse_message_text(combined)
     elif event_type != MarketplaceAlert.EventType.NOISE:
         message_text = _parse_operational_message(normalized_body)
 
@@ -179,8 +184,6 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
     flag_codes = ()
     classification_reason = "Operational/system event; buyer lead classifier was not applied."
     if event_type == MarketplaceAlert.EventType.BUYER_MESSAGE:
-        # Classify only the buyer-authored message, not subject/listing metadata.
-        # Otherwise listing titles like "... TÜV bis ..." create false risk flags.
         classification = classify_marketplace_message(message_text)
         priority = classification.priority
         flag_codes = classification.flag_codes
@@ -207,6 +210,31 @@ def parse_kleinanzeigen_email(subject: str, body: str) -> ParsedMarketplaceEmail
     )
 
 
+def _looks_like_kleinanzeigen_direct_reply(subject: str, raw_body: str) -> bool:
+    if not _clean_value(subject):
+        return False
+    text = _normalize_matching_text(raw_body or "").lower()
+    return (
+        "@mail.kleinanzeigen.de" in text
+        and bool(re.search(r"\bprivat\s+(?:über|ueber)\s+kleinanzeigen\b", text, flags=re.IGNORECASE))
+    )
+
+
+def _parse_direct_reply_buyer_name(raw_body: str) -> str:
+    text = raw_body or ""
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = unescape(text)
+    patterns = (
+        r"(?:Mit freundlichen Grüßen|Mit freundlichen Gruessen|Viele Grüße)\s*\n+\s*([^\n<]{2,80})",
+        r"(?:Mit freundlichen Grüßen|Mit freundlichen Gruessen|Viele Grüße)\s+([^\n<]{2,80}?)(?:\s+On\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),|$)",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return _clean_value(match.group(1))
+    return "Interessent"
+
+
 def _strip_signature(text: str) -> str:
     signature_patterns = (
         r"\n--\s*\n.*$",
@@ -214,6 +242,7 @@ def _strip_signature(text: str) -> str:
         r"\nMit freundlichen Grüßen[\s\S]*$",
         r"\nDein Kleinanzeigen-Team[\s\S]*$",
         r"\nDiese Nachricht wurde.*$",
+        r"\nOn\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),[\s\S]*$",
     )
     stripped = text
     for pattern in signature_patterns:
