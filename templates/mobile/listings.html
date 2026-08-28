@@ -70,6 +70,9 @@
                     <span class="summary-title">
                         🚗 {{ group.title }}
                         <span class="status-pill muted">💬 {{ group.alerts|length }}</span>
+                        {% if group.statistics and group.statistics.views_count is not None %}
+                            <span class="status-pill ok listing-views-pill">👁 {{ group.statistics.views_count }}</span>
+                        {% endif %}
                         {% if group.is_closed %}
                             <span class="status-pill danger"><span class="status-dot"></span>закрыто</span>
                         {% elif group.open_count %}
@@ -86,7 +89,19 @@
                         {% if group.listing_id %}<span class="badge">ID {{ group.listing_id }}</span>{% endif %}
                     </div>
 
-                    <div class="listing-action-box listing-statistics-box">
+                    <details class="listing-statistics-details" {% if not group.statistics or group.statistics.views_count is None %}open{% endif %}>
+                        <summary class="listing-statistics-summary">
+                            <span>📊 Статистика просмотров</span>
+                            {% if group.statistics and group.statistics.views_count is not None %}
+                                <strong>👁 {{ group.statistics.views_count }} просмотров</strong>
+                                {% if group.statistics.views_delta_24h is not None %}
+                                    <span class="badge">{% if group.statistics.views_delta_24h >= 0 %}+{% endif %}{{ group.statistics.views_delta_24h }} за 24 ч</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="small">Настроить URL</span>
+                            {% endif %}
+                        </summary>
+                        <div class="listing-action-box listing-statistics-box">
                         <div class="listing-action-title">📊 Статистика просмотров</div>
                         <div class="small">Ссылка сохраняется именно для объявления «{{ group.title }}».</div>
                         <form method="post" action="{% url 'mobile_configure_listing_statistics' group.representative_alert_id %}">
@@ -113,7 +128,8 @@
                             {% endif %}
                             <button class="small-action" type="submit">Сохранить URL</button>
                         </form>
-                    </div>
+                        </div>
+                    </details>
 
                     {% if group.is_closed %}
                         <div class="listing-action-box listing-action-box-success">
@@ -264,6 +280,42 @@
         .listing-statistics-box {
             border-color: rgba(70, 155, 255, .42);
             background: rgba(70, 155, 255, .06);
+        }
+        .listing-statistics-details {
+            border: 1px solid rgba(70, 155, 255, .42);
+            border-radius: 9px;
+            background: rgba(70, 155, 255, .06);
+        }
+        .listing-statistics-summary {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 44px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-weight: 700;
+            list-style: none;
+        }
+        .listing-statistics-summary::-webkit-details-marker {
+            display: none;
+        }
+        .listing-statistics-summary::after {
+            content: "▾";
+            margin-left: auto;
+            color: var(--muted);
+        }
+        .listing-statistics-details:not([open]) .listing-statistics-summary::after {
+            content: "▸";
+        }
+        .listing-statistics-summary strong {
+            color: var(--accent);
+        }
+        .listing-statistics-details .listing-statistics-box {
+            border: 0;
+            border-top: 1px solid rgba(70, 155, 255, .25);
+            border-radius: 0;
+            background: transparent;
         }
         .listing-statistics-box label {
             display: grid;
