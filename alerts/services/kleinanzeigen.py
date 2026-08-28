@@ -18,7 +18,7 @@ from ..models import Listing, ListingViewStat
 KLEINANZEIGEN_HOSTS = {"kleinanzeigen.de", "www.kleinanzeigen.de"}
 REQUEST_TIMEOUT_SECONDS = 8
 MAX_RESPONSE_BYTES = 1_000_000
-VIEW_COUNTER_REFRESH_INTERVAL = timedelta(hours=24)
+VIEW_COUNTER_REFRESH_INTERVAL = timedelta(hours=1)
 
 
 class KleinanzeigenURLValidationError(ValueError):
