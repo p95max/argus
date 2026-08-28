@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+from ..gmail_polling import get_gmail_polling_status
 from ..mobile_listings import LISTING_CLOSED_MARKER, _build_listing_group_keys
 from ..models import MailboxAccount, MarketplaceAlert
 from .i18n import use_argus_telegram_language
@@ -65,8 +66,22 @@ def build_mailboxes_status_message() -> str:
         is_connected = mailbox.connection_status == MailboxAccount.ConnectionStatus.CONNECTED
         icon = "🔴" if is_error else "🟢" if is_connected else "🟠"
         label = mailbox.name or mailbox.email or "—"
-        last_check = _format_time(mailbox.last_checked_at)
-        lines.append(f"{icon} {html.escape(label)} · {last_check}")
+        lines.append(f"{icon} {html.escape(label)}")
+
+    last_success_at = max(
+        (mailbox.last_success_at for mailbox in mailboxes if mailbox.last_success_at),
+        default=None,
+    )
+    polling_status = get_gmail_polling_status()
+    interval = polling_status.localized_interval_label or "—"
+
+    lines.extend(
+        [
+            "",
+            f"✅ Последняя успешная синхронизация: {_format_time(last_success_at)}",
+            f"⏱ Текущий интервал: {html.escape(interval)}",
+        ]
+    )
 
     return "\n".join(lines)
 
