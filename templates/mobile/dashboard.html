@@ -10,7 +10,7 @@
     {% trans "Delete the entire system log, including open errors?" as confirm_clear_all %}
 
     <section class="dashboard-overview">
-        <article class="card gmail-overview-card">
+        <article class="card dashboard-summary-card gmail-overview-card">
             <div class="gmail-overview-content">
             <div class="title">Gmail</div>
             <div class="badges">
@@ -34,7 +34,7 @@
             {% endif %}
         </article>
 
-        <a class="card dashboard-listings-card" href="{% url 'mobile_listings' %}">
+        <a class="card dashboard-summary-card dashboard-listings-card" href="{% url 'mobile_listings' %}">
             <div class="title">🚗 Объявления</div>
             <div class="dashboard-active-listings">Активных объявлений: {{ active_listings_count }}</div>
             {% if active_listings %}
@@ -64,6 +64,11 @@
         .dashboard-overview > .card {
             margin: 0;
         }
+        .dashboard-summary-card {
+            min-height: 166px;
+            border-color: var(--line);
+            background: var(--panel);
+        }
         .gmail-overview-card {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
@@ -76,12 +81,11 @@
             min-width: 0;
         }
         .gmail-check-action {
-            align-self: stretch;
+            align-self: center;
             margin: 0;
         }
         .gmail-check-action form {
             display: flex;
-            height: 100%;
         }
         .gmail-check-button {
             display: grid;
@@ -97,10 +101,9 @@
             gap: 9px;
             text-decoration: none;
             color: inherit;
-            border-color: rgba(70, 155, 255, .42);
         }
         .dashboard-listings-card:hover {
-            border-color: var(--accent);
+            border-color: var(--line-accent);
         }
         .dashboard-active-listings {
             color: var(--accent);

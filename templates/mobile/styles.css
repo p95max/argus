@@ -69,6 +69,20 @@ header {
     padding: 14px 16px;
 }
 
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+.header-logo {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+}
+
 .header-actions {
     display: flex;
     align-items: center;

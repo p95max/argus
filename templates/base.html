@@ -27,7 +27,10 @@
 <header>
     <div class="header-content">
         {% block header %}
-            <h1>{% block header_title %}Argus{% endblock %}</h1>
+            <div class="header-brand">
+                <img class="header-logo" src="{% static 'favicon.svg' %}" width="28" height="28" alt="" aria-hidden="true">
+                <h1>{% block header_title %}Argus{% endblock %}</h1>
+            </div>
             {% block header_actions %}
                 <div class="header-actions">
                     <button
