@@ -9,6 +9,7 @@ from alerts.telegram.config import get_telegram_config
 from alerts.telegram.deploy_command import handle_deploy_command
 from alerts.telegram.doctor_command import handle_doctor_command
 from alerts.telegram.command_menu import publish_telegram_command_menu
+from alerts.telegram.health_command import handle_health_command
 from alerts.telegram.help_command import handle_help_command
 from alerts.telegram.i18n import get_argus_telegram_language
 from alerts.telegram.handlers import (
@@ -17,7 +18,6 @@ from alerts.telegram.handlers import (
     handle_daily_summary_command,
     handle_gmail_polling_callback,
     handle_gmail_polling_command,
-    handle_health_command,
     handle_unread_command,
 )
 from alerts.telegram.status_command import (
@@ -66,12 +66,12 @@ class Command(BaseCommand):
         application.add_handler(CommandHandler("mailboxes_status", handle_mailboxes_status_command))
         application.add_handler(CommandHandler("ads_status", handle_ads_status_command))
         application.add_handler(CommandHandler("summary", handle_daily_summary_command))
-        application.add_handler(CommandHandler("health", handle_health_command))
-        application.add_handler(CommandHandler("doctor", handle_doctor_command))
-        application.add_handler(CommandHandler("deploy", handle_deploy_command))
         application.add_handler(CommandHandler("unread", handle_unread_command))
         application.add_handler(CommandHandler("checkmail", handle_check_mail_command))
         application.add_handler(CommandHandler("polling", handle_gmail_polling_command))
+        application.add_handler(CommandHandler("health", handle_health_command))
+        application.add_handler(CommandHandler("doctor", handle_doctor_command))
+        application.add_handler(CommandHandler("deploy", handle_deploy_command))
 
         try:
             application.run_polling(allowed_updates=["callback_query", "message"], drop_pending_updates=True)
