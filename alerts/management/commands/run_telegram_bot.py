@@ -18,10 +18,12 @@ from alerts.telegram.handlers import (
     handle_gmail_polling_callback,
     handle_gmail_polling_command,
     handle_health_command,
-    handle_mailbox_status_command,
     handle_unread_command,
 )
-from alerts.telegram.status_command import handle_status_command
+from alerts.telegram.status_command import (
+    handle_ads_status_command,
+    handle_mailboxes_status_command,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +63,8 @@ class Command(BaseCommand):
         application.add_handler(CallbackQueryHandler(handle_alert_callback, pattern=r"^alert:\d+:(status|in_work|unread|ignored)$"))
         application.add_handler(CallbackQueryHandler(handle_gmail_polling_callback, pattern=r"^polling:(status|enable|disable|run_now)$"))
         application.add_handler(CommandHandler("help", handle_help_command))
-        application.add_handler(CommandHandler("status", handle_status_command))
-        application.add_handler(CommandHandler("mailboxes", handle_mailbox_status_command))
+        application.add_handler(CommandHandler("mailboxes_status", handle_mailboxes_status_command))
+        application.add_handler(CommandHandler("ads_status", handle_ads_status_command))
         application.add_handler(CommandHandler("summary", handle_daily_summary_command))
         application.add_handler(CommandHandler("health", handle_health_command))
         application.add_handler(CommandHandler("doctor", handle_doctor_command))
