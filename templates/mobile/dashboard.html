@@ -26,7 +26,7 @@
                     <form method="post" action="{% url 'mobile_check_gmail_now' %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button class="small-action" type="submit">{% trans "Check now" %}</button>
+                        <button class="small-action" type="submit" aria-label="{% trans 'Check now' %}" title="{% trans 'Check now' %}">🔄</button>
                     </form>
                 </div>
             {% endif %}
@@ -34,18 +34,20 @@
 
         <a class="card dashboard-listings-card" href="{% url 'mobile_listings' %}">
             <div class="title">🚗 Объявления</div>
-            {% if listing_analytics %}
-                <div class="dashboard-views-total">👁 {{ listing_analytics.total_views }} просмотров</div>
-                <div class="badges">
-                    <span class="badge ok">📊 Всего просмотров</span>
-                    <span class="badge">{{ listing_analytics.listings|length }} объявл.</span>
-                    {% if listing_analytics.total_delta_24h is not None %}
-                        <span class="badge">{% if listing_analytics.total_delta_24h >= 0 %}+{% endif %}{{ listing_analytics.total_delta_24h }} за 24 ч</span>
-                    {% endif %}
+            <div class="dashboard-active-listings">Активных объявлений: {{ active_listings_count }}</div>
+            {% if active_listings %}
+                <div class="dashboard-listing-preview">
+                    {% for listing in active_listings %}
+                        <div class="dashboard-listing-row">
+                            <span>{{ listing.title }}</span>
+                            <strong>👁 {% if listing.views_count is not None %}{{ listing.views_count }}{% else %}—{% endif %}</strong>
+                        </div>
+                    {% endfor %}
                 </div>
-                <div class="small">Откройте карточку объявления, чтобы изменить URL или посмотреть детали.</div>
+                {% if active_listings_count > active_listings|length %}
+                    <div class="small">Показаны первые {{ active_listings|length }} из {{ active_listings_count }}.</div>
+                {% endif %}
             {% else %}
-                <div class="dashboard-views-total">👁 Нет данных о просмотрах</div>
                 <div class="small">Добавьте Kleinanzeigen URL в нужной карточке объявления.</div>
             {% endif %}
         </a>
@@ -71,10 +73,32 @@
         .dashboard-listings-card:hover {
             border-color: var(--accent);
         }
-        .dashboard-views-total {
+        .dashboard-active-listings {
             color: var(--accent);
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 800;
+        }
+        .dashboard-listing-preview {
+            display: grid;
+            gap: 6px;
+        }
+        .dashboard-listing-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 7px 9px;
+            border-radius: 6px;
+            background: var(--panel-2);
+        }
+        .dashboard-listing-row span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dashboard-listing-row strong {
+            flex: 0 0 auto;
+            color: var(--accent);
         }
         @media (max-width: 640px) {
             .dashboard-overview {

@@ -11,11 +11,10 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from ...services.attention import filter_needs_attention, needs_attention_alert_q
-from ...services.listing_analytics import get_listing_analytics
 from ...command_locks import CommandAlreadyRunning, command_lock
 from ...gmail.gmail import check_mailbox
 from ...monitoring.health import build_health_report
-from ...models import MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
+from ...models import Listing, MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 from ...permissions import can_manage_mailboxes, can_view_mailbox_operations
 
 
@@ -177,7 +176,15 @@ def mobile_dashboard(request):
         "last_success_at": mailbox_status["last_success_at"],
         "today_alerts": alert_counts["today"],
     }
-    listing_analytics = get_listing_analytics()
+    active_listings = list(
+        Listing.objects.filter(is_active=True, source_alert__isnull=False)
+        .only("id", "title", "views_count")
+        .order_by("title", "id")[:4]
+    )
+    active_listings_count = Listing.objects.filter(
+        is_active=True,
+        source_alert__isnull=False,
+    ).count()
     health_report = build_health_report()
 
     context = {
@@ -187,7 +194,8 @@ def mobile_dashboard(request):
         "mailboxes": mailboxes,
         "mailbox_status": mailbox_status,
         "gmail_summary": gmail_summary,
-        "listing_analytics": listing_analytics,
+        "active_listings": active_listings,
+        "active_listings_count": active_listings_count,
         "health_report": health_report,
         "view_mode": view_mode,
         "alert_counts": alert_counts,
