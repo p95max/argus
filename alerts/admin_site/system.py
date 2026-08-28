@@ -8,11 +8,35 @@ from ..models import (
     ArgusSettings,
     LanguageCode,
     LeadFlag,
+    Listing,
+    ListingViewStat,
     ProcessedEmail,
     ServiceEvent,
     TelegramSettings,
 )
 from ..telegram.command_menu import refresh_telegram_command_menu
+
+
+@admin.register(Listing)
+class ListingAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "is_active",
+        "kleinanzeigen_listing_id",
+        "views_count",
+        "views_checked_at",
+    )
+    list_filter = ("is_active",)
+    search_fields = ("title", "kleinanzeigen_listing_id", "kleinanzeigen_url")
+    readonly_fields = ("views_count", "views_checked_at", "views_error", "created_at", "updated_at")
+
+
+@admin.register(ListingViewStat)
+class ListingViewStatAdmin(admin.ModelAdmin):
+    list_display = ("listing", "views_count", "created_at")
+    search_fields = ("listing__title",)
+    readonly_fields = ("listing", "views_count", "created_at", "updated_at")
+    ordering = ("-created_at",)
 
 
 class ArgusSettingsAdminForm(forms.ModelForm):

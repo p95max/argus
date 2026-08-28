@@ -57,6 +57,8 @@ JAZZMIN_SETTINGS = {
         "alerts.argussettings": "fas fa-language",
         "alerts.mailboxaccount": "fas fa-envelope-open-text",
         "alerts.marketplacealert": "fas fa-bell",
+        "alerts.listing": "fas fa-car",
+        "alerts.listingviewstat": "fas fa-chart-line",
         "alerts.noisealert": "fas fa-volume-mute",
         "alerts.leadflag": "fas fa-flag",
         "alerts.processedemail": "fas fa-check-double",

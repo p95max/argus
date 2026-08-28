@@ -232,6 +232,72 @@ class NoiseAlert(MarketplaceAlert):
         verbose_name_plural = _("Spam and newsletters")
 
 
+class Listing(TimestampedModel):
+    """A user-managed Kleinanzeigen listing with optional public view statistics."""
+
+    title = models.CharField(_("listing title"), max_length=255)
+    mailbox = models.ForeignKey(
+        MailboxAccount,
+        verbose_name=_("mailbox"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="listings",
+    )
+    kleinanzeigen_url = models.URLField(_("Kleinanzeigen URL"), blank=True)
+    kleinanzeigen_listing_id = models.CharField(
+        _("Kleinanzeigen listing ID"),
+        max_length=80,
+        blank=True,
+    )
+    views_count = models.PositiveIntegerField(_("views"), null=True, blank=True)
+    views_checked_at = models.DateTimeField(_("views checked at"), null=True, blank=True)
+    views_error = models.CharField(_("views error"), max_length=120, blank=True)
+    is_active = models.BooleanField(_("active"), default=True)
+
+    class Meta:
+        ordering = ["title", "id"]
+        indexes = [
+            models.Index(
+                fields=["is_active", "views_checked_at"],
+                name="alerts_list_is_acti_3bd259_idx",
+            ),
+            models.Index(
+                fields=["kleinanzeigen_listing_id"],
+                name="alerts_list_kleinan_b7aa25_idx",
+            ),
+        ]
+        verbose_name = _("Listing")
+        verbose_name_plural = _("Listings")
+
+    def __str__(self):
+        return self.title
+
+
+class ListingViewStat(TimestampedModel):
+    listing = models.ForeignKey(
+        Listing,
+        verbose_name=_("listing"),
+        on_delete=models.CASCADE,
+        related_name="view_stats",
+    )
+    views_count = models.PositiveIntegerField(_("views"))
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["listing", "created_at"],
+                name="alerts_list_listin_565a37_idx",
+            )
+        ]
+        verbose_name = _("Listing view snapshot")
+        verbose_name_plural = _("Listing view snapshots")
+
+    def __str__(self):
+        return f"{self.listing}: {self.views_count}"
+
+
 class ProcessedEmail(TimestampedModel):
     mailbox = models.ForeignKey(
         MailboxAccount,

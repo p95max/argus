@@ -10,6 +10,54 @@
     </section>
 
     <section>
+        <article class="card">
+            <div class="title">📊 Статистика просмотров</div>
+            <form class="listing-stats-form" method="post" action="{% url 'mobile_create_listing' %}">
+                {% csrf_token %}
+                <label>
+                    Название объявления
+                    <input name="title" required maxlength="255" placeholder="Например, VW Golf">
+                </label>
+                <label>
+                    Kleinanzeigen URL
+                    <input
+                        id="kleinanzeigen-url"
+                        name="kleinanzeigen_url"
+                        type="url"
+                        inputmode="url"
+                        placeholder="https://www.kleinanzeigen.de/s-anzeige/..."
+                    >
+                </label>
+                <div id="kleinanzeigen-url-status" class="small" aria-live="polite"></div>
+                <label class="listing-checkbox"><input name="is_active" type="checkbox" checked> Активно</label>
+                <button class="small-action" type="submit">Сохранить объявление</button>
+            </form>
+        </article>
+
+        {% for listing in configured_listings %}
+            <article class="card nested-card">
+                <div class="title">🚗 {{ listing.title }}</div>
+                {% if listing.views_count is not None %}
+                    <div class="badges">
+                        <span class="badge ok">👁 {{ listing.views_count }}</span>
+                        {% if listing.views_delta_24h is not None %}
+                            <span class="badge">{% if listing.views_delta_24h >= 0 %}+{% endif %}{{ listing.views_delta_24h }} за 24 ч</span>
+                        {% endif %}
+                        <span class="badge">Обновлено {{ listing.views_checked_at|date:"d.m H:i" }}</span>
+                    </div>
+                {% elif listing.kleinanzeigen_url %}
+                    <div class="small">Статистика пока недоступна.</div>
+                {% else %}
+                    <div class="small">Ссылка Kleinanzeigen не настроена.</div>
+                {% endif %}
+                <div class="actions compact-actions">
+                    <a class="link-button small-action" href="{% url 'mobile_edit_listing' listing.id %}">Настроить</a>
+                </div>
+            </article>
+        {% endfor %}
+    </section>
+
+    <section>
         <div class="badges">
             <span class="badge">💬 {{ alert_count }} обращений</span>
         </div>
@@ -184,10 +232,69 @@
             min-width: 105px;
             text-align: center;
         }
+        .listing-stats-form {
+            display: grid;
+            gap: 8px;
+        }
+        .listing-stats-form label:not(.listing-checkbox) {
+            display: grid;
+            gap: 4px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .listing-stats-form input:not([type="checkbox"]) {
+            width: 100%;
+            min-height: 38px;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            padding: 8px 10px;
+            background: var(--panel-2);
+            color: var(--text);
+            font: inherit;
+        }
+        .listing-checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
     </style>
 
     <script>
         (() => {
+            const urlInput = document.getElementById('kleinanzeigen-url');
+            const urlStatus = document.getElementById('kleinanzeigen-url-status');
+            let validationTimer;
+
+            if (urlInput && urlStatus) {
+                urlInput.addEventListener('input', () => {
+                    clearTimeout(validationTimer);
+                    const value = urlInput.value.trim();
+                    if (!value) {
+                        urlStatus.textContent = '';
+                        return;
+                    }
+                    urlStatus.textContent = 'Проверяем ссылку…';
+                    validationTimer = setTimeout(async () => {
+                        try {
+                            const response = await fetch(
+                                '{% url "mobile_validate_kleinanzeigen_url" %}?url=' + encodeURIComponent(value)
+                            );
+                            const result = await response.json();
+                            if (!result.valid) {
+                                urlStatus.textContent = 'Некорректная ссылка Kleinanzeigen.';
+                            } else if (result.status === 'verified') {
+                                urlStatus.textContent = `Ссылка проверена · 👁 ${result.views}`;
+                            } else {
+                                urlStatus.textContent = 'Ссылка корректна, но статистика временно недоступна.';
+                            }
+                        } catch (_) {
+                            urlStatus.textContent = 'Ссылка корректна, но статистика временно недоступна.';
+                        }
+                    }, 500);
+                });
+            }
+
             document.querySelectorAll('.listing-card').forEach((card) => {
                 const container = card.querySelector('.listing-alerts');
                 const pagination = card.querySelector('[data-listing-pagination]');

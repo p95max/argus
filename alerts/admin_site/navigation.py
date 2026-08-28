@@ -7,7 +7,7 @@ ADMIN_SECTIONS = (
     (
         "argus_leads",
         _("Leads"),
-        {"MarketplaceAlert", "NoiseAlert", "LeadFlag"},
+        {"MarketplaceAlert", "NoiseAlert", "LeadFlag", "Listing", "ListingViewStat"},
     ),
     ("argus_settings", _("Settings"), {"ArgusSettings", "TelegramSettings"}),
     ("argus_system", _("System"), {"ServiceEvent", "AdminLoginLog"}),

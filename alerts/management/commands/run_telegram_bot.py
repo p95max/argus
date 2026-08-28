@@ -13,6 +13,7 @@ from alerts.telegram.help_command import handle_help_command
 from alerts.telegram.i18n import get_argus_telegram_language
 from alerts.telegram.handlers import (
     handle_alert_callback,
+    handle_apps_command,
     handle_daily_summary_command,
     handle_gmail_polling_callback,
     handle_gmail_polling_command,
@@ -109,6 +110,7 @@ class Command(BaseCommand):
                 handle_daily_summary_command,
             )
         )
+        application.add_handler(CommandHandler("apps", handle_apps_command))
         application.add_handler(
             CommandHandler(
                 "health",

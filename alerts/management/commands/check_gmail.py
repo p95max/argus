@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from alerts.command_locks import CommandAlreadyRunning, command_lock
 from alerts.gmail.gmail import check_mailbox
+from alerts.kleinanzeigen import refresh_listing_view_stats
 from alerts.models import MailboxAccount, ServiceEvent
 
 
@@ -111,9 +112,15 @@ class Command(BaseCommand):
             mailboxes.append(mailbox)
 
         if not mailboxes:
+            checked_views, updated_views = refresh_listing_view_stats()
             self.stdout.write(
                 self.style.WARNING(
                     f"No connected active mailboxes found. Skipped {total_skipped}."
+                )
+            )
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Listing views checked {checked_views}, updated {updated_views}."
                 )
             )
             return
@@ -201,10 +208,16 @@ class Command(BaseCommand):
                 )
             )
 
+        checked_views, updated_views = refresh_listing_view_stats()
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"Done. Created {total_created}, "
-                f"duplicates {total_duplicates}, "
-                f"failed {total_failed}, skipped {total_skipped}."
+                f"duplicates {total_duplicates}, failed {total_failed}, skipped {total_skipped}."
+            )
+        )
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Listing views checked {checked_views}, updated {updated_views}."
             )
         )

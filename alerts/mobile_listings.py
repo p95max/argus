@@ -1,11 +1,21 @@
 from collections import OrderedDict
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST
 
-from .models import MarketplaceAlert
+from .kleinanzeigen import (
+    KleinanzeigenURLValidationError,
+    ListingViewCheck,
+    validate_kleinanzeigen_url,
+    verify_listing_url,
+)
+from .listing_analytics import get_listing_analytics
+from .models import Listing, ListingViewStat, MarketplaceAlert
 
 
 LISTING_CLOSED_MARKER = "__listing_closed__"
@@ -69,6 +79,15 @@ def mobile_listings(request):
             group["open_count"] += 1
 
     listing_groups = list(grouped.values())
+    configured_listings = list(Listing.objects.select_related("mailbox").all())
+    analytics = get_listing_analytics()
+    deltas = {
+        item.listing_id: item.views_delta_24h
+        for item in (analytics.listings if analytics else ())
+    }
+    for listing in configured_listings:
+        listing.views_delta_24h = deltas.get(listing.id)
+
     return render(
         request,
         "mobile/listings.html",
@@ -76,8 +95,116 @@ def mobile_listings(request):
             "listing_groups": listing_groups,
             "listing_count": len(listing_groups),
             "alert_count": sum(len(group["alerts"]) for group in listing_groups),
+            "configured_listings": configured_listings,
         },
     )
+
+
+def _save_listing_from_request(request, listing: Listing) -> ListingViewCheck | None:
+    title = (request.POST.get("title") or "").strip()
+    if not title:
+        raise ValueError("title_required")
+
+    listing.title = title
+    listing.is_active = request.POST.get("is_active") == "on"
+    raw_url = (request.POST.get("kleinanzeigen_url") or "").strip()
+    if not raw_url:
+        listing.kleinanzeigen_url = ""
+        listing.kleinanzeigen_listing_id = ""
+        listing.views_count = None
+        listing.views_checked_at = None
+        listing.views_error = ""
+        listing.save()
+        return None
+
+    validated = validate_kleinanzeigen_url(raw_url)
+    url_changed = listing.kleinanzeigen_url != validated.normalized_url
+    listing.kleinanzeigen_url = validated.normalized_url
+    listing.kleinanzeigen_listing_id = validated.listing_id
+    if url_changed:
+        listing.views_count = None
+        listing.views_checked_at = None
+        listing.views_error = ""
+    listing.save()
+
+    try:
+        result = verify_listing_url(validated.normalized_url)
+    except Exception:
+        result = ListingViewCheck(None, "listing_unavailable")
+    if result.verified:
+        changed = listing.views_count != result.views_count
+        listing.views_count = result.views_count
+        listing.views_checked_at = timezone.now()
+        listing.views_error = ""
+        listing.save(update_fields=["views_count", "views_checked_at", "views_error", "updated_at"])
+        if changed:
+            ListingViewStat.objects.create(listing=listing, views_count=result.views_count)
+    else:
+        listing.views_error = result.error
+        listing.save(update_fields=["views_error", "updated_at"])
+    return result
+
+
+@login_required
+@require_GET
+def mobile_validate_kleinanzeigen_url(request):
+    _require_staff(request.user)
+    raw_url = request.GET.get("url", "")
+    try:
+        validated = validate_kleinanzeigen_url(raw_url)
+    except KleinanzeigenURLValidationError:
+        return JsonResponse({"valid": False, "error": "invalid_listing_url"})
+
+    try:
+        result = verify_listing_url(validated.normalized_url)
+    except Exception:
+        result = ListingViewCheck(None, "listing_unavailable")
+    payload = {
+        "valid": True,
+        "listing_id": validated.listing_id,
+        "status": "verified" if result.verified else "valid_unverified",
+    }
+    if result.verified:
+        payload["views"] = result.views_count
+    else:
+        payload["error"] = result.error
+    return JsonResponse(payload)
+
+
+@login_required
+@require_POST
+def mobile_create_listing(request):
+    _require_staff(request.user)
+    listing = Listing()
+    try:
+        result = _save_listing_from_request(request, listing)
+    except (KleinanzeigenURLValidationError, ValueError):
+        messages.error(request, "Укажите название и корректную ссылку Kleinanzeigen.")
+        return redirect("mobile_listings")
+
+    if result is not None and not result.verified:
+        messages.warning(request, "Ссылка сохранена, но статистика пока недоступна.")
+    else:
+        messages.success(request, "Объявление сохранено.")
+    return redirect("mobile_listings")
+
+
+@login_required
+def mobile_edit_listing(request, listing_id):
+    _require_staff(request.user)
+    listing = get_object_or_404(Listing, id=listing_id)
+    if request.method == "POST":
+        try:
+            result = _save_listing_from_request(request, listing)
+        except (KleinanzeigenURLValidationError, ValueError):
+            messages.error(request, "Укажите название и корректную ссылку Kleinanzeigen.")
+        else:
+            if result is not None and not result.verified:
+                messages.warning(request, "Ссылка сохранена, но статистика пока недоступна.")
+            else:
+                messages.success(request, "Объявление сохранено.")
+            return redirect("mobile_edit_listing", listing_id=listing.id)
+    return render(request, "mobile/listing_edit.html", {"listing": listing})
 
 
 @login_required

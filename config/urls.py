@@ -11,9 +11,12 @@ from alerts.health import build_health_report
 from alerts.mobile_archive import mobile_clear_archived_alerts
 from alerts.mobile_listings import (
     mobile_close_listing,
+    mobile_create_listing,
     mobile_delete_listing,
+    mobile_edit_listing,
     mobile_listings,
     mobile_reopen_listing,
+    mobile_validate_kleinanzeigen_url,
 )
 from alerts.mobile_service_log import mobile_clear_service_events, mobile_dashboard
 
@@ -46,6 +49,13 @@ urlpatterns = [
     ),
     path("m/", mobile_dashboard, name="mobile_dashboard"),
     path("m/listings/", mobile_listings, name="mobile_listings"),
+    path("m/listings/create/", mobile_create_listing, name="mobile_create_listing"),
+    path("m/listings/<int:listing_id>/", mobile_edit_listing, name="mobile_edit_listing"),
+    path(
+        "api/listings/validate-kleinanzeigen-url/",
+        mobile_validate_kleinanzeigen_url,
+        name="mobile_validate_kleinanzeigen_url",
+    ),
     path(
         "m/listings/<int:alert_id>/close/",
         mobile_close_listing,

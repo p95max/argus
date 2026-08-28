@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Argus · Объявление{% endblock %}
+{% block header_title %}🚗 Объявление{% endblock %}
+
+{% block content %}
+    <section class="alert-detail-navigation">
+        <a class="link-button small-action" href="{% url 'mobile_listings' %}">← Назад</a>
+    </section>
+    <section>
+        <form class="card listing-edit-form" method="post">
+            {% csrf_token %}
+            <label>Название<input name="title" required maxlength="255" value="{{ listing.title }}"></label>
+            <label>Kleinanzeigen URL<input id="kleinanzeigen-url" name="kleinanzeigen_url" type="url" value="{{ listing.kleinanzeigen_url }}"></label>
+            <div id="kleinanzeigen-url-status" class="small" aria-live="polite"></div>
+            <label class="listing-edit-checkbox"><input name="is_active" type="checkbox" {% if listing.is_active %}checked{% endif %}> Активно</label>
+            {% if listing.views_count is not None %}
+                <div class="small">👁 {{ listing.views_count }} · обновлено {{ listing.views_checked_at|date:"d.m.Y H:i" }}</div>
+            {% endif %}
+            <button type="submit">Сохранить</button>
+        </form>
+    </section>
+    <style>
+        .listing-edit-form { max-width: 620px; }
+        .listing-edit-form label { display:grid; gap:5px; color:var(--muted); font-size:13px; }
+        .listing-edit-form input:not([type="checkbox"]) { min-height:38px; border:1px solid var(--line); border-radius:7px; padding:8px 10px; background:var(--panel-2); color:var(--text); font:inherit; }
+        .listing-edit-form .listing-edit-checkbox { display:inline-flex; align-items:center; gap:6px; color:var(--text); }
+    </style>
+    <script>
+        (() => {
+            const input = document.getElementById('kleinanzeigen-url');
+            const status = document.getElementById('kleinanzeigen-url-status');
+            let timer;
+            if (!input || !status) return;
+            input.addEventListener('input', () => {
+                clearTimeout(timer);
+                const value = input.value.trim();
+                if (!value) { status.textContent = ''; return; }
+                status.textContent = 'Проверяем ссылку…';
+                timer = setTimeout(async () => {
+                    try {
+                        const response = await fetch('{% url "mobile_validate_kleinanzeigen_url" %}?url=' + encodeURIComponent(value));
+                        const result = await response.json();
+                        status.textContent = !result.valid
+                            ? 'Некорректная ссылка Kleinanzeigen.'
+                            : result.status === 'verified'
+                                ? `Ссылка проверена · 👁 ${result.views}`
+                                : 'Ссылка корректна, но статистика временно недоступна.';
+                    } catch (_) {
+                        status.textContent = 'Ссылка корректна, но статистика временно недоступна.';
+                    }
+                }, 500);
+            });
+        })();
+    </script>
+{% endblock %}

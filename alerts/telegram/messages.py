@@ -11,7 +11,8 @@ from django.utils.translation import gettext as _
 
 from ..health import build_health_report
 from ..gmail_polling import GmailPollingStatus, get_gmail_polling_status
-from ..models import MailboxAccount, MarketplaceAlert
+from ..listing_analytics import ListingAnalytics, get_listing_analytics
+from ..models import Listing, MailboxAccount, MarketplaceAlert
 from .i18n import use_argus_telegram_language
 from .quiet_hours import quiet_hours_allows_alert
 
@@ -29,6 +30,52 @@ def should_send_telegram_for_alert(alert: MarketplaceAlert, at_time=None) -> boo
     if alert.event_type == MarketplaceAlert.EventType.NOISE:
         return False
     return quiet_hours_allows_alert(alert, at_time=at_time)
+
+
+@use_argus_telegram_language
+def build_apps_message() -> str:
+    """Keep the operational `/apps` response separate from view analytics."""
+
+    active_count = Listing.objects.filter(is_active=True).count()
+    return "\n".join(
+        [
+            "📱 <b>Объявления</b>",
+            "",
+            f"📦 <b>Активные объявления:</b> {active_count}",
+        ]
+    )
+
+
+@use_argus_telegram_language
+def build_apps_analytics_message(analytics: ListingAnalytics | None = None) -> str | None:
+    """Format a compact analytics-only Telegram message from DB-derived data."""
+
+    analytics = analytics if analytics is not None else get_listing_analytics()
+    if analytics is None:
+        return None
+
+    lines = ["📊 <b>Аналитика</b>", "", f"👁 <b>Просмотры:</b> {_format_count(analytics.total_views)}"]
+    if analytics.total_delta_24h is not None:
+        lines.append(f"📈 <b>За 24 ч:</b> {_format_delta(analytics.total_delta_24h)}")
+
+    for index, listing in enumerate(analytics.listings):
+        lines.append("")
+        prefix = "🔥 " if index == 0 else ""
+        lines.append(f"{prefix}<b>{html.escape(_truncate(listing.title, 80))}</b>")
+        stat_line = f"{_format_count(listing.views_count)} 👁"
+        if listing.views_delta_24h is not None:
+            stat_line += f" · {_format_delta(listing.views_delta_24h)} за 24 ч"
+        lines.append(stat_line)
+
+    return _fit_telegram_message(lines)
+
+
+def _format_count(value: int) -> str:
+    return f"{value:,}".replace(",", " ")
+
+
+def _format_delta(value: int) -> str:
+    return f"{value:+,}".replace(",", " ")
 
 
 @use_argus_telegram_language

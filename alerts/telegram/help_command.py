@@ -16,6 +16,7 @@ ACTIVE_BOT_COMMANDS = (
     ("status", "mailbox status and recent Gmail checks"),
     ("mailboxes", "same as /status"),
     ("summary", "today's leads summary"),
+    ("apps", "active listings and saved view analytics"),
     ("unread", "one summary of unread leads"),
     ("polling", "manage Gmail polling on the production server"),
     ("health", "service health: DB, Gmail, Telegram, and errors"),

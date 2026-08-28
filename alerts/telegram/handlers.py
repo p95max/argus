@@ -31,6 +31,8 @@ from .keyboards import (
 )
 from .messages import (
     build_alert_message,
+    build_apps_analytics_message,
+    build_apps_message,
     build_daily_summary_message,
     build_gmail_polling_message,
     build_health_message,
@@ -352,6 +354,32 @@ async def handle_daily_summary_command(update, context):
         chat_id,
         user_id,
     )
+
+
+async def handle_apps_command(update, context):
+    chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+    user_id = str(update.effective_user.id) if update.effective_user else ""
+
+    if not is_allowed_update(update):
+        await update.effective_message.reply_text(telegram_gettext(PERMISSION_DENIED_MESSAGE))
+        return
+
+    main_text, analytics_text = await _run_db_sync(
+        lambda: (build_apps_message(), build_apps_analytics_message())
+    )
+    await update.effective_message.reply_text(
+        main_text,
+        parse_mode="HTML",
+        disable_web_page_preview=True,
+    )
+    if analytics_text:
+        await update.effective_message.reply_text(
+            analytics_text,
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )
+
+    logger.info("Telegram apps command handled. chat_id=%s user_id=%s", chat_id, user_id)
 
 
 async def handle_health_command(update, context):
