@@ -99,54 +99,46 @@
 
                     <details class="listing-statistics-details" {% if not group.statistics or group.statistics.views_count is None %}open{% endif %}>
                         <summary class="listing-statistics-summary">
-                            <span>📊 Статистика просмотров{% if group.statistics and group.statistics.views_count is not None %} · 👁 ВСЕГО — {{ group.statistics.views_count }} просмотров{% endif %}</span>
-                            {% if group.statistics and group.statistics.views_count is not None %}
-                                {% if group.statistics.views_delta_24h is not None %}
-                                    <span class="badge">{% if group.statistics.views_delta_24h >= 0 %}+{% endif %}{{ group.statistics.views_delta_24h }} за 24 ч</span>
-                                {% endif %}
-                            {% else %}
+                            <span>📊 Аналитика{% if group.statistics and group.statistics.views_count is not None %} · 👁 {{ group.statistics.views_count }}{% endif %}</span>
+                            {% if not group.statistics or not group.statistics.kleinanzeigen_url %}
                                 <span class="small">Настроить URL</span>
                             {% endif %}
                         </summary>
                         <div class="listing-action-box listing-statistics-box">
-                        <div class="listing-action-title">📊 Статистика просмотров</div>
-                        <div class="small">Ссылка сохраняется именно для объявления «{{ group.title }}».</div>
-                        <form method="post" action="{% url 'mobile_configure_listing_statistics' group.representative_alert_id %}">
-                            {% csrf_token %}
-                            <label>
-                                Kleinanzeigen URL
-                                <input
-                                    name="kleinanzeigen_url"
-                                    type="url"
-                                    inputmode="url"
-                                    value="{% if group.statistics %}{{ group.statistics.kleinanzeigen_url }}{% endif %}"
-                                    placeholder="https://www.kleinanzeigen.de/s-anzeige/..."
-                                    data-kleinanzeigen-url
-                                >
-                            </label>
-                            <div class="small" data-kleinanzeigen-url-status aria-live="polite"></div>
-                            {% if group.statistics and group.statistics.views_count is not None %}
-                                <div class="badges">
-                                    <span class="badge ok">👁 {{ group.statistics.views_count }} за всё время</span>
-                                    {% if group.statistics.views_delta_24h is not None %}
-                                        <span class="badge">{% if group.statistics.views_delta_24h >= 0 %}+{% endif %}{{ group.statistics.views_delta_24h }} за 24 ч</span>
-                                    {% endif %}
-                                </div>
-                                <div class="listing-analytics-meta">
+                            {% if group.statistics and group.statistics.kleinanzeigen_url %}
+                                <div class="listing-analytics-panel">
+                                    <div class="listing-analytics-title">📊 Аналитика</div>
+                                    <div>👁 <strong>просмотров за всё время:</strong> {{ group.statistics.views_count }} 👁</div>
                                     {% if group.statistics.publication_date %}
-                                        <div>{{ group.statistics.publication_icon }} опубликовано {{ group.statistics.publication_age_label }} ({{ group.statistics.publication_date|date:"d.m.Y" }})</div>
+                                        <div>{{ group.statistics.publication_icon }} опубликовано {% if group.statistics.publication_age_days == 0 %}сегодня{% elif group.statistics.publication_age_days == 1 %}вчера{% else %}{{ group.statistics.publication_age_label }}{% endif %} ({{ group.statistics.publication_date|date:"d.m.Y" }})</div>
                                     {% else %}
                                         <div>⚪ дата публикации недоступна</div>
                                     {% endif %}
                                     {% if group.statistics.last_activity_date %}
-                                        <div>{% if group.statistics.last_activity_stale %}⚠️{% else %}•{% endif %} последняя активность {{ group.statistics.last_activity_age_label }} ({{ group.statistics.last_activity_date|date:"d.m.Y" }})</div>
+                                        <div>{% if group.statistics.last_activity_stale %}⚠️{% else %}•{% endif %} последняя активность {% if group.statistics.last_activity_age_days == 0 %}сегодня{% elif group.statistics.last_activity_age_days == 1 %}вчера{% else %}{{ group.statistics.last_activity_age_label }}{% endif %} ({{ group.statistics.last_activity_date|date:"d.m.Y" }})</div>
                                     {% else %}
                                         <div>• последняя активность: данных пока нет</div>
                                     {% endif %}
                                 </div>
+                            {% else %}
+                                <div class="listing-action-title">📊 Настроить аналитику</div>
+                                <div class="small">Ссылка сохраняется именно для объявления «{{ group.title }}».</div>
+                                <form method="post" action="{% url 'mobile_configure_listing_statistics' group.representative_alert_id %}">
+                                    {% csrf_token %}
+                                    <label>
+                                        Kleinanzeigen URL
+                                        <input
+                                            name="kleinanzeigen_url"
+                                            type="url"
+                                            inputmode="url"
+                                            placeholder="https://www.kleinanzeigen.de/s-anzeige/..."
+                                            data-kleinanzeigen-url
+                                        >
+                                    </label>
+                                    <div class="small" data-kleinanzeigen-url-status aria-live="polite"></div>
+                                    <button class="small-action" type="submit">Сохранить URL</button>
+                                </form>
                             {% endif %}
-                            <button class="small-action" type="submit">Сохранить URL</button>
-                        </form>
                         </div>
                     </details>
 
@@ -369,14 +361,16 @@
             color: var(--text);
             font: inherit;
         }
-        .listing-analytics-meta {
+        .listing-analytics-panel {
             display: grid;
-            gap: 5px;
-            padding: 9px 10px;
-            border-radius: 7px;
-            background: var(--panel-2);
-            font-size: 13px;
-            line-height: 1.35;
+            gap: 7px;
+            padding: 4px 2px;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+        .listing-analytics-title {
+            font-size: 16px;
+            font-weight: 700;
         }
         .listing-stats-form {
             display: grid;
