@@ -73,6 +73,12 @@
                             <span class="status-pill muted">💬 {{ group.alerts|length }}</span>
                             {% if group.statistics and group.statistics.views_count is not None %}
                                 <span class="status-pill ok listing-views-pill">👁 {{ group.statistics.views_count }}</span>
+                                {% if group.statistics.publication_date %}
+                                    <span class="status-pill muted">{{ group.statistics.publication_icon }} {{ group.statistics.publication_age_days }} дн.</span>
+                                {% endif %}
+                                {% if group.statistics.last_activity_stale %}
+                                    <span class="status-pill warn">⚠️ без активности {{ group.statistics.last_activity_age_days }} дн.</span>
+                                {% endif %}
                             {% endif %}
                             {% if group.is_closed %}
                                 <span class="status-pill danger"><span class="status-dot"></span>закрыто</span>
@@ -121,9 +127,21 @@
                             <div class="small" data-kleinanzeigen-url-status aria-live="polite"></div>
                             {% if group.statistics and group.statistics.views_count is not None %}
                                 <div class="badges">
-                                    <span class="badge ok">👁 {{ group.statistics.views_count }}</span>
+                                    <span class="badge ok">👁 {{ group.statistics.views_count }} за всё время</span>
                                     {% if group.statistics.views_delta_24h is not None %}
                                         <span class="badge">{% if group.statistics.views_delta_24h >= 0 %}+{% endif %}{{ group.statistics.views_delta_24h }} за 24 ч</span>
+                                    {% endif %}
+                                </div>
+                                <div class="listing-analytics-meta">
+                                    {% if group.statistics.publication_date %}
+                                        <div>{{ group.statistics.publication_icon }} опубликовано {{ group.statistics.publication_age_label }} ({{ group.statistics.publication_date|date:"d.m.Y" }})</div>
+                                    {% else %}
+                                        <div>⚪ дата публикации недоступна</div>
+                                    {% endif %}
+                                    {% if group.statistics.last_activity_date %}
+                                        <div>{% if group.statistics.last_activity_stale %}⚠️{% else %}•{% endif %} последняя активность {{ group.statistics.last_activity_age_label }} ({{ group.statistics.last_activity_date|date:"d.m.Y" }})</div>
+                                    {% else %}
+                                        <div>• последняя активность: данных пока нет</div>
                                     {% endif %}
                                 </div>
                             {% endif %}
@@ -350,6 +368,15 @@
             background: var(--panel-2);
             color: var(--text);
             font: inherit;
+        }
+        .listing-analytics-meta {
+            display: grid;
+            gap: 5px;
+            padding: 9px 10px;
+            border-radius: 7px;
+            background: var(--panel-2);
+            font-size: 13px;
+            line-height: 1.35;
         }
         .listing-stats-form {
             display: grid;
