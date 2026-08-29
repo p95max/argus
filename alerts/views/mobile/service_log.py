@@ -8,7 +8,8 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from . import dashboard
-from ...models import ServiceEvent
+from ...models import MarketplaceAlert, ServiceEvent
+from ...services.attention import filter_needs_attention
 
 
 def _safe_next_url(request):
@@ -26,6 +27,9 @@ def _safe_next_url(request):
 @login_required
 def mobile_dashboard(request):
     if request.method == "POST":
+        action = request.POST.get("action", "")
+        if action == "process_all_attention_alerts":
+            return _process_all_attention_alerts(request)
         return _clear_service_events(request)
     return dashboard.mobile_dashboard(request)
 
@@ -34,6 +38,26 @@ def mobile_dashboard(request):
 @require_POST
 def mobile_clear_service_events(request):
     return _clear_service_events(request)
+
+
+def _process_all_attention_alerts(request):
+    if not request.user.is_active or not request.user.is_staff:
+        raise PermissionDenied("Only staff users can process attention alerts.")
+
+    alerts = filter_needs_attention(MarketplaceAlert.objects.all())
+    alert_count = alerts.count()
+    if not alert_count:
+        messages.info(request, "Обращений, требующих внимания, уже нет.")
+        return redirect(_safe_next_url(request))
+
+    alerts.update(
+        alert_status=MarketplaceAlert.AlertStatus.ARCHIVED,
+        taken_by=None,
+        taken_by_label="",
+        taken_at=None,
+    )
+    messages.success(request, f"Обработано обращений: {alert_count}.")
+    return redirect(_safe_next_url(request))
 
 
 def _clear_service_events(request):
