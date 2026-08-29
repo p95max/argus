@@ -28,15 +28,20 @@ class ListingAnalytics:
 
 
 def _delta_since(listing, cutoff):
-    baseline = next(
-        (
-            snapshot
-            for snapshot in listing.view_stats.all()
-            if snapshot.created_at <= cutoff
-        ),
-        None,
-    )
-    return listing.views_count - baseline.views_count if baseline else None
+    """Return growth from the closest useful saved counter within available history."""
+    snapshots = list(listing.view_stats.all())
+    if not snapshots:
+        return None
+
+    older = [snapshot for snapshot in snapshots if snapshot.created_at <= cutoff]
+    if older:
+        baseline = max(older, key=lambda snapshot: snapshot.created_at)
+    else:
+        # Tracking may have started less than one full period ago. In that case
+        # show growth from the first saved counter instead of hiding useful data.
+        baseline = min(snapshots, key=lambda snapshot: snapshot.created_at)
+
+    return max(listing.views_count - baseline.views_count, 0)
 
 
 def get_listing_analytics(*, now=None) -> ListingAnalytics | None:
