@@ -64,7 +64,7 @@
             <section>
                 {% for message in messages %}
                     <div class="notice {{ message.tags }}">
-                        {{ message }}
+                        {{ message|linebreaksbr }}
                     </div>
                 {% endfor %}
             </section>
