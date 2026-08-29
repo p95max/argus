@@ -69,7 +69,8 @@ def build_mailboxes_status_message() -> str:
         icon = "🔴" if is_error else "🟢" if is_connected else "🟠"
         name = mailbox.name or "—"
         email = mailbox.email or mailbox.gmail_connected_email or "—"
-        lines.append(f"{icon} {html.escape(name)} · {html.escape(email)}")
+        lines.append(f"{icon} {html.escape(name)}")
+        lines.append(f"📧 {html.escape(email)}")
 
     last_success_at = max(
         (mailbox.last_success_at for mailbox in mailboxes if mailbox.last_success_at),
