@@ -65,6 +65,9 @@
                 {% for message in messages %}
                     <div class="notice {{ message.tags }}">
                         {{ message|linebreaksbr }}
+                        {% if mailbox_status and 'Почта проверена' in message|stringformat:'s' %}
+                            <br>📬 Подключено ящиков: {{ mailbox_status.total }}
+                        {% endif %}
                     </div>
                 {% endfor %}
             </section>
