@@ -8,6 +8,7 @@ from django.utils.translation import gettext as _
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from ..gmail_polling import get_gmail_polling_status
+from ..services.listing_analytics import get_listing_analytics
 from ..views.mobile.listings import LISTING_CLOSED_MARKER, _build_listing_group_keys
 from ..models import MailboxAccount, MarketplaceAlert
 from .i18n import use_argus_telegram_language
@@ -95,6 +96,18 @@ def build_ads_status_message() -> str:
     )
     group_keys = _build_listing_group_keys(alerts)
 
+    analytics = get_listing_analytics()
+    analytics_urls = {}
+    if analytics is not None:
+        analytics_listing_ids = [item.listing_id for item in analytics.listings]
+        from ..models import Listing
+
+        analytics_urls = {
+            listing.title.casefold(): listing.kleinanzeigen_url
+            for listing in Listing.objects.filter(id__in=analytics_listing_ids)
+            if listing.kleinanzeigen_url
+        }
+
     grouped = OrderedDict()
     for alert in alerts:
         key = group_keys[alert.id]
@@ -119,10 +132,16 @@ def build_ads_status_message() -> str:
 
     for index, group in enumerate(active_groups[:STATUS_LISTING_LIMIT], start=1):
         title = _truncate(group["title"], STATUS_TITLE_LIMIT)
+        listing_url = analytics_urls.get(str(group["title"]).casefold())
+        link = (
+            f' · <a href="{html.escape(listing_url, quote=True)}">ссылка</a>'
+            if listing_url
+            else ""
+        )
         lines.extend(
             [
                 "",
-                f"{index}. {html.escape(title)}",
+                f"{index}. {html.escape(title)}{link}",
                 f"· Всего обращений: 💬 {group['total']}",
             ]
         )
