@@ -73,6 +73,37 @@
 
     {% block content %}{% endblock %}
 
+    {% if request.GET.view == 'attention' and request.user.is_staff %}
+        <div id="attention-bulk-actions" class="actions compact-actions" hidden>
+            <form
+                method="post"
+                action="{% url 'mobile_dashboard' %}"
+                onsubmit="return confirm('Пометить все обращения в разделе «Требует внимания» как обработанные?')"
+            >
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="action" value="process_all_attention_alerts">
+                <button class="small-action" type="submit">✅ Обработать все обращения</button>
+            </form>
+        </div>
+        <script>
+            (() => {
+                const actions = document.getElementById("attention-bulk-actions");
+                const headings = document.querySelectorAll("main section h1");
+                const attentionHeading = Array.from(headings).find((heading) =>
+                    heading.textContent.includes("⚠️")
+                );
+
+                if (!actions || !attentionHeading) {
+                    return;
+                }
+
+                attentionHeading.insertAdjacentElement("afterend", actions);
+                actions.hidden = false;
+            })();
+        </script>
+    {% endif %}
+
     {% if request.GET.view == 'archived' and request.user.is_staff %}
         {% trans "Delete all archived leads?" as confirm_clear_archive %}
         <div id="archive-cleanup-actions" class="actions compact-actions" hidden>
