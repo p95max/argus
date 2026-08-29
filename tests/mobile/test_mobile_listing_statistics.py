@@ -1,8 +1,10 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.urls import reverse
 
 from alerts.models import Listing, MailboxAccount, MarketplaceAlert
+from alerts.services.kleinanzeigen import ListingViewCheck
 
 
 VALID_URL = "https://www.kleinanzeigen.de/s-anzeige/vw-golf/1234567890-216-1234"
@@ -64,3 +66,56 @@ def test_url_tracker_is_bound_to_the_selected_listing_card(client, staff_user):
     listing = Listing.objects.get(source_alert=alert)
     assert listing.title == "VW Golf"
     assert listing.mailbox == mailbox
+
+
+@pytest.mark.django_db
+def test_same_kleinanzeigen_ad_uses_one_tracker_across_mailboxes(client, staff_user, monkeypatch):
+    client.force_login(staff_user)
+    first_mailbox = MailboxAccount.objects.create(name="One", email="one@example.com")
+    second_mailbox = MailboxAccount.objects.create(name="Two", email="two@example.com")
+    first = MarketplaceAlert.objects.create(
+        mailbox=first_mailbox,
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+        listing_id="1234567890",
+        listing_title="Original title",
+    )
+    second = MarketplaceAlert.objects.create(
+        mailbox=second_mailbox,
+        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+        listing_id="1234567890",
+        listing_title="Renamed title",
+    )
+    monkeypatch.setattr(
+        "alerts.views.mobile.listings.verify_listing_url",
+        lambda _url: ListingViewCheck(120),
+    )
+
+    client.post(
+        reverse("mobile_configure_listing_statistics", args=[first.id]),
+        {"kleinanzeigen_url": VALID_URL},
+    )
+    client.post(
+        reverse("mobile_configure_listing_statistics", args=[second.id]),
+        {"kleinanzeigen_url": VALID_URL + "?source=other-mailbox"},
+    )
+
+    assert Listing.objects.count() == 1
+    listing = Listing.objects.get()
+    assert listing.kleinanzeigen_listing_id == "1234567890"
+    assert listing.source_alert_id == first.id
+    assert listing.title == "Renamed title"
+
+    response = client.get(reverse("mobile_listings"))
+    assert len(response.context["listing_groups"]) == 1
+    assert response.context["listing_groups"][0]["statistics"].id == listing.id
+
+
+@pytest.mark.django_db
+def test_unique_ad_id_rejects_duplicate_trackers():
+    Listing.objects.create(title="First", kleinanzeigen_url=VALID_URL)
+
+    with pytest.raises(IntegrityError):
+        Listing.objects.create(
+            title="Duplicate",
+            kleinanzeigen_url="https://www.kleinanzeigen.de/s-anzeige/other-title/1234567890-216-9999",
+        )

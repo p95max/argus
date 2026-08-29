@@ -2,6 +2,7 @@ from datetime import time
 import re
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -254,7 +255,7 @@ class Listing(TimestampedModel):
     )
     kleinanzeigen_url = models.URLField(_("Kleinanzeigen URL"), blank=True)
     kleinanzeigen_listing_id = models.CharField(
-        _("Kleinanzeigen listing ID"),
+        _("Kleinanzeigen ad ID"),
         max_length=80,
         blank=True,
     )
@@ -275,11 +276,48 @@ class Listing(TimestampedModel):
                 name="alerts_list_kleinan_b7aa25_idx",
             ),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["kleinanzeigen_listing_id"],
+                condition=~models.Q(kleinanzeigen_listing_id=""),
+                name="unique_kleinanzeigen_ad_id",
+            )
+        ]
         verbose_name = _("Listing")
         verbose_name_plural = _("Listings")
 
     def __str__(self):
         return self.title
+
+    def _normalize_kleinanzeigen_identifier(self):
+        """Keep the persisted identifier canonical even for admin/API writes."""
+
+        raw_url = (self.kleinanzeigen_url or "").strip()
+        if raw_url:
+            # Imported lazily to avoid a models <-> service import cycle.
+            from .services.kleinanzeigen import (
+                KleinanzeigenURLValidationError,
+                validate_kleinanzeigen_url,
+            )
+
+            try:
+                validated = validate_kleinanzeigen_url(raw_url)
+            except KleinanzeigenURLValidationError as exc:
+                raise ValidationError(
+                    {"kleinanzeigen_url": "Invalid Kleinanzeigen listing URL."}
+                ) from exc
+            self.kleinanzeigen_url = validated.normalized_url
+            self.kleinanzeigen_listing_id = validated.ad_id
+        else:
+            self.kleinanzeigen_listing_id = ""
+
+    def clean(self):
+        super().clean()
+        self._normalize_kleinanzeigen_identifier()
+
+    def save(self, *args, **kwargs):
+        self._normalize_kleinanzeigen_identifier()
+        super().save(*args, **kwargs)
 
 
 class ListingViewStat(TimestampedModel):

@@ -26,6 +26,7 @@ def test_valid_listing_url_is_normalized_and_keeps_external_id():
 
     assert validated.normalized_url == VALID_URL
     assert validated.listing_id == "1234567890-216-1234"
+    assert validated.ad_id == "1234567890"
 
 
 @pytest.mark.parametrize(
@@ -120,9 +121,21 @@ def test_snapshot_is_created_only_when_the_view_count_changes():
 @pytest.mark.django_db
 def test_analytics_uses_saved_data_and_sorts_by_24_hour_growth():
     now = timezone.now()
-    slow = Listing.objects.create(title="iPhone", kleinanzeigen_url=VALID_URL, views_count=286)
-    fast = Listing.objects.create(title="VW Golf", kleinanzeigen_url=VALID_URL, views_count=427)
-    fresh = Listing.objects.create(title="Fresh", kleinanzeigen_url=VALID_URL, views_count=5)
+    slow = Listing.objects.create(
+        title="iPhone",
+        kleinanzeigen_url="https://www.kleinanzeigen.de/s-anzeige/iphone/1234567891-216-1234",
+        views_count=286,
+    )
+    fast = Listing.objects.create(
+        title="VW Golf",
+        kleinanzeigen_url="https://www.kleinanzeigen.de/s-anzeige/vw-golf/1234567892-216-1234",
+        views_count=427,
+    )
+    fresh = Listing.objects.create(
+        title="Fresh",
+        kleinanzeigen_url="https://www.kleinanzeigen.de/s-anzeige/fresh/1234567893-216-1234",
+        views_count=5,
+    )
     ListingViewStat.objects.create(listing=slow, views_count=264)
     ListingViewStat.objects.create(listing=fast, views_count=396)
     ListingViewStat.objects.filter(listing__in=[slow, fast]).update(created_at=now - timedelta(hours=25))

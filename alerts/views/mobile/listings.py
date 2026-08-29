@@ -3,12 +3,14 @@ from collections import OrderedDict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from ...services.kleinanzeigen import (
+    canonicalize_kleinanzeigen_ad_id,
     KleinanzeigenURLValidationError,
     ListingViewCheck,
     VIEW_COUNTER_REFRESH_INTERVAL,
@@ -28,13 +30,11 @@ def _require_staff(user):
 
 
 def _same_listing_queryset(alert):
-    queryset = MarketplaceAlert.objects.filter(
-        mailbox_id=alert.mailbox_id,
-        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
-    )
+    queryset = MarketplaceAlert.objects.filter(event_type=MarketplaceAlert.EventType.BUYER_MESSAGE)
 
     if alert.listing_id:
         return queryset.filter(listing_id=alert.listing_id)
+    queryset = queryset.filter(mailbox_id=alert.mailbox_id)
     if alert.listing_title:
         return queryset.filter(listing_title=alert.listing_title)
     if alert.subject:
@@ -47,6 +47,10 @@ def _normalize_listing_title(value):
     return " ".join((value or "").split()).casefold()
 
 
+def _canonical_alert_listing_id(alert):
+    return canonicalize_kleinanzeigen_ad_id(alert.listing_id) or alert.listing_id
+
+
 def _build_listing_group_keys(alerts):
     """Map title-only alerts to a listing ID only when that title identifies one listing."""
     title_listing_ids = {}
@@ -55,20 +59,20 @@ def _build_listing_group_keys(alerts):
             continue
         title = _normalize_listing_title(alert.listing_title or alert.subject)
         if title:
-            title_listing_ids.setdefault((alert.mailbox_id, title), set()).add(alert.listing_id)
+            title_listing_ids.setdefault(title, set()).add(_canonical_alert_listing_id(alert))
 
     keys = {}
     for alert in alerts:
         if alert.listing_id:
-            keys[alert.id] = (alert.mailbox_id, f"id:{alert.listing_id}")
+            keys[alert.id] = (f"id:{_canonical_alert_listing_id(alert)}",)
             continue
 
         title_value = alert.listing_title or alert.subject
         title = _normalize_listing_title(title_value)
-        matching_ids = title_listing_ids.get((alert.mailbox_id, title), set())
+        matching_ids = title_listing_ids.get(title, set())
         if title and len(matching_ids) == 1:
             listing_id = next(iter(matching_ids))
-            keys[alert.id] = (alert.mailbox_id, f"id:{listing_id}")
+            keys[alert.id] = (f"id:{listing_id}",)
         elif title:
             keys[alert.id] = (alert.mailbox_id, f"title:{title}")
         else:
@@ -95,7 +99,7 @@ def mobile_listings(request):
             key,
             {
                 "title": alert.listing_title or alert.subject or alert.get_event_type_display(),
-                "listing_id": alert.listing_id,
+                "listing_id": _canonical_alert_listing_id(alert),
                 "alerts": [],
                 "open_count": 0,
                 "processed_count": 0,
@@ -104,7 +108,7 @@ def mobile_listings(request):
             },
         )
         if not group["listing_id"] and alert.listing_id:
-            group["listing_id"] = alert.listing_id
+            group["listing_id"] = _canonical_alert_listing_id(alert)
         group["alerts"].append(alert)
         if alert.taken_by_label == LISTING_CLOSED_MARKER:
             group["is_closed"] = True
@@ -114,26 +118,19 @@ def mobile_listings(request):
             group["open_count"] += 1
 
     listing_groups = list(grouped.values())
-    trackers_by_alert_id = {
-        listing.source_alert_id: listing
-        for listing in Listing.objects.select_related("mailbox").exclude(source_alert__isnull=True)
+    trackers_by_listing_id = {
+        listing.kleinanzeigen_listing_id: listing
+        for listing in Listing.objects.select_related("mailbox").exclude(kleinanzeigen_listing_id="")
     }
     for group in listing_groups:
-        group["statistics"] = next(
-            (
-                trackers_by_alert_id[alert.id]
-                for alert in group["alerts"]
-                if alert.id in trackers_by_alert_id
-            ),
-            None,
-        )
+        group["statistics"] = trackers_by_listing_id.get(group["listing_id"])
 
     analytics = get_listing_analytics()
     deltas = {
         item.listing_id: item.views_delta_24h
         for item in (analytics.listings if analytics else ())
     }
-    for listing in trackers_by_alert_id.values():
+    for listing in trackers_by_listing_id.values():
         listing.views_delta_24h = deltas.get(listing.id)
 
     return render(
@@ -154,6 +151,7 @@ def _save_listing_from_request(
     title: str | None = None,
     mailbox=None,
     is_active: bool | None = None,
+    validated=None,
 ) -> ListingViewCheck | None:
     title = (title if title is not None else request.POST.get("title") or "").strip()
     if not title:
@@ -173,10 +171,10 @@ def _save_listing_from_request(
         listing.save()
         return None
 
-    validated = validate_kleinanzeigen_url(raw_url)
+    validated = validated or validate_kleinanzeigen_url(raw_url)
     url_changed = listing.kleinanzeigen_url != validated.normalized_url
     listing.kleinanzeigen_url = validated.normalized_url
-    listing.kleinanzeigen_listing_id = validated.listing_id
+    listing.kleinanzeigen_listing_id = validated.ad_id
     if url_changed:
         listing.views_count = None
         listing.views_checked_at = None
@@ -230,10 +228,26 @@ def mobile_validate_kleinanzeigen_url(request):
 @require_POST
 def mobile_create_listing(request):
     _require_staff(request.user)
-    listing = Listing()
     try:
-        result = _save_listing_from_request(request, listing)
-    except (KleinanzeigenURLValidationError, ValueError):
+        title = (request.POST.get("title") or "").strip()
+        if not title:
+            raise ValueError("title_required")
+        raw_url = (request.POST.get("kleinanzeigen_url") or "").strip()
+        validated = validate_kleinanzeigen_url(raw_url) if raw_url else None
+        listing, _ = (
+            Listing.objects.get_or_create(
+                kleinanzeigen_listing_id=validated.ad_id,
+                defaults={
+                    "title": title,
+                    "kleinanzeigen_url": validated.normalized_url,
+                    "is_active": request.POST.get("is_active") == "on",
+                },
+            )
+            if validated
+            else (Listing(), True)
+        )
+        result = _save_listing_from_request(request, listing, validated=validated)
+    except (IntegrityError, KleinanzeigenURLValidationError, ValueError):
         messages.error(request, "Укажите название и корректную ссылку Kleinanzeigen.")
         return redirect("mobile_listings")
 
@@ -255,23 +269,47 @@ def mobile_configure_listing_statistics(request, alert_id):
         id=alert_id,
         event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
     )
-    listing, _ = Listing.objects.get_or_create(
-        source_alert=alert,
-        defaults={
-            "title": alert.listing_title or alert.subject or str(alert.id),
-            "mailbox": alert.mailbox,
-            "is_active": True,
-        },
-    )
     try:
+        raw_url = (request.POST.get("kleinanzeigen_url") or "").strip()
+        validated = validate_kleinanzeigen_url(raw_url) if raw_url else None
+        alert_ad_id = _canonical_alert_listing_id(alert)
+        if validated and alert_ad_id.isdecimal() and alert_ad_id != validated.ad_id:
+            raise ValueError("listing_id_mismatch")
+        if validated:
+            listing, created = Listing.objects.get_or_create(
+                kleinanzeigen_listing_id=validated.ad_id,
+                defaults={
+                    "title": alert.listing_title or alert.subject or str(alert.id),
+                    "mailbox": alert.mailbox,
+                    "kleinanzeigen_url": validated.normalized_url,
+                    "source_alert": alert,
+                    "is_active": True,
+                },
+            )
+        else:
+            listing = Listing.objects.filter(kleinanzeigen_listing_id=alert_ad_id).first()
+            if listing is None:
+                listing, created = Listing.objects.get_or_create(
+                    source_alert=alert,
+                    defaults={
+                        "title": alert.listing_title or alert.subject or str(alert.id),
+                        "mailbox": alert.mailbox,
+                        "is_active": True,
+                    },
+                )
+        if not listing.source_alert_id and not Listing.objects.filter(source_alert=alert).exclude(
+            pk=listing.pk
+        ).exists():
+            listing.source_alert = alert
         result = _save_listing_from_request(
             request,
             listing,
             title=alert.listing_title or alert.subject or str(alert.id),
             mailbox=alert.mailbox,
             is_active=True,
+            validated=validated,
         )
-    except KleinanzeigenURLValidationError:
+    except (IntegrityError, KleinanzeigenURLValidationError, ValueError):
         messages.error(request, "Укажите корректную ссылку Kleinanzeigen.")
     else:
         if result is not None and not result.verified:
@@ -288,7 +326,7 @@ def mobile_edit_listing(request, listing_id):
     if request.method == "POST":
         try:
             result = _save_listing_from_request(request, listing)
-        except (KleinanzeigenURLValidationError, ValueError):
+        except (IntegrityError, KleinanzeigenURLValidationError, ValueError):
             messages.error(request, "Укажите название и корректную ссылку Kleinanzeigen.")
         else:
             if result is not None and not result.verified:

@@ -33,6 +33,7 @@ class KleinanzeigenTemporaryError(RuntimeError):
 class ValidatedListingURL:
     normalized_url: str
     listing_id: str
+    ad_id: str
 
 
 @dataclass(frozen=True)
@@ -76,10 +77,25 @@ def validate_kleinanzeigen_url(value: str) -> ValidatedListingURL:
     if not path_match:
         raise KleinanzeigenURLValidationError("invalid_listing_url")
 
+    listing_id = path_match.group("listing_id")
     return ValidatedListingURL(
         normalized_url=urlunsplit(("https", "www.kleinanzeigen.de", parts.path.rstrip("/"), "", "")),
-        listing_id=path_match.group("listing_id"),
+        listing_id=listing_id,
+        ad_id=listing_id.split("-", 1)[0],
     )
+
+
+def canonicalize_kleinanzeigen_ad_id(value: str) -> str:
+    """Return Kleinanzeigen' numeric ad ID from a URL or known ID representation."""
+
+    match = re.search(
+        r"/s-anzeige/(?:[^/?#]+/)*(?P<ad_id>\d{5,})(?:-\d+)*/?",
+        value or "",
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        match = re.search(r"(?<!\d)(?P<ad_id>\d{5,})(?:-\d+)*(?!\d)", value or "")
+    return match.group("ad_id") if match else ""
 
 
 def parse_views_count(page_html: str) -> int | None:
@@ -121,7 +137,7 @@ def parse_view_counter_response(payload: bytes) -> int | None:
 def _view_counter_url(validated: ValidatedListingURL) -> str:
     """Build the only allowed ViewCount endpoint from a validated listing ID."""
 
-    ad_id = validated.listing_id.split("-", 1)[0]
+    ad_id = validated.ad_id
     if not ad_id.isdecimal():
         raise KleinanzeigenTemporaryError("listing_unavailable")
     return f"https://www.kleinanzeigen.de/s-vac-inc-get.json?adId={ad_id}"

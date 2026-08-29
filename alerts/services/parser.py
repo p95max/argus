@@ -5,6 +5,7 @@ import re
 
 from ..models import MarketplaceAlert
 from .classifier import classify_marketplace_message
+from .kleinanzeigen import canonicalize_kleinanzeigen_ad_id
 
 
 class BodyTextExtractor(HTMLParser):
@@ -325,7 +326,8 @@ def _parse_listing_id(text: str) -> str:
     for pattern in patterns:
         match = re.search(pattern, text, flags=re.IGNORECASE)
         if match:
-            return _clean_value(match.group(1))
+            value = _clean_value(match.group(1))
+            return canonicalize_kleinanzeigen_ad_id(value) or value
     return ""
 
 
