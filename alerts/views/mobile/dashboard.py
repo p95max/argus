@@ -18,7 +18,7 @@ from ...models import Listing, MailboxAccount, MarketplaceAlert, ServiceEvent, T
 from ...permissions import can_manage_mailboxes, can_view_mailbox_operations
 
 
-MOBILE_ALERTS_PER_PAGE = 5
+MOBILE_ALERTS_PER_PAGE = 20
 
 
 def _require_staff(user):
