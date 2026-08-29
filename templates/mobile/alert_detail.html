@@ -154,7 +154,7 @@
                 {% endif %}
 
                 <form method="post" action="{% url 'mobile_update_alert_status' alert.id %}">
-                    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="status" value="archived">
+                    {% csrf_token %}<input type="hidden" name="next" value="{% url 'mobile_dashboard' %}"><input type="hidden" name="status" value="archived">
                     <button class="small-action" type="submit" {% if alert.alert_status == 'archived' %}disabled{% endif %}>✅ Обращение обработано</button>
                 </form>
 
