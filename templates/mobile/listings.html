@@ -109,13 +109,15 @@
                                 <div class="listing-analytics-panel">
                                     <div class="listing-analytics-title">📊 Аналитика</div>
                                     <div>👁 <strong>просмотров за всё время:</strong> {{ group.statistics.views_count }} 👁</div>
+                                    <div>• <strong>за последние 24 ч:</strong> {% if group.statistics.views_delta_24h is not None %}{{ group.statistics.views_delta_24h }} 👁{% else %}данных пока нет{% endif %}</div>
+                                    <div>• <strong>за последние 7 дней:</strong> {% if group.statistics.views_delta_7d is not None %}{{ group.statistics.views_delta_7d }} 👁{% else %}данных пока нет{% endif %}</div>
                                     {% if group.statistics.publication_date %}
-                                        <div>{{ group.statistics.publication_icon }} опубликовано {% if group.statistics.publication_age_days == 0 %}сегодня{% elif group.statistics.publication_age_days == 1 %}вчера{% else %}{{ group.statistics.publication_age_label }}{% endif %} ({{ group.statistics.publication_date|date:"d.m.Y" }})</div>
+                                        <div>{{ group.statistics.publication_icon }} опубликовано {{ group.statistics.publication_age_label }} ({{ group.statistics.publication_date|date:"d.m.Y" }})</div>
                                     {% else %}
                                         <div>⚪ дата публикации недоступна</div>
                                     {% endif %}
                                     {% if group.statistics.last_activity_date %}
-                                        <div>{% if group.statistics.last_activity_stale %}⚠️{% else %}•{% endif %} последняя активность {% if group.statistics.last_activity_age_days == 0 %}сегодня{% elif group.statistics.last_activity_age_days == 1 %}вчера{% else %}{{ group.statistics.last_activity_age_label }}{% endif %} ({{ group.statistics.last_activity_date|date:"d.m.Y" }})</div>
+                                        <div>{% if group.statistics.last_activity_stale %}⚠️{% else %}•{% endif %} последняя активность {{ group.statistics.last_activity_age_label }} ({{ group.statistics.last_activity_date|date:"d.m.Y" }})</div>
                                     {% else %}
                                         <div>• последняя активность: данных пока нет</div>
                                     {% endif %}
