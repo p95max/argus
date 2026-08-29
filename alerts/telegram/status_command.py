@@ -134,11 +134,6 @@ def build_ads_status_message() -> str:
         title = _truncate(group["title"], STATUS_TITLE_LIMIT)
         listing = analytics_listings.get(str(group["title"]).casefold())
         listing_url = listing.kleinanzeigen_url if listing else ""
-        link = (
-            f' · <a href="{html.escape(listing_url, quote=True)}">ссылка</a>'
-            if listing_url
-            else ""
-        )
 
         mailbox = group["mailbox"]
         mailbox_label = mailbox.name or mailbox.email or "—"
@@ -151,11 +146,18 @@ def build_ads_status_message() -> str:
                 published_on = None
         publication_label = published_on.strftime("%d.%m.%Y") if published_on else "—"
 
+        source_line = "· 🔗 Источник: —"
+        if listing_url:
+            source_line = (
+                f'· 🔗 Источник: <a href="{html.escape(listing_url, quote=True)}">ссылка</a>'
+            )
+
         lines.extend(
             [
                 "",
-                f"{index}. {html.escape(title)}{link}",
+                f"{index}. {html.escape(title)}",
                 f"· 📬 Ящик: {html.escape(mailbox_label)}",
+                source_line,
                 f"· 📅 Опубликовано: {publication_label}",
                 f"· Всего обращений: 💬 {group['total']}",
             ]
