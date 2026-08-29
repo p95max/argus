@@ -99,7 +99,7 @@
 
                     <details class="listing-statistics-details" {% if not group.statistics or group.statistics.views_count is None %}open{% endif %}>
                         <summary class="listing-statistics-summary">
-                            <span>📊 Аналитика{% if group.statistics and group.statistics.views_count is not None %} · {{ group.statistics.views_count }}{% endif %}</span>
+                            <span>📊 Аналитика</span>
                             {% if not group.statistics or not group.statistics.kleinanzeigen_url %}
                                 <span class="small">Настроить URL</span>
                             {% endif %}
