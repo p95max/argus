@@ -22,6 +22,10 @@ def _format_date(value) -> str:
 
 def _days_label(days: int) -> str:
     days = max(int(days), 0)
+    if days == 0:
+        return "сегодня"
+    if days == 1:
+        return "вчера"
     if days % 10 == 1 and days % 100 != 11:
         word = "день"
     elif days % 10 in (2, 3, 4) and days % 100 not in (12, 13, 14):
