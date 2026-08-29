@@ -18,6 +18,7 @@ from ...services.kleinanzeigen import (
     verify_listing_url,
 )
 from ...services.listing_analytics import get_listing_analytics
+from ...services.listing_metadata import fetch_listing_public_metadata
 from ...models import Listing, ListingViewStat, MarketplaceAlert
 
 
@@ -80,6 +81,55 @@ def _build_listing_group_keys(alerts):
     return keys
 
 
+def _publication_icon(age_days):
+    if age_days <= 7:
+        return "🟢"
+    if age_days < 14:
+        return "🟡"
+    return "🔴"
+
+
+def _days_label(days):
+    days = max(int(days), 0)
+    if days % 10 == 1 and days % 100 != 11:
+        word = "день"
+    elif days % 10 in (2, 3, 4) and days % 100 not in (12, 13, 14):
+        word = "дня"
+    else:
+        word = "дней"
+    return f"{days} {word} назад"
+
+
+def _attach_mobile_listing_analytics(listing, *, today):
+    listing.publication_date = None
+    listing.publication_age_days = None
+    listing.publication_age_label = ""
+    listing.publication_icon = "⚪"
+    listing.last_activity_date = None
+    listing.last_activity_age_days = None
+    listing.last_activity_age_label = ""
+    listing.last_activity_stale = False
+
+    if listing.kleinanzeigen_url:
+        try:
+            metadata = fetch_listing_public_metadata(listing.kleinanzeigen_url)
+        except Exception:
+            metadata = None
+        if metadata and metadata.published_on:
+            listing.publication_date = metadata.published_on
+            listing.publication_age_days = max((today - metadata.published_on).days, 0)
+            listing.publication_age_label = _days_label(listing.publication_age_days)
+            listing.publication_icon = _publication_icon(listing.publication_age_days)
+
+    latest_stat = next(iter(listing.view_stats.all()), None)
+    if latest_stat is not None:
+        activity_date = timezone.localtime(latest_stat.created_at).date()
+        listing.last_activity_date = activity_date
+        listing.last_activity_age_days = max((today - activity_date).days, 0)
+        listing.last_activity_age_label = _days_label(listing.last_activity_age_days)
+        listing.last_activity_stale = listing.last_activity_age_days > 7
+
+
 @login_required
 def mobile_listings(request):
     _require_staff(request.user)
@@ -120,7 +170,9 @@ def mobile_listings(request):
     listing_groups = list(grouped.values())
     trackers_by_listing_id = {
         listing.kleinanzeigen_listing_id: listing
-        for listing in Listing.objects.select_related("mailbox").exclude(kleinanzeigen_listing_id="")
+        for listing in Listing.objects.select_related("mailbox")
+        .prefetch_related("view_stats")
+        .exclude(kleinanzeigen_listing_id="")
     }
     for group in listing_groups:
         group["statistics"] = trackers_by_listing_id.get(group["listing_id"])
@@ -130,8 +182,10 @@ def mobile_listings(request):
         item.listing_id: item.views_delta_24h
         for item in (analytics.listings if analytics else ())
     }
+    today = timezone.localdate()
     for listing in trackers_by_listing_id.values():
         listing.views_delta_24h = deltas.get(listing.id)
+        _attach_mobile_listing_analytics(listing, today=today)
 
     return render(
         request,
