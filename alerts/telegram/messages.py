@@ -178,10 +178,15 @@ def build_unread_reminder_report_message(alerts) -> str:
         f"{report_icon} <b>{_('Status')}:</b> {_('needs attention')}",
         f"🆕 <b>{_('Unread')}:</b> {len(alerts)}",
         f"📂 <b>{_('Cases')}:</b> {len(cases)}",
-        f"🔥 <b>High/Urgent:</b> {high_total}",
-        f"⏳ <b>{_('Oldest')}:</b> {_format_age_minutes(oldest_minutes)}",
-        "",
     ]
+    if high_total:
+        lines.append(f"🔥 <b>Срочных:</b> {high_total}")
+    lines.extend(
+        [
+            f"⏳ <b>{_('Oldest')}:</b> {_format_age_minutes(oldest_minutes)}",
+            "",
+        ]
+    )
 
     if not alerts:
         lines.append(_("🟢 There are no unread leads for reminder."))
@@ -198,14 +203,14 @@ def build_unread_reminder_report_message(alerts) -> str:
         )
         buyer = _latest_known_buyer_name(case["alerts"])
         mailbox_label = _alert_mailbox_label(latest)
+        case_stats = f"🆕 {case['count']} {_('unread')}"
+        if case["high_count"]:
+            case_stats += f" · 🔥 {case['high_count']} срочных"
+        case_stats += f" · ⏳ {_format_age_minutes(age_minutes)}"
         lines.extend(
             [
                 f"{led} <b>{index}. {html.escape(title)}</b>",
-                (
-                    f"🆕 {case['count']} {_('unread')} · "
-                    f"🔥 {case['high_count']} high · "
-                    f"⏳ {_format_age_minutes(age_minutes)}"
-                ),
+                case_stats,
                 f"👤 <b>{_('Latest')}:</b> {html.escape(buyer)}",
                 f"📬 <b>{_('Mailbox')}:</b> {html.escape(mailbox_label)}",
                 "",
