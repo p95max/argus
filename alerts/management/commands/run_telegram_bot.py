@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler
 
+from alerts.telegram.analytics_command import handle_analytics_command
 from alerts.telegram.config import get_telegram_config
 from alerts.telegram.deploy_command import handle_deploy_command
 from alerts.telegram.doctor_command import handle_doctor_command
@@ -14,7 +15,6 @@ from alerts.telegram.help_command import handle_help_command
 from alerts.telegram.i18n import get_argus_telegram_language
 from alerts.telegram.handlers import (
     handle_alert_callback,
-    handle_apps_command,
     handle_check_mail_command,
     handle_daily_summary_command,
     handle_gmail_polling_callback,
@@ -65,9 +65,9 @@ class Command(BaseCommand):
         application.add_handler(CallbackQueryHandler(handle_gmail_polling_callback, pattern=r"^polling:(status|enable|disable|run_now)$"))
         application.add_handler(CommandHandler("help", handle_help_command))
         application.add_handler(CommandHandler("mailboxes_status", handle_mailboxes_status_command))
-        application.add_handler(CommandHandler("ads_status", handle_ads_status_command))
+        application.add_handler(CommandHandler("apps_status", handle_ads_status_command))
         application.add_handler(CommandHandler("summary", handle_daily_summary_command))
-        application.add_handler(CommandHandler("apps", handle_apps_command))
+        application.add_handler(CommandHandler("analytics", handle_analytics_command))
         application.add_handler(CommandHandler("unread", handle_unread_command))
         application.add_handler(CommandHandler("checkmail", handle_check_mail_command))
         application.add_handler(CommandHandler("polling", handle_gmail_polling_command))
