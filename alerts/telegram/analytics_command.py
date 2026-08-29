@@ -1,5 +1,6 @@
 from asgiref.sync import sync_to_async
 
+from ..services.listing_analytics import get_listing_analytics
 from .i18n import telegram_gettext
 from .messages import build_apps_analytics_message
 from .permissions import is_allowed_update
@@ -15,10 +16,16 @@ async def handle_analytics_command(update, context):
         )
         return
 
-    analytics_text = await sync_to_async(
-        build_apps_analytics_message,
+    analytics = await sync_to_async(
+        get_listing_analytics,
         thread_sensitive=True,
     )()
+
+    analytics_text = build_apps_analytics_message(analytics) if analytics else None
+    if analytics_text and not any(
+        listing.views_delta_24h is not None for listing in analytics.listings
+    ):
+        analytics_text = analytics_text.replace("🔥 ", "", 1)
 
     if not analytics_text:
         analytics_text = "📊 Аналитика\n\nСтатистика просмотров пока недоступна."
