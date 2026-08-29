@@ -396,17 +396,11 @@ def mobile_check_mailbox_now(request, mailbox_id):
 
     mailbox = get_object_or_404(MailboxAccount, id=mailbox_id)
     result = check_mailbox(mailbox)
-    messages.success(
-        request,
-        _(
-            "Mail checked: fetched=%(fetched)s, created=%(created)s, duplicates=%(duplicates)s."
-        )
-        % {
-            "fetched": result.fetched,
-            "created": result.created,
-            "duplicates": result.duplicates,
-        },
-    )
+    if result.created:
+        text = _("✅ Почта проверена · новых обращений: %(count)s") % {"count": result.created}
+    else:
+        text = _("✅ Почта проверена · новых обращений нет")
+    messages.success(request, text)
     return redirect(_safe_next_url(request))
 
 
@@ -421,18 +415,17 @@ def mobile_check_gmail_now(request):
     except CommandAlreadyRunning:
         messages.warning(
             request,
-            _("🔄 Mailbox check is already running. Try again a little later."),
+            _("🔄 Проверка почты уже выполняется. Попробуйте чуть позже."),
         )
         return redirect(_safe_next_url(request))
 
-    messages.success(
-        request,
-        _(
-            "Mail checked: mailboxes=%(mailboxes)s, fetched=%(fetched)s, "
-            "created=%(created)s, duplicates=%(duplicates)s."
-        )
-        % summary,
-    )
+    if summary["created"]:
+        text = _("✅ Почта проверена · новых обращений: %(count)s") % {
+            "count": summary["created"],
+        }
+    else:
+        text = _("✅ Почта проверена · новых обращений нет")
+    messages.success(request, text)
     return redirect(_safe_next_url(request))
 
 
