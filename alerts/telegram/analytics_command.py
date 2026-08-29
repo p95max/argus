@@ -43,6 +43,12 @@ def _publication_icon(age_days: int) -> str:
     return "🔴"
 
 
+def _period_views_line(label: str, value: int | None) -> str:
+    if value is None:
+        return f"• {label}: данных пока нет"
+    return f"• {label}: {_format_count(value)} 👁"
+
+
 def _build_analytics_message() -> str | None:
     analytics = get_listing_analytics()
     if analytics is None:
@@ -69,6 +75,10 @@ def _build_analytics_message() -> str | None:
         "",
         f"👁 <b>Общие просмотры:</b> {_format_count(analytics.total_views)}",
     ]
+    if analytics.total_delta_24h is not None:
+        lines.append(f"📅 <b>За последние 24 ч:</b> {_format_count(analytics.total_delta_24h)} 👁")
+    if analytics.total_delta_7d is not None:
+        lines.append(f"🗓 <b>За последние 7 дней:</b> {_format_count(analytics.total_delta_7d)} 👁")
 
     for item in analytics.listings:
         listing = listings.get(item.listing_id)
@@ -82,9 +92,9 @@ def _build_analytics_message() -> str | None:
         leader_used = leader_used or is_leader
         prefix = "🔥 " if is_leader else ""
         lines.append(f"{prefix}<b>{html.escape(item.title)}</b>")
-        lines.append(
-            f"• просмотров за всё время: {_format_count(item.views_count)} 👁"
-        )
+        lines.append(f"• просмотров за всё время: {_format_count(item.views_count)} 👁")
+        lines.append(_period_views_line("за последние 24 ч", item.views_delta_24h))
+        lines.append(_period_views_line("за последние 7 дней", item.views_delta_7d))
 
         published_on = None
         if listing and listing.kleinanzeigen_url:
