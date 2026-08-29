@@ -9,8 +9,9 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from ..gmail_polling import get_gmail_polling_status
 from ..services.listing_analytics import get_listing_analytics
+from ..services.listing_metadata import fetch_listing_public_metadata
 from ..views.mobile.listings import LISTING_CLOSED_MARKER, _build_listing_group_keys
-from ..models import MailboxAccount, MarketplaceAlert
+from ..models import Listing, MailboxAccount, MarketplaceAlert
 from .i18n import use_argus_telegram_language
 from .permissions import is_allowed_update
 
@@ -97,13 +98,11 @@ def build_ads_status_message() -> str:
     group_keys = _build_listing_group_keys(alerts)
 
     analytics = get_listing_analytics()
-    analytics_urls = {}
+    analytics_listings = {}
     if analytics is not None:
         analytics_listing_ids = [item.listing_id for item in analytics.listings]
-        from ..models import Listing
-
-        analytics_urls = {
-            listing.title.casefold(): listing.kleinanzeigen_url
+        analytics_listings = {
+            listing.title.casefold(): listing
             for listing in Listing.objects.filter(id__in=analytics_listing_ids)
             if listing.kleinanzeigen_url
         }
@@ -117,6 +116,7 @@ def build_ads_status_message() -> str:
                 "title": alert.listing_title or alert.subject or str(_("Listing")),
                 "total": 0,
                 "is_closed": False,
+                "mailbox": alert.mailbox,
             },
         )
         group["total"] += 1
@@ -132,16 +132,31 @@ def build_ads_status_message() -> str:
 
     for index, group in enumerate(active_groups[:STATUS_LISTING_LIMIT], start=1):
         title = _truncate(group["title"], STATUS_TITLE_LIMIT)
-        listing_url = analytics_urls.get(str(group["title"]).casefold())
+        listing = analytics_listings.get(str(group["title"]).casefold())
+        listing_url = listing.kleinanzeigen_url if listing else ""
         link = (
             f' · <a href="{html.escape(listing_url, quote=True)}">ссылка</a>'
             if listing_url
             else ""
         )
+
+        mailbox = group["mailbox"]
+        mailbox_label = mailbox.name or mailbox.email or "—"
+
+        published_on = None
+        if listing_url:
+            try:
+                published_on = fetch_listing_public_metadata(listing_url).published_on
+            except Exception:
+                published_on = None
+        publication_label = published_on.strftime("%d.%m.%Y") if published_on else "—"
+
         lines.extend(
             [
                 "",
                 f"{index}. {html.escape(title)}{link}",
+                f"· 📬 Ящик: {html.escape(mailbox_label)}",
+                f"· 📅 Опубликовано: {publication_label}",
                 f"· Всего обращений: 💬 {group['total']}",
             ]
         )
