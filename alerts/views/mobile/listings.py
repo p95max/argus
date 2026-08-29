@@ -91,6 +91,10 @@ def _publication_icon(age_days):
 
 def _days_label(days):
     days = max(int(days), 0)
+    if days == 0:
+        return "сегодня"
+    if days == 1:
+        return "вчера"
     if days % 10 == 1 and days % 100 != 11:
         word = "день"
     elif days % 10 in (2, 3, 4) and days % 100 not in (12, 13, 14):
@@ -178,13 +182,15 @@ def mobile_listings(request):
         group["statistics"] = trackers_by_listing_id.get(group["listing_id"])
 
     analytics = get_listing_analytics()
-    deltas = {
-        item.listing_id: item.views_delta_24h
+    analytics_by_id = {
+        item.listing_id: item
         for item in (analytics.listings if analytics else ())
     }
     today = timezone.localdate()
     for listing in trackers_by_listing_id.values():
-        listing.views_delta_24h = deltas.get(listing.id)
+        item = analytics_by_id.get(listing.id)
+        listing.views_delta_24h = item.views_delta_24h if item else None
+        listing.views_delta_7d = item.views_delta_7d if item else None
         _attach_mobile_listing_analytics(listing, today=today)
 
     return render(
