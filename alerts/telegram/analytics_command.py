@@ -43,10 +43,10 @@ def _publication_icon(age_days: int) -> str:
     return "🔴"
 
 
-def _period_views_line(label: str, value: int | None) -> str:
+def _period_views_line(icon: str, label: str, value: int | None) -> str:
     if value is None:
-        return f"• {label}: данных пока нет"
-    return f"• {label}: {_format_count(value)} 👁"
+        return f"{icon} {label}: данных пока нет"
+    return f"{icon} {label}: +{_format_count(value)} 👁"
 
 
 def _build_analytics_message() -> str | None:
@@ -76,9 +76,9 @@ def _build_analytics_message() -> str | None:
         f"👁 <b>Общие просмотры:</b> {_format_count(analytics.total_views)}",
     ]
     if analytics.total_delta_24h is not None:
-        lines.append(f"📅 <b>За последние 24 ч:</b> {_format_count(analytics.total_delta_24h)} 👁")
+        lines.append(f"📈 <b>За последние 24 ч:</b> +{_format_count(analytics.total_delta_24h)} 👁")
     if analytics.total_delta_7d is not None:
-        lines.append(f"🗓 <b>За последние 7 дней:</b> {_format_count(analytics.total_delta_7d)} 👁")
+        lines.append(f"📅 <b>За последние 7 дней:</b> +{_format_count(analytics.total_delta_7d)} 👁")
 
     for item in analytics.listings:
         listing = listings.get(item.listing_id)
@@ -92,9 +92,9 @@ def _build_analytics_message() -> str | None:
         leader_used = leader_used or is_leader
         prefix = "🔥 " if is_leader else ""
         lines.append(f"{prefix}<b>{html.escape(item.title)}</b>")
-        lines.append(f"• просмотров за всё время: {_format_count(item.views_count)} 👁")
-        lines.append(_period_views_line("за последние 24 ч", item.views_delta_24h))
-        lines.append(_period_views_line("за последние 7 дней", item.views_delta_7d))
+        lines.append(f"👁 просмотров за всё время: {_format_count(item.views_count)}")
+        lines.append(_period_views_line("📈", "за последние 24 ч", item.views_delta_24h))
+        lines.append(_period_views_line("📅", "за последние 7 дней", item.views_delta_7d))
 
         published_on = None
         if listing and listing.kleinanzeigen_url:
@@ -122,13 +122,13 @@ def _build_analytics_message() -> str | None:
         if last_activity_at:
             activity_date = timezone.localtime(last_activity_at).date()
             activity_age = max((today - activity_date).days, 0)
-            activity_icon = "⚠️ " if activity_age > 7 else "• "
+            activity_icon = "⚠️" if activity_age > 7 else "🕒"
             lines.append(
-                f"{activity_icon}последняя активность "
+                f"{activity_icon} последняя активность "
                 f"{_days_label(activity_age)} ({_format_date(activity_date)})"
             )
         else:
-            lines.append("• последняя активность: данных пока нет")
+            lines.append("🕒 последняя активность: данных пока нет")
 
     return "\n".join(lines)
 
