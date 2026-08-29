@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 ACTIVE_BOT_COMMANDS = (
     ("help", "bot capabilities and command list"),
     ("mailboxes_status", "mailbox status"),
-    ("ads_status", "active ads status and statistics"),
+    ("apps_status", "active apps status and statistics"),
     ("summary", "today's leads summary"),
-    ("apps", "active listings and saved view analytics"),
+    ("analytics", "saved listing view analytics"),
     ("unread", "one summary of unread leads"),
     ("checkmail", "check Gmail now and show new cases"),
     ("polling", "manage Gmail polling on the production server"),
