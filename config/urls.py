@@ -73,7 +73,7 @@ urlpatterns = [
         name="mobile_reopen_listing",
     ),
     path(
-        "m/listings/<int:alert_id>/delete/",
+        "m/listings/<int:listing_id>/delete/",
         mobile_delete_listing,
         name="mobile_delete_listing",
     ),
