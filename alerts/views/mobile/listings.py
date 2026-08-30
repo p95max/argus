@@ -138,6 +138,11 @@ def _attach_mobile_listing_analytics(listing, *, today):
 def mobile_listings(request):
     _require_staff(request.user)
 
+    configured_listings = list(
+        Listing.objects.select_related("mailbox", "source_alert")
+        .prefetch_related("view_stats")
+        .order_by("-is_active", "title", "id")
+    )
     alerts = list(
         MarketplaceAlert.objects.filter(event_type=MarketplaceAlert.EventType.BUYER_MESSAGE)
         .select_related("mailbox", "taken_by")
@@ -147,6 +152,22 @@ def mobile_listings(request):
     group_keys = _build_listing_group_keys(alerts)
 
     grouped = OrderedDict()
+    for listing in configured_listings:
+        if listing.kleinanzeigen_listing_id:
+            key = (f"id:{listing.kleinanzeigen_listing_id}",)
+        else:
+            key = (f"listing:{listing.id}",)
+        grouped[key] = {
+            "title": listing.title,
+            "listing_id": listing.kleinanzeigen_listing_id,
+            "alerts": [],
+            "open_count": 0,
+            "processed_count": 0,
+            "representative_alert_id": listing.source_alert_id,
+            "is_closed": not listing.is_active,
+            "statistics": listing,
+        }
+
     for alert in alerts:
         key = group_keys[alert.id]
         group = grouped.setdefault(
@@ -159,10 +180,13 @@ def mobile_listings(request):
                 "processed_count": 0,
                 "representative_alert_id": alert.id,
                 "is_closed": False,
+                "statistics": None,
             },
         )
         if not group["listing_id"] and alert.listing_id:
             group["listing_id"] = _canonical_alert_listing_id(alert)
+        if not group["representative_alert_id"]:
+            group["representative_alert_id"] = alert.id
         group["alerts"].append(alert)
         if alert.taken_by_label == LISTING_CLOSED_MARKER:
             group["is_closed"] = True
@@ -171,15 +195,14 @@ def mobile_listings(request):
         elif alert.alert_status != MarketplaceAlert.AlertStatus.IGNORED:
             group["open_count"] += 1
 
-    listing_groups = list(grouped.values())
     trackers_by_listing_id = {
         listing.kleinanzeigen_listing_id: listing
-        for listing in Listing.objects.select_related("mailbox")
-        .prefetch_related("view_stats")
-        .exclude(kleinanzeigen_listing_id="")
+        for listing in configured_listings
+        if listing.kleinanzeigen_listing_id
     }
-    for group in listing_groups:
-        group["statistics"] = trackers_by_listing_id.get(group["listing_id"])
+    for group in grouped.values():
+        if group["statistics"] is None and group["listing_id"]:
+            group["statistics"] = trackers_by_listing_id.get(group["listing_id"])
 
     analytics = get_listing_analytics()
     analytics_by_id = {
@@ -187,19 +210,20 @@ def mobile_listings(request):
         for item in (analytics.listings if analytics else ())
     }
     today = timezone.localdate()
-    for listing in trackers_by_listing_id.values():
+    for listing in configured_listings:
         item = analytics_by_id.get(listing.id)
         listing.views_delta_24h = item.views_delta_24h if item else None
         listing.views_delta_7d = item.views_delta_7d if item else None
         _attach_mobile_listing_analytics(listing, today=today)
 
+    listing_groups = list(grouped.values())
     return render(
         request,
         "mobile/listings.html",
         {
             "listing_groups": listing_groups,
-            "listing_count": len(listing_groups),
-            "alert_count": sum(len(group["alerts"]) for group in listing_groups),
+            "listing_count": len(configured_listings),
+            "alert_count": len(alerts),
         },
     )
 
