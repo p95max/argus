@@ -176,15 +176,12 @@ def mobile_dashboard(request):
         "last_success_at": mailbox_status["last_success_at"],
         "today_alerts": alert_counts["today"],
     }
+    active_listings_queryset = Listing.objects.filter(is_active=True)
     active_listings = list(
-        Listing.objects.filter(is_active=True, source_alert__isnull=False)
-        .only("id", "title", "views_count")
+        active_listings_queryset.only("id", "title", "views_count")
         .order_by("title", "id")[:4]
     )
-    active_listings_count = Listing.objects.filter(
-        is_active=True,
-        source_alert__isnull=False,
-    ).count()
+    active_listings_count = active_listings_queryset.count()
     health_report = build_health_report()
 
     context = {
