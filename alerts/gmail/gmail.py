@@ -25,7 +25,7 @@ GMAIL_SCOPES = [
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
-    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.modify",
 ]
 GMAIL_API_RETRY_ATTEMPTS = 3
 GMAIL_API_RETRY_BASE_SLEEP_SECONDS = 1.0
@@ -181,6 +181,43 @@ def fetch_gmail_messages(service, query: str, max_results: int = 25) -> list[Gma
     messages = response.get("messages", [])
     payloads = _fetch_gmail_message_payloads(service, messages)
     return [parse_gmail_api_message(payload) for payload in payloads]
+
+
+def mark_gmail_messages_read(
+    mailbox: MailboxAccount,
+    message_ids: list[str],
+    *,
+    service=None,
+) -> int:
+    """Remove Gmail's UNREAD label from the supplied message IDs."""
+    message_ids = list(dict.fromkeys(message_id for message_id in message_ids if message_id))
+    if not message_ids:
+        return 0
+
+    if service is None:
+        service = build_gmail_service(mailbox=mailbox)
+
+    request = service.users().messages().batchModify(
+        userId="me",
+        body={
+            "ids": message_ids,
+            "removeLabelIds": ["UNREAD"],
+        },
+    )
+    _execute_gmail_request_with_retry(request, operation="messages.batchModify:mark_read")
+    return len(message_ids)
+
+
+def mark_alert_gmail_message_read(alert: MarketplaceAlert, *, service=None) -> bool:
+    """Mark the source Gmail message for one Argus alert as read."""
+    if not alert.gmail_message_id:
+        return False
+    mark_gmail_messages_read(
+        alert.mailbox,
+        [alert.gmail_message_id],
+        service=service,
+    )
+    return True
 
 
 def _fetch_gmail_message_payloads(service, messages: list[dict]) -> list[dict]:
