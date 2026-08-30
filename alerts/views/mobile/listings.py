@@ -441,6 +441,11 @@ def mobile_close_listing(request, alert_id):
     )
     same_listing.filter(id=alert.id).update(taken_by_label=LISTING_CLOSED_MARKER)
 
+    tracker = Listing.objects.filter(kleinanzeigen_listing_id=_canonical_alert_listing_id(alert)).first()
+    if tracker is not None:
+        tracker.is_active = False
+        tracker.save(update_fields=["is_active", "updated_at"])
+
     return redirect("mobile_listings")
 
 
@@ -457,32 +462,31 @@ def mobile_reopen_listing(request, alert_id):
     same_listing = _same_listing_queryset(alert)
     same_listing.filter(taken_by_label=LISTING_CLOSED_MARKER).update(taken_by_label="")
 
+    tracker = Listing.objects.filter(kleinanzeigen_listing_id=_canonical_alert_listing_id(alert)).first()
+    if tracker is not None:
+        tracker.is_active = True
+        tracker.save(update_fields=["is_active", "updated_at"])
+
     return redirect("mobile_listings")
 
 
 @login_required
 @require_POST
-def mobile_delete_listing(request, alert_id):
+def mobile_delete_listing(request, listing_id):
     _require_staff(request.user)
 
-    alert = get_object_or_404(
-        MarketplaceAlert,
-        id=alert_id,
-        event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
-    )
-    same_listing = _same_listing_queryset(alert)
+    listing = get_object_or_404(Listing.objects.select_related("source_alert"), id=listing_id)
+    if listing.source_alert_id:
+        related_alerts = _same_listing_queryset(listing.source_alert)
+    elif listing.kleinanzeigen_listing_id:
+        related_alerts = MarketplaceAlert.objects.filter(
+            event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+            listing_id=listing.kleinanzeigen_listing_id,
+        )
+    else:
+        related_alerts = MarketplaceAlert.objects.none()
 
-    if not same_listing.filter(taken_by_label=LISTING_CLOSED_MARKER).exists():
-        raise PermissionDenied("Only closed listings can be deleted.")
-
-    listing_id = _canonical_alert_listing_id(alert)
-    tracker = None
-    if listing_id:
-        tracker = Listing.objects.filter(kleinanzeigen_listing_id=listing_id).first()
-    if tracker is None:
-        tracker = Listing.objects.filter(source_alert__in=same_listing).first()
-
-    same_listing.delete()
-    if tracker is not None:
-        tracker.delete()
+    related_alerts.delete()
+    listing.delete()
+    messages.success(request, "Объявление, обращения и история аналитики удалены.")
     return redirect("mobile_listings")
