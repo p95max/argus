@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -8,6 +10,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from . import dashboard
+from ...gmail.gmail import mark_gmail_messages_read
 from ...models import MarketplaceAlert, ServiceEvent
 from ...services.attention import filter_needs_attention
 
@@ -44,11 +47,21 @@ def _process_all_attention_alerts(request):
     if not request.user.is_active or not request.user.is_staff:
         raise PermissionDenied("Only staff users can process attention alerts.")
 
-    alerts = filter_needs_attention(MarketplaceAlert.objects.all())
+    alerts = filter_needs_attention(
+        MarketplaceAlert.objects.select_related("mailbox")
+    )
     alert_count = alerts.count()
     if not alert_count:
         messages.info(request, "Обращений, требующих внимания, уже нет.")
         return redirect(_safe_next_url(request))
+
+    gmail_messages_by_mailbox = defaultdict(list)
+    mailboxes = {}
+    for alert in alerts:
+        if not alert.gmail_message_id:
+            continue
+        gmail_messages_by_mailbox[alert.mailbox_id].append(alert.gmail_message_id)
+        mailboxes[alert.mailbox_id] = alert.mailbox
 
     alerts.update(
         alert_status=MarketplaceAlert.AlertStatus.ARCHIVED,
@@ -56,7 +69,21 @@ def _process_all_attention_alerts(request):
         taken_by_label="",
         taken_at=None,
     )
+
+    gmail_errors = 0
+    for mailbox_id, message_ids in gmail_messages_by_mailbox.items():
+        try:
+            mark_gmail_messages_read(mailboxes[mailbox_id], message_ids)
+        except Exception:
+            gmail_errors += 1
+
     messages.success(request, f"Обработано обращений: {alert_count}.")
+    if gmail_errors:
+        messages.warning(
+            request,
+            "Часть писем Gmail не удалось пометить прочитанными. "
+            "Переподключите ящики, которые ещё используют старые права.",
+        )
     return redirect(_safe_next_url(request))
 
 
