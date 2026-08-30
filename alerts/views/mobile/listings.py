@@ -451,5 +451,14 @@ def mobile_delete_listing(request, alert_id):
     if not same_listing.filter(taken_by_label=LISTING_CLOSED_MARKER).exists():
         raise PermissionDenied("Only closed listings can be deleted.")
 
+    listing_id = _canonical_alert_listing_id(alert)
+    tracker = None
+    if listing_id:
+        tracker = Listing.objects.filter(kleinanzeigen_listing_id=listing_id).first()
+    if tracker is None:
+        tracker = Listing.objects.filter(source_alert__in=same_listing).first()
+
     same_listing.delete()
+    if tracker is not None:
+        tracker.delete()
     return redirect("mobile_listings")
