@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 
 from ...services.attention import filter_needs_attention, needs_attention_alert_q
 from ...command_locks import CommandAlreadyRunning, command_lock
-from ...gmail.gmail import check_mailbox
+from ...gmail.gmail import check_mailbox, mark_alert_gmail_message_read
 from ...monitoring.health import build_health_report
 from ...models import Listing, MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 from ...permissions import can_manage_mailboxes, can_view_mailbox_operations
@@ -244,7 +244,7 @@ def mobile_alert_detail(request, alert_id):
 def mobile_update_alert_status(request, alert_id):
     _require_staff(request.user)
 
-    alert = get_object_or_404(MarketplaceAlert, id=alert_id)
+    alert = get_object_or_404(MarketplaceAlert.objects.select_related("mailbox"), id=alert_id)
     status = request.POST.get("status")
 
     if status not in MarketplaceAlert.AlertStatus.values:
@@ -270,6 +270,16 @@ def mobile_update_alert_status(request, alert_id):
         update_fields.extend(["taken_by", "taken_by_label", "taken_at"])
 
     alert.save(update_fields=update_fields)
+
+    if status == MarketplaceAlert.AlertStatus.ARCHIVED and alert.gmail_message_id:
+        try:
+            mark_alert_gmail_message_read(alert)
+        except Exception:
+            messages.warning(
+                request,
+                "Обращение обработано, но письмо не удалось пометить прочитанным. "
+                "Переподключите Gmail, если ящик ещё использует старые права.",
+            )
 
     return redirect(_safe_next_url(request))
 
