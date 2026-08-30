@@ -19,7 +19,6 @@ from ..gmail_polling import (
     get_gmail_polling_status,
 )
 from .git_status import build_git_deploy_status_text as build_git_deploy_status_text_v2
-from .help_command import ACTIVE_BOT_COMMANDS
 from .i18n import telegram_gettext, use_argus_telegram_language
 from .keyboards import (
     CALLBACK_STATUS_ACTION,
@@ -337,25 +336,38 @@ def build_git_deploy_status_text() -> str:
     origin_sha = _run_git_command(["rev-parse", "--short", "origin/master"])
     relation = _build_git_relation_text()
     lines = ["🧬 Git deploy status"]
-    if branch: lines.append(f"Branch: {branch}")
-    if head_sha: lines.append(f"Local HEAD: {head_sha}")
-    if head_subject: lines.append(f"Commit: {head_subject}")
-    if head_date: lines.append(f"Date: {head_date}")
-    if origin_sha: lines.append(f"Origin/master: {origin_sha}")
-    if relation: lines.append(f"Status: {relation}")
+    if branch:
+        lines.append(f"Branch: {branch}")
+    if head_sha:
+        lines.append(f"Local HEAD: {head_sha}")
+    if head_subject:
+        lines.append(f"Commit: {head_subject}")
+    if head_date:
+        lines.append(f"Date: {head_date}")
+    if origin_sha:
+        lines.append(f"Origin/master: {origin_sha}")
+    if relation:
+        lines.append(f"Status: {relation}")
     return "\n".join(lines) if len(lines) > 1 else "🧬 Git deploy status\nStatus: git info unavailable"
 
 
 def _build_git_relation_text() -> str:
     relation = _run_git_command(["rev-list", "--left-right", "--count", "HEAD...origin/master"])
-    if not relation: return "unknown"
+    if not relation:
+        return "unknown"
     parts = relation.split()
-    if len(parts) != 2: return "unknown"
-    try: ahead, behind = int(parts[0]), int(parts[1])
-    except ValueError: return "unknown"
-    if ahead == 0 and behind == 0: return "up to date"
-    if ahead == 0: return f"behind origin/master by {behind} commit(s)"
-    if behind == 0: return f"ahead of origin/master by {ahead} commit(s)"
+    if len(parts) != 2:
+        return "unknown"
+    try:
+        ahead, behind = int(parts[0]), int(parts[1])
+    except ValueError:
+        return "unknown"
+    if ahead == 0 and behind == 0:
+        return "up to date"
+    if ahead == 0:
+        return f"behind origin/master by {behind} commit(s)"
+    if behind == 0:
+        return f"ahead of origin/master by {ahead} commit(s)"
     return f"diverged: ahead {ahead}, behind {behind}"
 
 
