@@ -7,7 +7,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from ...models import MarketplaceAlert
+from ...models import Listing, MarketplaceAlert
 
 
 def _safe_next_url(request):
@@ -36,11 +36,25 @@ def mobile_clear_archived_alerts(request):
         messages.info(request, _("The lead archive is already empty."))
         return redirect(_safe_next_url(request))
 
-    archived_count = archived_alerts.count()
-    archived_alerts.delete()
-    messages.success(
-        request,
-        _("Lead archive cleared. Deleted records: %(count)s.")
-        % {"count": archived_count},
-    )
+    # A Listing keeps one source alert as its stable anchor. Deleting that row would
+    # detach the listing from the mobile listings UI. Keep those anchors so clearing
+    # the lead archive never removes listing metadata, view counters or history.
+    listing_anchor_ids = Listing.objects.filter(
+        source_alert__isnull=False,
+        source_alert__alert_status=MarketplaceAlert.AlertStatus.ARCHIVED,
+    ).values_list("source_alert_id", flat=True)
+    removable_alerts = archived_alerts.exclude(id__in=listing_anchor_ids)
+    removed_count = removable_alerts.count()
+    removable_alerts.delete()
+
+    if removed_count:
+        messages.success(
+            request,
+            _("Lead archive cleared. Listings and analytics were preserved."),
+        )
+    else:
+        messages.info(
+            request,
+            _("There are no removable archived leads. Listings and analytics were preserved."),
+        )
     return redirect(_safe_next_url(request))
