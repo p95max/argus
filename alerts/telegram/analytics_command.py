@@ -3,7 +3,7 @@ import html
 from asgiref.sync import sync_to_async
 from django.utils import timezone
 
-from ..models import Listing
+from ..models import Listing, MarketplaceAlert
 from ..services.listing_analytics import get_listing_analytics
 from ..services.listing_metadata import fetch_listing_public_metadata
 from .i18n import telegram_gettext
@@ -49,6 +49,24 @@ def _period_views_line(icon: str, label: str, value: int | None) -> str:
     return f"{icon} {label}: +{_format_count(value)} 👁"
 
 
+def _latest_inquiry_at(listing: Listing):
+    if not listing.kleinanzeigen_listing_id:
+        return None
+
+    alert = (
+        MarketplaceAlert.objects.filter(
+            event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+            listing_id=listing.kleinanzeigen_listing_id,
+        )
+        .order_by("-received_at", "-created_at", "-id")
+        .only("received_at", "created_at")
+        .first()
+    )
+    if alert is None:
+        return None
+    return alert.received_at or alert.created_at
+
+
 def _build_analytics_message() -> str | None:
     analytics = get_listing_analytics()
     if analytics is None:
@@ -58,7 +76,7 @@ def _build_analytics_message() -> str | None:
         listing.id: listing
         for listing in Listing.objects.filter(
             id__in=[item.listing_id for item in analytics.listings]
-        ).prefetch_related("view_stats")
+        )
     }
     today = timezone.localdate()
 
@@ -113,28 +131,23 @@ def _build_analytics_message() -> str | None:
         else:
             lines.append("⚪ дата публикации недоступна")
 
-        last_activity_at = None
-        if listing:
-            latest_stat = next(iter(listing.view_stats.all()), None)
-            if latest_stat is not None:
-                last_activity_at = latest_stat.created_at
-
-        if last_activity_at:
-            activity_date = timezone.localtime(last_activity_at).date()
-            activity_age = max((today - activity_date).days, 0)
-            activity_icon = "⚠️" if activity_age > 7 else "🕒"
+        last_inquiry_at = _latest_inquiry_at(listing) if listing else None
+        if last_inquiry_at:
+            inquiry_date = timezone.localtime(last_inquiry_at).date()
+            inquiry_age = max((today - inquiry_date).days, 0)
+            inquiry_icon = "⚠️" if inquiry_age > 7 else "🕒"
             lines.append(
-                f"{activity_icon} последняя активность "
-                f"{_days_label(activity_age)} ({_format_date(activity_date)})"
+                f"{inquiry_icon} последнее обращение "
+                f"{_days_label(inquiry_age)} ({_format_date(inquiry_date)})"
             )
         else:
-            lines.append("🕒 последняя активность: данных пока нет")
+            lines.append("🕒 последнее обращение: данных пока нет")
 
     return "\n".join(lines)
 
 
 async def handle_analytics_command(update, context):
-    """Show listing views, publication age, and the latest detected view activity."""
+    """Show listing views, publication age, and the latest buyer inquiry."""
     if not is_allowed_update(update):
         await update.effective_message.reply_text(
             telegram_gettext(PERMISSION_DENIED_MESSAGE)
