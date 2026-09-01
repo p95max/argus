@@ -104,7 +104,7 @@ def _days_label(days):
     return f"{days} {word} назад"
 
 
-def _attach_mobile_listing_analytics(listing, *, today):
+def _attach_mobile_listing_analytics(listing, *, today, latest_inquiry_at=None):
     listing.publication_date = None
     listing.publication_age_days = None
     listing.publication_age_label = ""
@@ -125,9 +125,8 @@ def _attach_mobile_listing_analytics(listing, *, today):
             listing.publication_age_label = _days_label(listing.publication_age_days)
             listing.publication_icon = _publication_icon(listing.publication_age_days)
 
-    latest_stat = next(iter(listing.view_stats.all()), None)
-    if latest_stat is not None:
-        activity_date = timezone.localtime(latest_stat.created_at).date()
+    if latest_inquiry_at is not None:
+        activity_date = timezone.localtime(latest_inquiry_at).date()
         listing.last_activity_date = activity_date
         listing.last_activity_age_days = max((today - activity_date).days, 0)
         listing.last_activity_age_label = _days_label(listing.last_activity_age_days)
@@ -214,7 +213,23 @@ def mobile_listings(request):
         item = analytics_by_id.get(listing.id)
         listing.views_delta_24h = item.views_delta_24h if item else None
         listing.views_delta_7d = item.views_delta_7d if item else None
-        _attach_mobile_listing_analytics(listing, today=today)
+
+        if listing.kleinanzeigen_listing_id:
+            group_key = (f"id:{listing.kleinanzeigen_listing_id}",)
+        else:
+            group_key = (f"listing:{listing.id}",)
+        listing_alerts = grouped.get(group_key, {}).get("alerts", [])
+        latest_alert = listing_alerts[0] if listing_alerts else None
+        latest_inquiry_at = (
+            latest_alert.received_at or latest_alert.created_at
+            if latest_alert is not None
+            else None
+        )
+        _attach_mobile_listing_analytics(
+            listing,
+            today=today,
+            latest_inquiry_at=latest_inquiry_at,
+        )
 
     listing_groups = list(grouped.values())
     return render(
