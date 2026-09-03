@@ -70,6 +70,19 @@ def _build_daily_chart(events, now):
     ]
 
 
+def _build_all_time_hour_chart(events):
+    """Aggregate all saved view growth by local hour of day."""
+    values = {hour: 0 for hour in range(24)}
+    for created_at, delta in events:
+        hour = timezone.localtime(created_at).hour
+        values[hour] += delta
+
+    return [
+        {"label": f"{hour:02d}:00", "value": values[hour]}
+        for hour in range(24)
+    ]
+
+
 def _selected_listing_summary(analytics, listing_id):
     if analytics is None or listing_id is None:
         return None
@@ -110,5 +123,6 @@ def mobile_analytics(request):
             "selected_summary": selected_summary,
             "chart_24h": _build_hourly_chart(events, now),
             "chart_7d": _build_daily_chart(events, now),
+            "chart_hours_all_time": _build_all_time_hour_chart(events),
         },
     )
