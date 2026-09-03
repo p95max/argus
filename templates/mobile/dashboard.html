@@ -34,7 +34,7 @@
             {% endif %}
         </article>
 
-        <a class="card dashboard-summary-card dashboard-analytics-card" href="{% url 'mobile_listings' %}">
+        <a class="card dashboard-summary-card dashboard-analytics-card" href="{% url 'mobile_analytics' %}">
             <div class="title">📊 Аналитика</div>
             {% if listing_analytics %}
                 <div class="dashboard-analytics-total">👁 {{ listing_analytics.total_views }} просмотров</div>
