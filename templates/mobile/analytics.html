@@ -7,64 +7,49 @@
     <section class="alert-detail-navigation">
         <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← Назад</a>
         <a class="link-button small-action" href="{% url 'mobile_listings' %}">🚗 Объявления</a>
-        {% if selected_listing %}
-            <a class="link-button small-action" href="{% url 'mobile_analytics' %}">↺ Сбросить</a>
-        {% endif %}
     </section>
 
     {% if analytics %}
-        {% if selected_listing %}
-            <section>
-                <article class="card analytics-filter-card">
-                    <span class="small">Графики по объявлению</span>
-                    <strong>🚗 {{ selected_listing.title }}</strong>
-                </article>
-            </section>
-        {% endif %}
+        <section>
+            <div class="analytics-tabs" role="tablist" aria-label="Фильтр аналитики по объявлениям">
+                <button class="analytics-tab active" type="button" role="tab" aria-selected="true" data-analytics-key="all">🌐 Все</button>
+                {% for listing in analytics.listings %}
+                    <button class="analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-key="{{ listing.listing_id }}">🚗 {{ listing.title }}</button>
+                {% endfor %}
+            </div>
+        </section>
 
         <section class="analytics-summary-grid">
             <article class="card analytics-summary-card">
                 <span>👁 Всего просмотров</span>
-                <strong>{% if selected_summary %}{{ selected_summary.views_count }}{% else %}{{ analytics.total_views }}{% endif %}</strong>
+                <strong id="analytics-total-views">{{ analytics.total_views }}</strong>
             </article>
             <article class="card analytics-summary-card">
                 <span>📈 За 24 часа</span>
-                <strong>
-                    {% if selected_summary %}
-                        {% if selected_summary.views_delta_24h is not None %}+{{ selected_summary.views_delta_24h }}{% else %}—{% endif %}
-                    {% else %}
-                        {% if analytics.total_delta_24h is not None %}+{{ analytics.total_delta_24h }}{% else %}—{% endif %}
-                    {% endif %}
-                </strong>
+                <strong id="analytics-delta-24h">{% if analytics.total_delta_24h is not None %}+{{ analytics.total_delta_24h }}{% else %}—{% endif %}</strong>
             </article>
             <article class="card analytics-summary-card">
                 <span>📅 За 7 дней</span>
-                <strong>
-                    {% if selected_summary %}
-                        {% if selected_summary.views_delta_7d is not None %}+{{ selected_summary.views_delta_7d }}{% else %}—{% endif %}
-                    {% else %}
-                        {% if analytics.total_delta_7d is not None %}+{{ analytics.total_delta_7d }}{% else %}—{% endif %}
-                    {% endif %}
-                </strong>
+                <strong id="analytics-delta-7d">{% if analytics.total_delta_7d is not None %}+{{ analytics.total_delta_7d }}{% else %}—{% endif %}</strong>
             </article>
         </section>
 
         <section class="analytics-chart-grid">
             <article class="card analytics-chart-card">
                 <div class="title">📈 Общие просмотры за 24 часа</div>
-                <div class="small">{% if selected_listing %}Прирост просмотров выбранного объявления за последние 24 часа, по часам.{% else %}Суммарный прирост просмотров всех объявлений за последние 24 часа, по часам.{% endif %}</div>
+                <div class="small" id="analytics-description-24h">Суммарный прирост просмотров всех объявлений за последние 24 часа, по часам.</div>
                 <canvas id="chart-24h" class="analytics-canvas" height="230"></canvas>
             </article>
 
             <article class="card analytics-chart-card">
                 <div class="title">📅 Общие просмотры за 7 дней</div>
-                <div class="small">{% if selected_listing %}Прирост просмотров выбранного объявления за последние 7 дней, по дням.{% else %}Суммарный прирост просмотров всех объявлений за последние 7 дней, по дням.{% endif %}</div>
+                <div class="small" id="analytics-description-7d">Суммарный прирост просмотров всех объявлений за последние 7 дней, по дням.</div>
                 <canvas id="chart-7d" class="analytics-canvas" height="230"></canvas>
             </article>
 
             <article class="card analytics-chart-card analytics-chart-wide">
                 <div class="title">🕒 Наиболее активные часы</div>
-                <div class="small">{% if selected_listing %}В какие часы суток выбранное объявление набирало больше всего просмотров за всю сохранённую историю.{% else %}В какие часы суток все объявления набирали больше всего просмотров за всю сохранённую историю.{% endif %}</div>
+                <div class="small" id="analytics-description-hours">В какие часы суток все объявления набирали больше всего просмотров за всю сохранённую историю.</div>
                 <canvas id="chart-hours-all-time" class="analytics-canvas" height="230"></canvas>
             </article>
         </section>
@@ -72,15 +57,15 @@
         <section>
             <article class="card">
                 <div class="title">🚗 По объявлениям</div>
-                <div class="small analytics-listing-hint">Нажмите на объявление, чтобы перестроить все графики.</div>
+                <div class="small analytics-listing-hint">Вкладки выше переключают все три графика мгновенно, без перезагрузки страницы.</div>
                 <div class="analytics-listing-table">
                     {% for listing in analytics.listings %}
-                        <a class="analytics-listing-row{% if selected_listing and selected_listing.id == listing.listing_id %} selected{% endif %}" href="?listing={{ listing.listing_id }}">
+                        <button class="analytics-listing-row" type="button" data-analytics-key="{{ listing.listing_id }}">
                             <span>{{ listing.title }}</span>
                             <span>👁 {{ listing.views_count }}</span>
                             <span>24 ч: {% if listing.views_delta_24h is not None %}+{{ listing.views_delta_24h }}{% else %}—{% endif %}</span>
                             <span>7 дн.: {% if listing.views_delta_7d is not None %}+{{ listing.views_delta_7d }}{% else %}—{% endif %}</span>
-                        </a>
+                        </button>
                     {% endfor %}
                 </div>
             </article>
@@ -89,20 +74,36 @@
         <div class="empty">Статистика просмотров пока недоступна.</div>
     {% endif %}
 
-    {{ chart_24h|json_script:"chart-24h-data" }}
-    {{ chart_7d|json_script:"chart-7d-data" }}
-    {{ chart_hours_all_time|json_script:"chart-hours-all-time-data" }}
+    {{ chart_sets|json_script:"analytics-chart-sets" }}
 
     <style>
-        .analytics-filter-card {
-            display: grid;
-            gap: 5px;
-            margin: 0;
-            border-color: var(--line-accent);
+        .analytics-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 2px 0 6px;
+            scrollbar-width: thin;
         }
-        .analytics-filter-card strong {
+        .analytics-tab {
+            flex: 0 0 auto;
+            max-width: 260px;
+            min-height: 38px;
+            padding: 7px 12px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--panel-2);
+            color: var(--text);
+            font: inherit;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .analytics-tab.active {
+            border-color: var(--line-accent);
             color: var(--accent);
-            font-size: 18px;
+            background: rgba(54, 194, 163, .09);
         }
         .analytics-summary-grid {
             display: grid;
@@ -152,12 +153,15 @@
             grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(90px, .6fr));
             gap: 10px;
             align-items: center;
+            width: 100%;
             padding: 9px 10px;
             border: 1px solid transparent;
             border-radius: 7px;
             background: var(--panel-2);
             color: inherit;
-            text-decoration: none;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
         }
         .analytics-listing-row:hover,
         .analytics-listing-row.selected {
@@ -191,16 +195,17 @@
 
     <script>
         (() => {
-            const readData = (id) => JSON.parse(document.getElementById(id).textContent || '[]');
+            const chartSets = JSON.parse(document.getElementById('analytics-chart-sets').textContent || '{}');
             const css = getComputedStyle(document.documentElement);
             const accent = css.getPropertyValue('--accent').trim() || '#3cc7aa';
             const muted = css.getPropertyValue('--muted').trim() || '#8b95a5';
             const line = css.getPropertyValue('--line').trim() || '#39414d';
             const text = css.getPropertyValue('--text').trim() || '#e8edf2';
+            let activeKey = 'all';
 
             const draw = (canvasId, data, labelEvery) => {
                 const canvas = document.getElementById(canvasId);
-                if (!canvas || !data.length) return;
+                if (!canvas || !data || !data.length) return;
 
                 const ratio = window.devicePixelRatio || 1;
                 const width = Math.max(canvas.clientWidth, 280);
@@ -250,14 +255,49 @@
                 });
             };
 
-            const renderAll = () => {
-                draw('chart-24h', readData('chart-24h-data'), 4);
-                draw('chart-7d', readData('chart-7d-data'), 1);
-                draw('chart-hours-all-time', readData('chart-hours-all-time-data'), 3);
+            const formatDelta = (value) => value === null || value === undefined ? '—' : `+${value}`;
+
+            const render = (key) => {
+                const data = chartSets[key] || chartSets.all;
+                if (!data) return;
+                activeKey = key in chartSets ? key : 'all';
+                const isAll = activeKey === 'all';
+
+                document.getElementById('analytics-total-views').textContent = data.views_count;
+                document.getElementById('analytics-delta-24h').textContent = formatDelta(data.delta_24h);
+                document.getElementById('analytics-delta-7d').textContent = formatDelta(data.delta_7d);
+                document.getElementById('analytics-description-24h').textContent = isAll
+                    ? 'Суммарный прирост просмотров всех объявлений за последние 24 часа, по часам.'
+                    : `Прирост просмотров «${data.title}» за последние 24 часа, по часам.`;
+                document.getElementById('analytics-description-7d').textContent = isAll
+                    ? 'Суммарный прирост просмотров всех объявлений за последние 7 дней, по дням.'
+                    : `Прирост просмотров «${data.title}» за последние 7 дней, по дням.`;
+                document.getElementById('analytics-description-hours').textContent = isAll
+                    ? 'В какие часы суток все объявления набирали больше всего просмотров за всю сохранённую историю.'
+                    : `В какие часы суток «${data.title}» набирало больше всего просмотров за всю сохранённую историю.`;
+
+                document.querySelectorAll('.analytics-tab').forEach(tab => {
+                    const selected = tab.dataset.analyticsKey === activeKey;
+                    tab.classList.toggle('active', selected);
+                    tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+                });
+                document.querySelectorAll('.analytics-listing-row').forEach(row => {
+                    row.classList.toggle('selected', row.dataset.analyticsKey === activeKey);
+                });
+
+                draw('chart-24h', data.chart_24h, 4);
+                draw('chart-7d', data.chart_7d, 1);
+                draw('chart-hours-all-time', data.chart_hours_all_time, 3);
             };
 
-            renderAll();
-            window.addEventListener('resize', renderAll);
+            document.querySelectorAll('[data-analytics-key]').forEach(control => {
+                control.addEventListener('click', () => {
+                    render(control.dataset.analyticsKey);
+                });
+            });
+
+            render('all');
+            window.addEventListener('resize', () => render(activeKey));
         })();
     </script>
 {% endblock %}
