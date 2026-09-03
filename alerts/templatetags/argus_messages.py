@@ -36,6 +36,7 @@ def compact_buyer_message(value: str) -> str:
         return ""
 
     patterns = (
+        r"Ein\s+Interessent\s+hat\s+eine\s+Anfrage\s+zu\s+deiner\s+Anzeige\s+.*?\(Anzeigennummer:\s*\d+\)\s+gesendet\.\s*(.*?)(?=\s+Beantworte diese Nachricht|\s+Schütze dich vor Betrug|\s+Dein Team von Kleinanzeigen|$)",
         r"Antwort von\s+[^\s:]+\s+(.*?)(?=\s+Beantworte diese Nachricht|\s+Schütze dich vor Betrug|\s+Dein Team von Kleinanzeigen|$)",
         r"Nachricht von\s+[^\s:]+\s+(.*?)(?=\s+Beantworte diese Nachricht|\s+Schütze dich vor Betrug|\s+Dein Team von Kleinanzeigen|$)",
         r"(?:Nachricht|Message)\s*:\s*(.*?)(?=\s+Beantworte diese Nachricht|\s+Antworten\b|\s+Schütze dich vor Betrug|$)",
