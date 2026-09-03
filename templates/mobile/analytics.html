@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Argus · Аналитика{% endblock %}
+{% block header_title %}📊 Аналитика{% endblock %}
+
+{% block content %}
+    <section class="alert-detail-navigation">
+        <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← Назад</a>
+        <a class="link-button small-action" href="{% url 'mobile_listings' %}">🚗 Объявления</a>
+    </section>
+
+    {% if analytics %}
+        <section class="analytics-summary-grid">
+            <article class="card analytics-summary-card">
+                <span>👁 Всего просмотров</span>
+                <strong>{{ analytics.total_views }}</strong>
+            </article>
+            <article class="card analytics-summary-card">
+                <span>📈 За 24 часа</span>
+                <strong>{% if analytics.total_delta_24h is not None %}+{{ analytics.total_delta_24h }}{% else %}—{% endif %}</strong>
+            </article>
+            <article class="card analytics-summary-card">
+                <span>📅 За 7 дней</span>
+                <strong>{% if analytics.total_delta_7d is not None %}+{{ analytics.total_delta_7d }}{% else %}—{% endif %}</strong>
+            </article>
+        </section>
+
+        <section class="analytics-chart-grid">
+            <article class="card analytics-chart-card">
+                <div class="title">📈 Просмотры за 24 часа</div>
+                <div class="small">Прирост по сохранённым замерам, по часам.</div>
+                <canvas id="chart-24h" class="analytics-canvas" height="230"></canvas>
+            </article>
+
+            <article class="card analytics-chart-card">
+                <div class="title">📅 Просмотры за 7 дней</div>
+                <div class="small">Прирост просмотров по дням.</div>
+                <canvas id="chart-7d" class="analytics-canvas" height="230"></canvas>
+            </article>
+        </section>
+
+        <section>
+            <article class="card">
+                <div class="title">🚗 По объявлениям</div>
+                <div class="analytics-listing-table">
+                    {% for listing in analytics.listings %}
+                        <div class="analytics-listing-row">
+                            <span>{{ listing.title }}</span>
+                            <span>👁 {{ listing.views_count }}</span>
+                            <span>24 ч: {% if listing.views_delta_24h is not None %}+{{ listing.views_delta_24h }}{% else %}—{% endif %}</span>
+                            <span>7 дн.: {% if listing.views_delta_7d is not None %}+{{ listing.views_delta_7d }}{% else %}—{% endif %}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+    {% else %}
+        <div class="empty">Статистика просмотров пока недоступна.</div>
+    {% endif %}
+
+    {{ chart_24h|json_script:"chart-24h-data" }}
+    {{ chart_7d|json_script:"chart-7d-data" }}
+
+    <style>
+        .analytics-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .analytics-summary-card {
+            display: grid;
+            gap: 7px;
+            margin: 0;
+        }
+        .analytics-summary-card span {
+            color: var(--muted);
+        }
+        .analytics-summary-card strong {
+            color: var(--accent);
+            font-size: 26px;
+        }
+        .analytics-chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .analytics-chart-card {
+            min-width: 0;
+            margin: 0;
+        }
+        .analytics-canvas {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            margin-top: 12px;
+        }
+        .analytics-listing-table {
+            display: grid;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .analytics-listing-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(90px, .6fr));
+            gap: 10px;
+            align-items: center;
+            padding: 9px 10px;
+            border-radius: 7px;
+            background: var(--panel-2);
+        }
+        .analytics-listing-row span:first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 700;
+        }
+        @media (max-width: 800px) {
+            .analytics-summary-grid,
+            .analytics-chart-grid {
+                grid-template-columns: 1fr;
+            }
+            .analytics-listing-row {
+                grid-template-columns: 1fr 1fr;
+            }
+            .analytics-listing-row span:first-child {
+                grid-column: 1 / -1;
+            }
+        }
+    </style>
+
+    <script>
+        (() => {
+            const readData = (id) => JSON.parse(document.getElementById(id).textContent || '[]');
+            const css = getComputedStyle(document.documentElement);
+            const accent = css.getPropertyValue('--accent').trim() || '#3cc7aa';
+            const muted = css.getPropertyValue('--muted').trim() || '#8b95a5';
+            const line = css.getPropertyValue('--line').trim() || '#39414d';
+            const text = css.getPropertyValue('--text').trim() || '#e8edf2';
+
+            const draw = (canvasId, data, labelEvery) => {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas || !data.length) return;
+
+                const ratio = window.devicePixelRatio || 1;
+                const width = Math.max(canvas.clientWidth, 280);
+                const height = 230;
+                canvas.width = width * ratio;
+                canvas.height = height * ratio;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(ratio, ratio);
+
+                const pad = { top: 18, right: 12, bottom: 34, left: 38 };
+                const chartWidth = width - pad.left - pad.right;
+                const chartHeight = height - pad.top - pad.bottom;
+                const maxValue = Math.max(...data.map(item => Number(item.value) || 0), 1);
+                const barGap = 4;
+                const barWidth = Math.max((chartWidth / data.length) - barGap, 3);
+
+                ctx.font = '12px sans-serif';
+                ctx.textBaseline = 'middle';
+                ctx.lineWidth = 1;
+
+                for (let step = 0; step <= 4; step += 1) {
+                    const y = pad.top + chartHeight - (chartHeight * step / 4);
+                    const value = Math.round(maxValue * step / 4);
+                    ctx.strokeStyle = line;
+                    ctx.beginPath();
+                    ctx.moveTo(pad.left, y);
+                    ctx.lineTo(width - pad.right, y);
+                    ctx.stroke();
+                    ctx.fillStyle = muted;
+                    ctx.textAlign = 'right';
+                    ctx.fillText(String(value), pad.left - 7, y);
+                }
+
+                data.forEach((item, index) => {
+                    const value = Number(item.value) || 0;
+                    const x = pad.left + index * (chartWidth / data.length) + barGap / 2;
+                    const barHeight = value ? Math.max((value / maxValue) * chartHeight, 2) : 1;
+                    const y = pad.top + chartHeight - barHeight;
+                    ctx.fillStyle = accent;
+                    ctx.fillRect(x, y, barWidth, barHeight);
+
+                    if (index % labelEvery === 0 || index === data.length - 1) {
+                        ctx.fillStyle = text;
+                        ctx.textAlign = 'center';
+                        ctx.fillText(item.label, x + barWidth / 2, height - 14);
+                    }
+                });
+            };
+
+            const renderAll = () => {
+                draw('chart-24h', readData('chart-24h-data'), 4);
+                draw('chart-7d', readData('chart-7d-data'), 1);
+            };
+
+            renderAll();
+            window.addEventListener('resize', renderAll);
+        })();
+    </script>
+{% endblock %}
