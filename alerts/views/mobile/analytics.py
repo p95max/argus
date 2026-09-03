@@ -5,7 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
 from django.utils import timezone
 
-from ...models import ListingViewStat
+from ...models import Listing, ListingViewStat
 from ...services.listing_analytics import get_listing_analytics
 
 
@@ -14,7 +14,7 @@ def _require_staff(user):
         raise PermissionDenied("Mobile control panel is available only for staff users.")
 
 
-def _growth_events():
+def _growth_events(listing_id=None):
     """Return timestamped positive view deltas from saved listing snapshots."""
     events = []
     previous_by_listing = {}
@@ -23,6 +23,9 @@ def _growth_events():
         .filter(listing__kleinanzeigen_url__gt="")
         .order_by("listing_id", "created_at", "id")
     )
+    if listing_id is not None:
+        stats = stats.filter(listing_id=listing_id)
+
     for stat in stats:
         previous = previous_by_listing.get(stat.listing_id)
         if previous is not None:
@@ -67,19 +70,44 @@ def _build_daily_chart(events, now):
     ]
 
 
+def _selected_listing_summary(analytics, listing_id):
+    if analytics is None or listing_id is None:
+        return None
+    return next(
+        (item for item in analytics.listings if item.listing_id == listing_id),
+        None,
+    )
+
+
 @login_required
 def mobile_analytics(request):
     _require_staff(request.user)
 
     now = timezone.now()
     analytics = get_listing_analytics(now=now)
-    events = _growth_events()
+
+    selected_listing = None
+    selected_listing_id = request.GET.get("listing")
+    if selected_listing_id:
+        try:
+            selected_listing_id = int(selected_listing_id)
+        except (TypeError, ValueError):
+            selected_listing_id = None
+        else:
+            selected_listing = Listing.objects.filter(id=selected_listing_id).first()
+            if selected_listing is None:
+                selected_listing_id = None
+
+    selected_summary = _selected_listing_summary(analytics, selected_listing_id)
+    events = _growth_events(selected_listing_id)
 
     return render(
         request,
         "mobile/analytics.html",
         {
             "analytics": analytics,
+            "selected_listing": selected_listing,
+            "selected_summary": selected_summary,
             "chart_24h": _build_hourly_chart(events, now),
             "chart_7d": _build_daily_chart(events, now),
         },
