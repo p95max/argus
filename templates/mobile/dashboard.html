@@ -34,6 +34,19 @@
             {% endif %}
         </article>
 
+        <a class="card dashboard-summary-card dashboard-analytics-card" href="{% url 'mobile_listings' %}">
+            <div class="title">📊 Аналитика</div>
+            {% if listing_analytics %}
+                <div class="dashboard-analytics-total">👁 {{ listing_analytics.total_views }} просмотров</div>
+                <div class="dashboard-analytics-metrics">
+                    <div><span>📈 24 ч</span><strong>{% if listing_analytics.total_delta_24h is not None %}+{{ listing_analytics.total_delta_24h }}{% else %}—{% endif %}</strong></div>
+                    <div><span>📅 7 дней</span><strong>{% if listing_analytics.total_delta_7d is not None %}+{{ listing_analytics.total_delta_7d }}{% else %}—{% endif %}</strong></div>
+                </div>
+            {% else %}
+                <div class="small">Статистика просмотров пока недоступна.</div>
+            {% endif %}
+        </a>
+
         <a class="card dashboard-summary-card dashboard-listings-card" href="{% url 'mobile_listings' %}">
             <div class="title">🚗 Объявления</div>
             <div class="dashboard-active-listings">Активных объявлений: {{ active_listings_count }}</div>
@@ -56,7 +69,7 @@
     </section>
 
     <style>
-        .dashboard-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .dashboard-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
         .dashboard-overview > .card { margin: 0; }
         .dashboard-summary-card { min-height: 166px; border-color: var(--line); background: var(--panel); }
         .gmail-overview-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
@@ -64,14 +77,21 @@
         .gmail-check-action { align-self: center; margin: 0; }
         .gmail-check-action form { display: flex; }
         .gmail-check-button { display: grid; place-items: center; min-width: 58px; min-height: 58px; padding: 0; font-size: 24px; }
+        .dashboard-analytics-card,
         .dashboard-listings-card { display: grid; align-content: start; gap: 9px; text-decoration: none; color: inherit; }
+        .dashboard-analytics-card:hover,
         .dashboard-listings-card:hover { border-color: var(--line-accent); }
+        .dashboard-analytics-total,
         .dashboard-active-listings { color: var(--accent); font-size: 20px; font-weight: 800; }
+        .dashboard-analytics-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .dashboard-analytics-metrics div { display: grid; gap: 3px; padding: 8px 10px; border-radius: 6px; background: var(--panel-2); }
+        .dashboard-analytics-metrics span { color: var(--muted); font-size: 13px; }
+        .dashboard-analytics-metrics strong { color: var(--accent); font-size: 18px; }
         .dashboard-listing-preview { display: grid; gap: 6px; }
         .dashboard-listing-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 9px; border-radius: 6px; background: var(--panel-2); }
         .dashboard-listing-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .dashboard-listing-row strong { flex: 0 0 auto; color: var(--accent); }
-        @media (max-width: 640px) { .dashboard-overview { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .dashboard-overview { grid-template-columns: 1fr; } }
     </style>
 
     <section>
