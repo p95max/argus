@@ -55,19 +55,18 @@
         </section>
 
         <section>
-            <article class="card">
-                <div class="title">🚗 По объявлениям</div>
-                <div class="small analytics-listing-hint">Вкладки выше переключают все три графика мгновенно, без перезагрузки страницы.</div>
-                <div class="analytics-listing-table">
-                    {% for listing in analytics.listings %}
-                        <button class="analytics-listing-row" type="button" data-analytics-key="{{ listing.listing_id }}">
-                            <span>{{ listing.title }}</span>
-                            <span>👁 {{ listing.views_count }}</span>
-                            <span>24 ч: {% if listing.views_delta_24h is not None %}+{{ listing.views_delta_24h }}{% else %}—{% endif %}</span>
-                            <span>7 дн.: {% if listing.views_delta_7d is not None %}+{{ listing.views_delta_7d }}{% else %}—{% endif %}</span>
-                        </button>
-                    {% endfor %}
-                </div>
+            <article class="card analytics-top-listing-card">
+                <div class="title">🏆 Топ объявление по просмотрам</div>
+                {% with top_listing=analytics.listings|dictsortreversed:"views_count"|first %}
+                    {% if top_listing %}
+                        <div class="analytics-top-listing-name">🚗 {{ top_listing.title }}</div>
+                        <div class="analytics-top-listing-metrics">
+                            <span>👁 {{ top_listing.views_count }}</span>
+                            <span>24 ч: {% if top_listing.views_delta_24h is not None %}+{{ top_listing.views_delta_24h }}{% else %}—{% endif %}</span>
+                            <span>7 дн.: {% if top_listing.views_delta_7d is not None %}+{{ top_listing.views_delta_7d }}{% else %}—{% endif %}</span>
+                        </div>
+                    {% endif %}
+                {% endwith %}
             </article>
         </section>
     {% else %}
@@ -140,41 +139,23 @@
             max-width: 100%;
             margin-top: 12px;
         }
-        .analytics-listing-hint {
-            margin-top: 5px;
-        }
-        .analytics-listing-table {
+        .analytics-top-listing-card {
             display: grid;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        .analytics-listing-row {
-            display: grid;
-            grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(90px, .6fr));
             gap: 10px;
-            align-items: center;
-            width: 100%;
-            padding: 9px 10px;
-            border: 1px solid transparent;
+        }
+        .analytics-top-listing-name {
+            font-size: 18px;
+            font-weight: 800;
+        }
+        .analytics-top-listing-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .analytics-top-listing-metrics span {
+            padding: 7px 10px;
             border-radius: 7px;
             background: var(--panel-2);
-            color: inherit;
-            font: inherit;
-            text-align: left;
-            cursor: pointer;
-        }
-        .analytics-listing-row:hover,
-        .analytics-listing-row.selected {
-            border-color: var(--line-accent);
-        }
-        .analytics-listing-row.selected {
-            background: rgba(54, 194, 163, .08);
-        }
-        .analytics-listing-row span:first-child {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-weight: 700;
         }
         @media (max-width: 800px) {
             .analytics-summary-grid,
@@ -183,12 +164,6 @@
             }
             .analytics-chart-wide {
                 grid-column: auto;
-            }
-            .analytics-listing-row {
-                grid-template-columns: 1fr 1fr;
-            }
-            .analytics-listing-row span:first-child {
-                grid-column: 1 / -1;
             }
         }
     </style>
@@ -280,9 +255,6 @@
                     const selected = tab.dataset.analyticsKey === activeKey;
                     tab.classList.toggle('active', selected);
                     tab.setAttribute('aria-selected', selected ? 'true' : 'false');
-                });
-                document.querySelectorAll('.analytics-listing-row').forEach(row => {
-                    row.classList.toggle('selected', row.dataset.analyticsKey === activeKey);
                 });
 
                 draw('chart-24h', data.chart_24h, 4);
