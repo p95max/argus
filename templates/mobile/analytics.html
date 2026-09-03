@@ -51,22 +51,28 @@
 
         <section class="analytics-chart-grid">
             <article class="card analytics-chart-card">
-                <div class="title">📈 Просмотры за 24 часа</div>
-                <div class="small">{% if selected_listing %}Прирост для выбранного объявления по часам.{% else %}Прирост по всем объявлениям, по часам.{% endif %}</div>
+                <div class="title">📈 Общие просмотры за 24 часа</div>
+                <div class="small">{% if selected_listing %}Прирост просмотров выбранного объявления за последние 24 часа, по часам.{% else %}Суммарный прирост просмотров всех объявлений за последние 24 часа, по часам.{% endif %}</div>
                 <canvas id="chart-24h" class="analytics-canvas" height="230"></canvas>
             </article>
 
             <article class="card analytics-chart-card">
-                <div class="title">📅 Просмотры за 7 дней</div>
-                <div class="small">{% if selected_listing %}Прирост для выбранного объявления по дням.{% else %}Прирост по всем объявлениям по дням.{% endif %}</div>
+                <div class="title">📅 Общие просмотры за 7 дней</div>
+                <div class="small">{% if selected_listing %}Прирост просмотров выбранного объявления за последние 7 дней, по дням.{% else %}Суммарный прирост просмотров всех объявлений за последние 7 дней, по дням.{% endif %}</div>
                 <canvas id="chart-7d" class="analytics-canvas" height="230"></canvas>
+            </article>
+
+            <article class="card analytics-chart-card analytics-chart-wide">
+                <div class="title">🕒 Наиболее активные часы</div>
+                <div class="small">{% if selected_listing %}В какие часы суток выбранное объявление набирало больше всего просмотров за всю сохранённую историю.{% else %}В какие часы суток все объявления набирали больше всего просмотров за всю сохранённую историю.{% endif %}</div>
+                <canvas id="chart-hours-all-time" class="analytics-canvas" height="230"></canvas>
             </article>
         </section>
 
         <section>
             <article class="card">
                 <div class="title">🚗 По объявлениям</div>
-                <div class="small analytics-listing-hint">Нажмите на объявление, чтобы перестроить оба графика.</div>
+                <div class="small analytics-listing-hint">Нажмите на объявление, чтобы перестроить все графики.</div>
                 <div class="analytics-listing-table">
                     {% for listing in analytics.listings %}
                         <a class="analytics-listing-row{% if selected_listing and selected_listing.id == listing.listing_id %} selected{% endif %}" href="?listing={{ listing.listing_id }}">
@@ -85,6 +91,7 @@
 
     {{ chart_24h|json_script:"chart-24h-data" }}
     {{ chart_7d|json_script:"chart-7d-data" }}
+    {{ chart_hours_all_time|json_script:"chart-hours-all-time-data" }}
 
     <style>
         .analytics-filter-card {
@@ -122,6 +129,9 @@
         .analytics-chart-card {
             min-width: 0;
             margin: 0;
+        }
+        .analytics-chart-wide {
+            grid-column: 1 / -1;
         }
         .analytics-canvas {
             display: block;
@@ -166,6 +176,9 @@
             .analytics-summary-grid,
             .analytics-chart-grid {
                 grid-template-columns: 1fr;
+            }
+            .analytics-chart-wide {
+                grid-column: auto;
             }
             .analytics-listing-row {
                 grid-template-columns: 1fr 1fr;
@@ -240,6 +253,7 @@
             const renderAll = () => {
                 draw('chart-24h', readData('chart-24h-data'), 4);
                 draw('chart-7d', readData('chart-7d-data'), 1);
+                draw('chart-hours-all-time', readData('chart-hours-all-time-data'), 3);
             };
 
             renderAll();
