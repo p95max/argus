@@ -8,6 +8,7 @@ from django.views.generic import RedirectView
 from django.conf import settings
 from alerts.monitoring.health import build_health_report
 from alerts.views.mobile import dashboard as mobile
+from alerts.views.mobile.analytics import mobile_analytics
 from alerts.views.mobile.archive import mobile_clear_archived_alerts
 from alerts.views.mobile.listings import (
     mobile_close_listing,
@@ -49,6 +50,7 @@ urlpatterns = [
         name="favicon",
     ),
     path("m/", mobile_dashboard, name="mobile_dashboard"),
+    path("m/analytics/", mobile_analytics, name="mobile_analytics"),
     path("m/listings/", mobile_listings, name="mobile_listings"),
     path("m/listings/create/", mobile_create_listing, name="mobile_create_listing"),
     path(
