@@ -7,34 +7,58 @@
     <section class="alert-detail-navigation">
         <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">← Назад</a>
         <a class="link-button small-action" href="{% url 'mobile_listings' %}">🚗 Объявления</a>
+        {% if selected_listing %}
+            <a class="link-button small-action" href="{% url 'mobile_analytics' %}">↺ Сбросить</a>
+        {% endif %}
     </section>
 
     {% if analytics %}
+        {% if selected_listing %}
+            <section>
+                <article class="card analytics-filter-card">
+                    <span class="small">Графики по объявлению</span>
+                    <strong>🚗 {{ selected_listing.title }}</strong>
+                </article>
+            </section>
+        {% endif %}
+
         <section class="analytics-summary-grid">
             <article class="card analytics-summary-card">
                 <span>👁 Всего просмотров</span>
-                <strong>{{ analytics.total_views }}</strong>
+                <strong>{% if selected_summary %}{{ selected_summary.views_count }}{% else %}{{ analytics.total_views }}{% endif %}</strong>
             </article>
             <article class="card analytics-summary-card">
                 <span>📈 За 24 часа</span>
-                <strong>{% if analytics.total_delta_24h is not None %}+{{ analytics.total_delta_24h }}{% else %}—{% endif %}</strong>
+                <strong>
+                    {% if selected_summary %}
+                        {% if selected_summary.views_delta_24h is not None %}+{{ selected_summary.views_delta_24h }}{% else %}—{% endif %}
+                    {% else %}
+                        {% if analytics.total_delta_24h is not None %}+{{ analytics.total_delta_24h }}{% else %}—{% endif %}
+                    {% endif %}
+                </strong>
             </article>
             <article class="card analytics-summary-card">
                 <span>📅 За 7 дней</span>
-                <strong>{% if analytics.total_delta_7d is not None %}+{{ analytics.total_delta_7d }}{% else %}—{% endif %}</strong>
+                <strong>
+                    {% if selected_summary %}
+                        {% if selected_summary.views_delta_7d is not None %}+{{ selected_summary.views_delta_7d }}{% else %}—{% endif %}
+                    {% else %}
+                        {% if analytics.total_delta_7d is not None %}+{{ analytics.total_delta_7d }}{% else %}—{% endif %}
+                    {% endif %}
+                </strong>
             </article>
         </section>
 
         <section class="analytics-chart-grid">
             <article class="card analytics-chart-card">
                 <div class="title">📈 Просмотры за 24 часа</div>
-                <div class="small">Прирост по сохранённым замерам, по часам.</div>
+                <div class="small">{% if selected_listing %}Прирост для выбранного объявления по часам.{% else %}Прирост по всем объявлениям, по часам.{% endif %}</div>
                 <canvas id="chart-24h" class="analytics-canvas" height="230"></canvas>
             </article>
 
             <article class="card analytics-chart-card">
                 <div class="title">📅 Просмотры за 7 дней</div>
-                <div class="small">Прирост просмотров по дням.</div>
+                <div class="small">{% if selected_listing %}Прирост для выбранного объявления по дням.{% else %}Прирост по всем объявлениям по дням.{% endif %}</div>
                 <canvas id="chart-7d" class="analytics-canvas" height="230"></canvas>
             </article>
         </section>
@@ -42,14 +66,15 @@
         <section>
             <article class="card">
                 <div class="title">🚗 По объявлениям</div>
+                <div class="small analytics-listing-hint">Нажмите на объявление, чтобы перестроить оба графика.</div>
                 <div class="analytics-listing-table">
                     {% for listing in analytics.listings %}
-                        <div class="analytics-listing-row">
+                        <a class="analytics-listing-row{% if selected_listing and selected_listing.id == listing.listing_id %} selected{% endif %}" href="?listing={{ listing.listing_id }}">
                             <span>{{ listing.title }}</span>
                             <span>👁 {{ listing.views_count }}</span>
                             <span>24 ч: {% if listing.views_delta_24h is not None %}+{{ listing.views_delta_24h }}{% else %}—{% endif %}</span>
                             <span>7 дн.: {% if listing.views_delta_7d is not None %}+{{ listing.views_delta_7d }}{% else %}—{% endif %}</span>
-                        </div>
+                        </a>
                     {% endfor %}
                 </div>
             </article>
@@ -62,6 +87,16 @@
     {{ chart_7d|json_script:"chart-7d-data" }}
 
     <style>
+        .analytics-filter-card {
+            display: grid;
+            gap: 5px;
+            margin: 0;
+            border-color: var(--line-accent);
+        }
+        .analytics-filter-card strong {
+            color: var(--accent);
+            font-size: 18px;
+        }
         .analytics-summary-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -94,6 +129,9 @@
             max-width: 100%;
             margin-top: 12px;
         }
+        .analytics-listing-hint {
+            margin-top: 5px;
+        }
         .analytics-listing-table {
             display: grid;
             gap: 8px;
@@ -105,8 +143,18 @@
             gap: 10px;
             align-items: center;
             padding: 9px 10px;
+            border: 1px solid transparent;
             border-radius: 7px;
             background: var(--panel-2);
+            color: inherit;
+            text-decoration: none;
+        }
+        .analytics-listing-row:hover,
+        .analytics-listing-row.selected {
+            border-color: var(--line-accent);
+        }
+        .analytics-listing-row.selected {
+            background: rgba(54, 194, 163, .08);
         }
         .analytics-listing-row span:first-child {
             overflow: hidden;
