@@ -10,6 +10,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from django.db.models import Max
 from django.utils import timezone
 
 from ..models import Listing, ListingViewStat
@@ -201,13 +202,40 @@ def verify_listing_url(value: str, *, opener=None) -> ListingViewCheck:
         return ListingViewCheck(None, "listing_unavailable")
 
 
+def _repair_decreasing_view_history(listing: Listing) -> int | None:
+    """Drop decreasing snapshots and restore the current counter from valid history."""
+
+    historical_max = listing.view_stats.aggregate(value=Max("views_count"))["value"]
+    if historical_max is None:
+        return listing.views_count
+
+    running_max = None
+    invalid_ids = []
+    for snapshot in listing.view_stats.order_by("created_at", "id").only("id", "views_count"):
+        if running_max is not None and snapshot.views_count < running_max:
+            invalid_ids.append(snapshot.id)
+            continue
+        running_max = snapshot.views_count
+
+    if invalid_ids:
+        ListingViewStat.objects.filter(id__in=invalid_ids).delete()
+
+    if listing.views_count is None or listing.views_count < historical_max:
+        listing.views_count = historical_max
+        listing.save(update_fields=["views_count", "updated_at"])
+
+    return historical_max
+
+
 def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]:
-    """Update all configured listings; a failure never affects listing activity."""
+    """Update configured listings without allowing a public counter to move backwards."""
 
     checked = 0
     updated = 0
     refresh_before = timezone.now() - VIEW_COUNTER_REFRESH_INTERVAL
     for listing in Listing.objects.exclude(kleinanzeigen_url="").iterator():
+        historical_floor = _repair_decreasing_view_history(listing)
+
         if listing.views_checked_at and listing.views_checked_at >= refresh_before:
             continue
         checked += 1
@@ -225,6 +253,16 @@ def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]
             continue
 
         now = timezone.now()
+        safe_floor = historical_floor
+        if listing.views_count is not None:
+            safe_floor = max(safe_floor or 0, listing.views_count)
+
+        if safe_floor is not None and result.views_count < safe_floor:
+            listing.views_error = "view_counter_decreased"
+            listing.views_checked_at = now
+            listing.save(update_fields=["views_error", "views_checked_at", "updated_at"])
+            continue
+
         changed = listing.views_count != result.views_count
         listing.views_count = result.views_count
         listing.views_checked_at = now
