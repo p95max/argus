@@ -227,6 +227,19 @@ def _repair_decreasing_view_history(listing: Listing) -> int | None:
     return historical_max
 
 
+def repair_listing_view_counters(listings=None) -> int:
+    """Repair already-corrupted current counters from saved monotonic history."""
+
+    queryset = listings if listings is not None else Listing.objects.exclude(kleinanzeigen_url="")
+    repaired = 0
+    for listing in queryset:
+        before = listing.views_count
+        _repair_decreasing_view_history(listing)
+        if listing.views_count != before:
+            repaired += 1
+    return repaired
+
+
 def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]:
     """Update configured listings without allowing a public counter to move backwards."""
 
