@@ -13,6 +13,7 @@ from ...services.kleinanzeigen import (
     canonicalize_kleinanzeigen_ad_id,
     KleinanzeigenURLValidationError,
     ListingViewCheck,
+    repair_listing_view_counters,
     VIEW_COUNTER_REFRESH_INTERVAL,
     validate_kleinanzeigen_url,
     verify_listing_url,
@@ -137,6 +138,7 @@ def _attach_mobile_listing_analytics(listing, *, today, latest_inquiry_at=None):
 def mobile_listings(request):
     _require_staff(request.user)
 
+    repair_listing_view_counters()
     configured_listings = list(
         Listing.objects.select_related("mailbox", "source_alert")
         .prefetch_related("view_stats")
