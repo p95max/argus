@@ -19,6 +19,7 @@ from ..gmail_polling import (
     get_gmail_polling_status,
 )
 from .git_status import build_git_deploy_status_text as build_git_deploy_status_text_v2
+from .help_command import ACTIVE_BOT_COMMANDS, build_help_message, handle_help_command
 from .i18n import telegram_gettext, use_argus_telegram_language
 from .keyboards import (
     CALLBACK_STATUS_ACTION,
