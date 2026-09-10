@@ -1,7 +1,6 @@
 import re
 from datetime import timedelta
 from html import unescape
-from urllib.parse import urlsplit, urlunsplit
 
 from django.utils import timezone
 
@@ -56,6 +55,27 @@ def prune_expired_listing_tombstones() -> int:
     cutoff = timezone.now() - TOMBSTONE_RETENTION
     deleted, _ = DeletedListingIdentifier.objects.filter(deleted_at__lt=cutoff).delete()
     return deleted
+
+
+def publication_listing_candidate(alert: MarketplaceAlert):
+    """Return the validated publication listing only when it can still be added."""
+    if not _looks_like_publication_notice(alert):
+        return None
+
+    listing_url = _extract_listing_url(alert) or _url_from_listing_id(alert)
+    if not listing_url:
+        return None
+
+    validated = validate_kleinanzeigen_url(listing_url)
+    prune_expired_listing_tombstones()
+
+    if DeletedListingIdentifier.objects.filter(
+        kleinanzeigen_listing_id=validated.ad_id
+    ).exists():
+        return None
+    if Listing.objects.filter(kleinanzeigen_listing_id=validated.ad_id).exists():
+        return None
+    return validated
 
 
 def sync_listing_from_publication(alert: MarketplaceAlert) -> Listing | None:
