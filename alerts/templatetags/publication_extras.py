@@ -1,14 +1,14 @@
 from django import template
 
-from ..services.listing_publication import publication_listing_candidate
+from ..services.listing_publication import publication_listing_state
 
 register = template.Library()
 
 
 @register.simple_tag
-def publication_add_available(alert) -> bool:
-    """Return whether a publication alert can create a new tracked listing."""
+def publication_state(alert) -> str:
+    """Return the publication listing state for the alert detail UI."""
     try:
-        return publication_listing_candidate(alert) is not None
+        return publication_listing_state(alert)
     except Exception:
-        return False
+        return "missing_id"
