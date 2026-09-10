@@ -75,7 +75,7 @@
                             {% if group.statistics and group.statistics.views_count is not None %}
                                 <span class="status-pill ok listing-views-pill">👁 {{ group.statistics.views_count }}</span>
                                 {% if group.statistics.publication_date %}
-                                    <span class="status-pill muted">{{ group.statistics.publication_icon }} {{ group.statistics.publication_age_days }} дн.</span>
+                                    <span class="status-pill muted">{{ group.statistics.publication_icon }} {{ group.statistics.publication_age_label }}</span>
                                 {% endif %}
                                 {% if group.statistics.last_activity_stale %}
                                     <span class="status-pill warn">⚠️ без активности {{ group.statistics.last_activity_age_days }} дн.</span>
