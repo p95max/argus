@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from ..models import (
     ArgusSettings,
+    GmailPollingSettings,
     LanguageCode,
     LeadFlag,
     Listing,
@@ -114,6 +115,55 @@ class ArgusSettingsAdmin(admin.ModelAdmin):
         settings = ArgusSettings.load()
         return redirect(
             reverse("admin:alerts_argussettings_change", args=[settings.pk])
+        )
+
+
+@admin.register(GmailPollingSettings)
+class GmailPollingSettingsAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "interval_minutes",
+        "working_hours_start",
+        "working_hours_end",
+        "updated_at",
+    )
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (
+            _("Gmail polling schedule"),
+            {
+                "description": _(
+                    "Gmail is checked only during working hours. Outside this window "
+                    "Argus does not send polling requests to Gmail."
+                ),
+                "fields": (
+                    "interval_minutes",
+                    "working_hours_start",
+                    "working_hours_end",
+                ),
+            },
+        ),
+        (
+            _("Audit"),
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def has_add_permission(self, request):
+        if GmailPollingSettings.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        polling = GmailPollingSettings.load()
+        return redirect(
+            reverse("admin:alerts_gmailpollingsettings_change", args=[polling.pk])
         )
 
 
