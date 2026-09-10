@@ -486,10 +486,18 @@ class TelegramSettings(TimestampedModel):
 
 
 class GmailPollingSettings(TimestampedModel):
+    working_hours_enabled = models.BooleanField(
+        _("restrict Gmail checks to working hours"),
+        default=True,
+        help_text=_(
+            "When enabled, Gmail is not checked outside the configured working hours. "
+            "Disable this option to check Gmail around the clock."
+        ),
+    )
     interval_minutes = models.PositiveSmallIntegerField(
         _("Gmail check interval (minutes)"),
         default=10,
-        help_text=_("How often Gmail is checked during working hours."),
+        help_text=_("How often Gmail is checked while polling is allowed."),
     )
     working_hours_start = models.TimeField(
         _("working hours start"),
@@ -515,12 +523,14 @@ class GmailPollingSettings(TimestampedModel):
             raise ValidationError(
                 {"interval_minutes": _("Interval must be at least 1 minute.")}
             )
-        if self.working_hours_start == self.working_hours_end:
+        if self.working_hours_enabled and self.working_hours_start == self.working_hours_end:
             raise ValidationError(
-                _("Working hours start and end must be different.")
+                _("Working hours start and end must be different while working hours are enabled.")
             )
 
     def is_working_time(self, value: time) -> bool:
+        if not self.working_hours_enabled:
+            return True
         start = self.working_hours_start
         end = self.working_hours_end
         if start < end:
