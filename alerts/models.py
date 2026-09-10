@@ -485,6 +485,56 @@ class TelegramSettings(TimestampedModel):
         return cls.objects.create()
 
 
+class GmailPollingSettings(TimestampedModel):
+    interval_minutes = models.PositiveSmallIntegerField(
+        _("Gmail check interval (minutes)"),
+        default=10,
+        help_text=_("How often Gmail is checked during working hours."),
+    )
+    working_hours_start = models.TimeField(
+        _("working hours start"),
+        default=time(7, 0),
+    )
+    working_hours_end = models.TimeField(
+        _("working hours end"),
+        default=time(23, 0),
+    )
+
+    class Meta:
+        verbose_name = _("Gmail polling settings")
+        verbose_name_plural = _("Gmail polling settings")
+
+    def __str__(self):
+        return _("Gmail polling: every %(minutes)s min") % {
+            "minutes": self.interval_minutes,
+        }
+
+    def clean(self):
+        super().clean()
+        if self.interval_minutes < 1:
+            raise ValidationError(
+                {"interval_minutes": _("Interval must be at least 1 minute.")}
+            )
+        if self.working_hours_start == self.working_hours_end:
+            raise ValidationError(
+                _("Working hours start and end must be different.")
+            )
+
+    def is_working_time(self, value: time) -> bool:
+        start = self.working_hours_start
+        end = self.working_hours_end
+        if start < end:
+            return start <= value < end
+        return value >= start or value < end
+
+    @classmethod
+    def load(cls):
+        polling = cls.objects.order_by("id").first()
+        if polling:
+            return polling
+        return cls.objects.create()
+
+
 class ArgusSettings(TimestampedModel):
     language_code = models.CharField(
         _("Interface language"),
