@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n argus_messages %}
+{% load i18n argus_messages publication_extras %}
 
 {% block title %}Argus alert #{{ alert.id }}{% endblock %}
 {% block header_title %}📋 {% blocktrans with id=alert.id %}Lead #{{ id }}{% endblocktrans %}{% endblock %}
@@ -9,6 +9,7 @@
 
 {% block content %}
     {% with security_notice=alert|is_security_system_notice %}
+    {% publication_add_available alert as can_add_publication_listing %}
     <section class="alert-detail-navigation">
         <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">&larr; {% trans "Back" %}</a>
         <a class="link-button small-action" href="{% url 'mobile_listings' %}">🚗 Объявления</a>
@@ -145,6 +146,14 @@
             {% endif %}
 
             <div class="actions compact-actions">
+                {% if can_add_publication_listing %}
+                    <form method="post" action="{% url 'mobile_add_listing_from_publication' alert.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="small-action" type="submit">➕ Добавить новое объявление</button>
+                    </form>
+                {% endif %}
+
                 {% if alert.event_type == 'system_notice' and alert.alert_status != 'archived' and not alert.telegram_sent_at %}
                     <form method="post" action="{% url 'mobile_send_system_notice' alert.id %}">
                         {% csrf_token %}
