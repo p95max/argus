@@ -156,6 +156,8 @@
                     <button class="small-action" type="button" disabled>✅ Объявление уже добавлено · ID {{ listing_info.listing_id }}</button>
                 {% elif listing_info.state == 'deleted' %}
                     <button class="small-action" type="button" disabled>🗑️ Недавно удалено · ID {{ listing_info.listing_id }}</button>
+                {% elif listing_info.state == 'missing_url' %}
+                    <button class="small-action" type="button" disabled>🆔 ID {{ listing_info.listing_id }}</button>
                 {% elif listing_info.state == 'missing_id' %}
                     <button class="small-action" type="button" disabled>⚠️ Не найден ID объявления</button>
                 {% endif %}
