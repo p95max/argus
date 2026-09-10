@@ -41,14 +41,14 @@ def mobile_add_listing_from_publication(request, alert_id):
     if candidate is None:
         messages.info(
             request,
-            "Объявление уже существует, было недавно удалено или ID/ссылка не найдены.",
+            "Объявление уже существует, было недавно удалено или в письме недостаточно данных.",
         )
         return redirect(_safe_next_url(request))
 
     listing = sync_listing_from_publication(alert)
     if listing is None:
-        messages.warning(request, "Не удалось добавить объявление из системного уведомления.")
+        messages.warning(request, "Не удалось добавить объявление из уведомления.")
     else:
-        messages.success(request, f"Объявление добавлено: {listing.title}")
+        messages.success(request, f"Объявление добавлено: {listing.title} · ID {candidate.ad_id}")
 
     return redirect(_safe_next_url(request))
