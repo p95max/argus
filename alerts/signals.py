@@ -3,13 +3,13 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.signals import user_logged_in, user_logged_out
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
-from .models import AdminLoginLog, Listing, MarketplaceAlert
+from .models import AdminLoginLog, Listing
 from .security import _client_ip
-from .services.listing_publication import sync_listing_from_publication, tombstone_listing_id
+from .services.listing_publication import tombstone_listing_id
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +42,6 @@ def log_admin_logout(sender, request, user, **kwargs):
         AdminLoginLog.objects.filter(pk=entry_id, logged_out_at__isnull=True).update(
             logged_out_at=timezone.now()
         )
-
-
-@receiver(post_save, sender=MarketplaceAlert, dispatch_uid="alerts.sync_published_listing")
-def sync_published_listing(sender, instance, created, **kwargs):
-    if not created:
-        return
-    try:
-        sync_listing_from_publication(instance)
-    except Exception:
-        logger.exception("Could not auto-create Listing from publication alert %s", instance.pk)
 
 
 @receiver(post_delete, sender=Listing, dispatch_uid="alerts.remember_deleted_listing")
