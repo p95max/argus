@@ -20,6 +20,7 @@ from alerts.views.mobile.listings import (
     mobile_reopen_listing,
     mobile_validate_kleinanzeigen_url,
 )
+from alerts.views.mobile.publication import mobile_add_listing_from_publication
 from alerts.views.mobile.service_log import mobile_clear_service_events, mobile_dashboard
 
 
@@ -80,6 +81,11 @@ urlpatterns = [
         name="mobile_delete_listing",
     ),
     path("m/alerts/<int:alert_id>/", mobile.mobile_alert_detail, name="mobile_alert_detail"),
+    path(
+        "m/alerts/<int:alert_id>/add-listing/",
+        mobile_add_listing_from_publication,
+        name="mobile_add_listing_from_publication",
+    ),
     path(
         "m/alerts/<int:alert_id>/status/",
         mobile.mobile_update_alert_status,
