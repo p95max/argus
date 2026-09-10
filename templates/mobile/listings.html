@@ -82,11 +82,11 @@
                                 {% endif %}
                             {% endif %}
                             {% if group.is_closed %}
-                                <span class="status-pill danger"><span class="status-dot"></span>закрыто</span>
+                                <span class="status-pill danger listing-status-pill"><span class="status-dot"></span>закрыто</span>
                             {% elif group.open_count %}
-                                <span class="status-pill warn"><span class="status-dot"></span>{{ group.open_count }} активных</span>
+                                <span class="status-pill warn listing-status-pill"><span class="status-dot"></span>{{ group.open_count }} активных</span>
                             {% else %}
-                                <span class="status-pill ok"><span class="status-dot"></span>активно</span>
+                                <span class="status-pill ok listing-status-pill"><span class="status-dot"></span>активно</span>
                             {% endif %}
                         </span>
                     </span>
@@ -263,10 +263,17 @@
             width: 100%;
         }
         .listing-summary-badges {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: auto auto minmax(0, 1fr) auto;
             align-items: center;
             gap: 7px;
+            width: 100%;
+        }
+        .listing-summary-badges .status-pill {
+            white-space: nowrap;
+        }
+        .listing-status-pill {
+            justify-self: end;
         }
         .listing-top-actions {
             display: flex;
