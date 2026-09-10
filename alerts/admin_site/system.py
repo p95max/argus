@@ -122,6 +122,7 @@ class ArgusSettingsAdmin(admin.ModelAdmin):
 class GmailPollingSettingsAdmin(admin.ModelAdmin):
     list_display = (
         "id",
+        "working_hours_enabled",
         "interval_minutes",
         "working_hours_start",
         "working_hours_end",
@@ -133,10 +134,15 @@ class GmailPollingSettingsAdmin(admin.ModelAdmin):
             _("Gmail polling schedule"),
             {
                 "description": _(
-                    "Gmail is checked only during working hours. Outside this window "
-                    "Argus does not send polling requests to Gmail."
+                    "IMPORTANT: when working hours are enabled, Argus does not check Gmail "
+                    "outside the configured time window. New emails, leads and system notices "
+                    "received during that time will not appear in Argus until working hours begin. "
+                    "If you need Argus to work at night or around the clock, simply disable the "
+                    "working-hours restriction; Gmail will then be checked continuously using the "
+                    "configured interval."
                 ),
                 "fields": (
+                    "working_hours_enabled",
                     "interval_minutes",
                     "working_hours_start",
                     "working_hours_end",
