@@ -1,6 +1,9 @@
 import re
+from datetime import timedelta
 from html import unescape
 from urllib.parse import urlsplit, urlunsplit
+
+from django.utils import timezone
 
 from ..listing_tombstones import DeletedListingIdentifier
 from ..models import Listing, MarketplaceAlert
@@ -11,6 +14,7 @@ PUBLICATION_PATTERNS = (
     r"\banzeige wurde erfolgreich ver(?:ö|oe)ffentlicht\b",
     r"\berfolgreich ver(?:ö|oe)ffentlicht\b",
 )
+TOMBSTONE_RETENTION = timedelta(days=30)
 
 
 def _looks_like_publication_notice(alert: MarketplaceAlert) -> bool:
@@ -47,6 +51,13 @@ def _url_from_listing_id(alert: MarketplaceAlert) -> str:
         return ""
 
 
+def prune_expired_listing_tombstones() -> int:
+    """Delete deleted-listing tombstones older than 30 days."""
+    cutoff = timezone.now() - TOMBSTONE_RETENTION
+    deleted, _ = DeletedListingIdentifier.objects.filter(deleted_at__lt=cutoff).delete()
+    return deleted
+
+
 def sync_listing_from_publication(alert: MarketplaceAlert) -> Listing | None:
     """Create a tracker for a publication notice unless its Kleinanzeigen ID is known/deleted."""
     if not _looks_like_publication_notice(alert):
@@ -58,6 +69,8 @@ def sync_listing_from_publication(alert: MarketplaceAlert) -> Listing | None:
 
     validated = validate_kleinanzeigen_url(listing_url)
     ad_id = validated.ad_id
+
+    prune_expired_listing_tombstones()
     if DeletedListingIdentifier.objects.filter(kleinanzeigen_listing_id=ad_id).exists():
         return None
 
@@ -80,4 +93,6 @@ def tombstone_listing_id(listing_id: str) -> None:
     listing_id = (listing_id or "").strip()
     if not listing_id:
         return
+
+    prune_expired_listing_tombstones()
     DeletedListingIdentifier.objects.get_or_create(kleinanzeigen_listing_id=listing_id)
