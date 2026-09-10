@@ -9,7 +9,7 @@
 
 {% block content %}
     {% with security_notice=alert|is_security_system_notice %}
-    {% publication_state alert as publication_listing_state %}
+    {% publication_info alert as listing_info %}
     <section class="alert-detail-navigation">
         <a class="link-button small-action" href="{% url 'mobile_dashboard' %}">&larr; {% trans "Back" %}</a>
         <a class="link-button small-action" href="{% url 'mobile_listings' %}">🚗 Объявления</a>
@@ -146,17 +146,19 @@
             {% endif %}
 
             <div class="actions compact-actions">
-                {% if publication_listing_state == 'available' %}
+                {% if listing_info.state == 'available' %}
                     <form method="post" action="{% url 'mobile_add_listing_from_publication' alert.id %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button class="small-action" type="submit">➕ Добавить новое объявление</button>
+                        <button class="small-action" type="submit">➕ Добавить объявление · ID {{ listing_info.listing_id }}</button>
                     </form>
-                {% elif publication_listing_state == 'existing' %}
-                    <button class="small-action" type="button" disabled>✅ Объявление уже добавлено</button>
-                {% elif publication_listing_state == 'deleted' %}
-                    <button class="small-action" type="button" disabled>🗑️ Недавно удалено</button>
-                {% elif publication_listing_state == 'missing_id' %}
+                {% elif listing_info.state == 'existing' %}
+                    <button class="small-action" type="button" disabled>✅ Объявление уже добавлено · ID {{ listing_info.listing_id }}</button>
+                {% elif listing_info.state == 'deleted' %}
+                    <button class="small-action" type="button" disabled>🗑️ Недавно удалено · ID {{ listing_info.listing_id }}</button>
+                {% elif listing_info.state == 'missing_url' %}
+                    <button class="small-action" type="button" disabled>🆔 ID {{ listing_info.listing_id }} · ссылка не найдена</button>
+                {% elif listing_info.state == 'missing_id' %}
                     <button class="small-action" type="button" disabled>⚠️ Не найден ID объявления</button>
                 {% endif %}
 
