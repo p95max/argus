@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
@@ -6,7 +7,7 @@ from django.utils import timezone
 from alerts.command_locks import CommandAlreadyRunning, command_lock
 from alerts.gmail.gmail import check_mailbox
 from alerts.services.kleinanzeigen import refresh_listing_view_stats
-from alerts.models import MailboxAccount, ServiceEvent
+from alerts.models import GmailPollingSettings, MailboxAccount, ServiceEvent
 
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,29 @@ def recover_mailbox_error(mailbox: MailboxAccount) -> int:
     )
 
 
+def _gmail_polling_skip_reason(mailboxes, *, force=False) -> str:
+    """Return why scheduled Gmail polling should be skipped, or an empty string."""
+    if force:
+        return ""
+
+    polling = GmailPollingSettings.load()
+    now = timezone.localtime()
+    if not polling.is_working_time(now.time()):
+        return (
+            "outside working hours "
+            f"({polling.working_hours_start:%H:%M}-{polling.working_hours_end:%H:%M})"
+        )
+
+    if any(mailbox.last_checked_at is None for mailbox in mailboxes):
+        return ""
+
+    last_check = min(mailbox.last_checked_at for mailbox in mailboxes)
+    next_check = last_check + timedelta(minutes=polling.interval_minutes)
+    if timezone.now() < next_check:
+        return f"next scheduled check at {timezone.localtime(next_check):%H:%M}"
+    return ""
+
+
 class Command(BaseCommand):
     help = "Check active Gmail mailboxes and create alerts for new Kleinanzeigen emails."
 
@@ -48,6 +72,11 @@ class Command(BaseCommand):
             "--max-results",
             type=int,
             default=25,
+        )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Ignore Gmail working hours and interval for a manual check.",
         )
 
     def handle(self, *args, **options):
@@ -72,6 +101,20 @@ class Command(BaseCommand):
 
         if not raw_mailboxes:
             raise CommandError("No active mailboxes found.")
+
+        skip_reason = _gmail_polling_skip_reason(
+            raw_mailboxes,
+            force=options["force"],
+        )
+        if skip_reason:
+            checked_views, updated_views = refresh_listing_view_stats()
+            self.stdout.write(self.style.WARNING(f"Gmail check skipped: {skip_reason}."))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Listing views checked {checked_views}, updated {updated_views}."
+                )
+            )
+            return
 
         mailboxes = []
         total_skipped = 0
