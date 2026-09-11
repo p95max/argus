@@ -49,6 +49,19 @@ def _period_views_line(icon: str, label: str, value: int | None) -> str:
     return f"{icon} {label}: +{_format_count(value)} 👁"
 
 
+def _listing_status_line(listing: Listing | None) -> str:
+    if listing is None:
+        return "⚪ статус объявления: неизвестно"
+    status = listing.kleinanzeigen_status
+    if status == Listing.KleinanzeigenStatus.DELETED:
+        return "❗ статус объявления: удалено"
+    if status == Listing.KleinanzeigenStatus.RESERVED:
+        return "🟡 статус объявления: зарезервировано"
+    if status == Listing.KleinanzeigenStatus.ACTIVE:
+        return "🟢 статус объявления: активно"
+    return "⚪ статус объявления: неизвестно"
+
+
 def _latest_inquiry_at(listing: Listing):
     if not listing.kleinanzeigen_listing_id:
         return None
@@ -110,6 +123,7 @@ def _build_analytics_message() -> str | None:
         leader_used = leader_used or is_leader
         prefix = "🔥 " if is_leader else ""
         lines.append(f"{prefix}<b>{html.escape(item.title)}</b>")
+        lines.append(_listing_status_line(listing))
         lines.append(f"👁 просмотров за всё время: {_format_count(item.views_count)}")
         lines.append(_period_views_line("📈", "за последние 24 ч", item.views_delta_24h))
         lines.append(_period_views_line("📅", "за последние 7 дней", item.views_delta_7d))
