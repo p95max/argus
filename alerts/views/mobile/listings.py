@@ -266,6 +266,7 @@ def _save_listing_from_request(
     if not raw_url:
         listing.kleinanzeigen_url = ""
         listing.kleinanzeigen_listing_id = ""
+        listing.kleinanzeigen_status = Listing.KleinanzeigenStatus.UNKNOWN
         listing.views_count = None
         listing.views_checked_at = None
         listing.views_error = ""
@@ -277,6 +278,7 @@ def _save_listing_from_request(
     listing.kleinanzeigen_url = validated.normalized_url
     listing.kleinanzeigen_listing_id = validated.ad_id
     if url_changed:
+        listing.kleinanzeigen_status = Listing.KleinanzeigenStatus.UNKNOWN
         listing.views_count = None
         listing.views_checked_at = None
         listing.views_error = ""
@@ -287,24 +289,49 @@ def _save_listing_from_request(
         and listing.views_checked_at
         and listing.views_checked_at >= timezone.now() - VIEW_COUNTER_REFRESH_INTERVAL
     ):
-        return ListingViewCheck(listing.views_count, listing.views_error)
+        return ListingViewCheck(
+            listing.views_count,
+            listing.views_error,
+            listing.kleinanzeigen_status,
+        )
 
     try:
         result = verify_listing_url(validated.normalized_url)
     except Exception:
         result = ListingViewCheck(None, "listing_unavailable")
+
+    now = timezone.now()
+    status_changed = result.status_verified and listing.kleinanzeigen_status != result.listing_status
+    if status_changed:
+        listing.kleinanzeigen_status = result.listing_status
+
+    if result.listing_status == Listing.KleinanzeigenStatus.DELETED:
+        listing.views_error = ""
+        listing.views_checked_at = now
+        update_fields = ["views_error", "views_checked_at", "updated_at"]
+        if status_changed:
+            update_fields.append("kleinanzeigen_status")
+        listing.save(update_fields=update_fields)
+        return result
+
     if result.verified:
         changed = listing.views_count != result.views_count
         listing.views_count = result.views_count
-        listing.views_checked_at = timezone.now()
+        listing.views_checked_at = now
         listing.views_error = ""
-        listing.save(update_fields=["views_count", "views_checked_at", "views_error", "updated_at"])
+        update_fields = ["views_count", "views_checked_at", "views_error", "updated_at"]
+        if status_changed:
+            update_fields.append("kleinanzeigen_status")
+        listing.save(update_fields=update_fields)
         if changed:
             ListingViewStat.objects.create(listing=listing, views_count=result.views_count)
     else:
         listing.views_error = result.error
-        listing.views_checked_at = timezone.now()
-        listing.save(update_fields=["views_error", "views_checked_at", "updated_at"])
+        listing.views_checked_at = now
+        update_fields = ["views_error", "views_checked_at", "updated_at"]
+        if status_changed:
+            update_fields.append("kleinanzeigen_status")
+        listing.save(update_fields=update_fields)
     return result
 
 
