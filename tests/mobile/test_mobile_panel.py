@@ -341,6 +341,7 @@ def test_mobile_panel_manual_mailbox_check(monkeypatch, client, staff_user, aler
     staff_user.is_superuser = True
     staff_user.save(update_fields=["is_superuser"])
     checked = []
+    listing_refreshes = []
 
     class Result:
         fetched = 2
@@ -352,6 +353,10 @@ def test_mobile_panel_manual_mailbox_check(monkeypatch, client, staff_user, aler
         return Result()
 
     monkeypatch.setattr("alerts.mobile.check_mailbox", fake_check_mailbox)
+    monkeypatch.setattr(
+        "alerts.mobile.refresh_listing_view_stats",
+        lambda **kwargs: listing_refreshes.append(kwargs),
+    )
     client.force_login(staff_user)
 
     response = client.post(
@@ -362,7 +367,34 @@ def test_mobile_panel_manual_mailbox_check(monkeypatch, client, staff_user, aler
 
     assert response.status_code == 200
     assert checked == [alert.mailbox_id]
+    assert listing_refreshes == [{"force": True}]
     assert "Mail checked" in response.content.decode("utf-8")
+
+
+@pytest.mark.django_db
+def test_mobile_panel_global_mail_check_refreshes_listings(
+    monkeypatch, client, staff_user, alert
+):
+    staff_user.is_superuser = True
+    staff_user.save(update_fields=["is_superuser"])
+    listing_refreshes = []
+
+    class Result:
+        fetched = 0
+        created = 0
+        duplicates = 0
+
+    monkeypatch.setattr("alerts.mobile.check_mailbox", lambda mailbox: Result())
+    monkeypatch.setattr(
+        "alerts.mobile.refresh_listing_view_stats",
+        lambda **kwargs: listing_refreshes.append(kwargs),
+    )
+    client.force_login(staff_user)
+
+    response = client.post(reverse("mobile_check_gmail_now"))
+
+    assert response.status_code == 302
+    assert listing_refreshes == [{"force": True}]
 
 
 @pytest.mark.django_db

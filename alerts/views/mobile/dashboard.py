@@ -11,6 +11,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from ...services.attention import filter_needs_attention, needs_attention_alert_q
+from ...services.kleinanzeigen import refresh_listing_view_stats
 from ...services.listing_analytics import get_listing_analytics
 from ...command_locks import CommandAlreadyRunning, command_lock
 from ...gmail.gmail import check_mailbox, mark_alert_gmail_message_read
@@ -406,6 +407,7 @@ def mobile_check_mailbox_now(request, mailbox_id):
 
     mailbox = get_object_or_404(MailboxAccount, id=mailbox_id)
     result = check_mailbox(mailbox)
+    refresh_listing_view_stats(force=True)
     if result.created:
         text = _("✅ Почта проверена · новых обращений: %(count)s") % {"count": result.created}
     else:
@@ -448,4 +450,5 @@ def _run_mobile_gmail_check():
         summary["fetched"] += result.fetched
         summary["created"] += result.created
         summary["duplicates"] += result.duplicates
+    refresh_listing_view_stats(force=True)
     return summary

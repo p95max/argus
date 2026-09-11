@@ -385,7 +385,7 @@ def _save_listing_status(listing: Listing, result: ListingViewCheck) -> bool:
     return True
 
 
-def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]:
+def refresh_listing_view_stats(*, fetcher=verify_listing_url, force=False) -> tuple[int, int]:
     """Update listing status and views without allowing the public counter to move backwards."""
 
     checked = 0
@@ -398,7 +398,11 @@ def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]
         if listing.kleinanzeigen_status == Listing.KleinanzeigenStatus.DELETED:
             continue
         recently_checked = listing.views_checked_at and listing.views_checked_at >= refresh_before
-        if recently_checked and listing.kleinanzeigen_status != Listing.KleinanzeigenStatus.UNKNOWN:
+        if (
+            not force
+            and recently_checked
+            and listing.kleinanzeigen_status != Listing.KleinanzeigenStatus.UNKNOWN
+        ):
             continue
 
         checked += 1

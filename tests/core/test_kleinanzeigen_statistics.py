@@ -193,14 +193,15 @@ def test_refresh_changes_reserved_listing_back_to_active():
         kleinanzeigen_url=VALID_URL,
         kleinanzeigen_status=Listing.KleinanzeigenStatus.RESERVED,
         views_count=100,
-        views_checked_at=timezone.now() - VIEW_COUNTER_REFRESH_INTERVAL,
+        views_checked_at=timezone.now(),
     )
 
     refresh_listing_view_stats(
         fetcher=lambda _: ListingViewCheck(
             101,
             listing_status=Listing.KleinanzeigenStatus.ACTIVE,
-        )
+        ),
+        force=True,
     )
 
     listing.refresh_from_db()
