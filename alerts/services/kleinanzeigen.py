@@ -131,12 +131,12 @@ def parse_listing_status(page_html: str) -> str:
 
     html = _normalize_status_markup(page_html)
     deleted_patterns = (
-        r'"(?:adStatus|listingStatus|status)"\s*:\s*"(?:DELETED|REMOVED|AD_STATUS_DELETED|AD_STATUS_REMOVED)"',
+        r'"(?:adStatus|ad[-_]?status|listingStatus|status|state)"\s*:\s*"(?:DELETED|REMOVED|EXPIRED|BLOCKED|AD_STATUS_DELETED|AD_STATUS_REMOVED)"',
         r">\s*Gelöscht\s*<",
         r"\bGelöscht\s*[•·]",
     )
     reserved_patterns = (
-        r'"(?:adStatus|listingStatus|status)"\s*:\s*"(?:RESERVED|AD_STATUS_RESERVED)"',
+        r'"(?:adStatus|ad[-_]?status|listingStatus|status|state)"\s*:\s*"(?:RESERVED|AD_STATUS_RESERVED)"',
         r'"(?:isReserved|reserved)"\s*:\s*true',
         r">\s*Reserviert\s*<",
         r"\bReserviert\s*[•·]",
@@ -147,13 +147,11 @@ def parse_listing_status(page_html: str) -> str:
     if any(re.search(pattern, html, flags=re.IGNORECASE) for pattern in reserved_patterns):
         return Listing.KleinanzeigenStatus.RESERVED
 
-    listing_markers = (
-        r'\bid\s*=\s*["\']viewad-title["\']',
-        r'\bid\s*=\s*["\']viewad-cntr-num["\']',
+    active_patterns = (
+        r'"(?:adStatus|ad[-_]?status|listingStatus|status|state)"\s*:\s*"(?:ACTIVE|AD_STATUS_ACTIVE)"',
         r'\bid\s*=\s*["\']viewad-main["\']',
-        r'"(?:adId|listingId)"\s*:',
     )
-    if any(re.search(pattern, html, flags=re.IGNORECASE) for pattern in listing_markers):
+    if any(re.search(pattern, html, flags=re.IGNORECASE) for pattern in active_patterns):
         return Listing.KleinanzeigenStatus.ACTIVE
     return Listing.KleinanzeigenStatus.UNKNOWN
 
@@ -204,7 +202,13 @@ def _view_counter_url(validated: ValidatedListingURL) -> str:
 
 
 def _fetch_payload(url: str, *, opener, referer: str = "") -> bytes:
-    headers = {"User-Agent": "Argus listing statistics/1.0"}
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36"
+        ),
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+    }
     if referer:
         headers["Referer"] = referer
     request = Request(url, headers=headers)
@@ -244,8 +248,6 @@ def fetch_listing_check(url: str, *, opener=None) -> ListingViewCheck:
 
     views_count = parse_views_count(page_html)
     if views_count is not None:
-        if listing_status == Listing.KleinanzeigenStatus.UNKNOWN:
-            listing_status = Listing.KleinanzeigenStatus.ACTIVE
         return ListingViewCheck(views_count, listing_status=listing_status)
 
     counter_payload = _fetch_payload(
@@ -260,8 +262,6 @@ def fetch_listing_check(url: str, *, opener=None) -> ListingViewCheck:
             "listing_unavailable",
             listing_status=listing_status,
         )
-    if listing_status == Listing.KleinanzeigenStatus.UNKNOWN:
-        listing_status = Listing.KleinanzeigenStatus.ACTIVE
     return ListingViewCheck(views_count, listing_status=listing_status)
 
 
@@ -344,10 +344,7 @@ def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]
         if listing.kleinanzeigen_status == Listing.KleinanzeigenStatus.DELETED:
             continue
         recently_checked = listing.views_checked_at and listing.views_checked_at >= refresh_before
-        if recently_checked and (
-            listing.kleinanzeigen_status != Listing.KleinanzeigenStatus.UNKNOWN
-            or listing.views_error
-        ):
+        if recently_checked and listing.kleinanzeigen_status != Listing.KleinanzeigenStatus.UNKNOWN:
             continue
 
         checked += 1
