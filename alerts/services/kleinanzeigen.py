@@ -41,10 +41,15 @@ class ValidatedListingURL:
 class ListingViewCheck:
     views_count: int | None
     error: str = ""
+    listing_status: str = Listing.KleinanzeigenStatus.UNKNOWN
 
     @property
     def verified(self) -> bool:
         return self.views_count is not None
+
+    @property
+    def status_verified(self) -> bool:
+        return self.listing_status != Listing.KleinanzeigenStatus.UNKNOWN
 
 
 class _NoRedirectHandler(HTTPRedirectHandler):
@@ -97,6 +102,38 @@ def canonicalize_kleinanzeigen_ad_id(value: str) -> str:
     if not match:
         match = re.search(r"(?<!\d)(?P<ad_id>\d{5,})(?:-\d+)*(?!\d)", value or "")
     return match.group("ad_id") if match else ""
+
+
+def parse_listing_status(page_html: str) -> str:
+    """Extract a stable Kleinanzeigen listing state from structured or visible page markers."""
+
+    html = page_html or ""
+    deleted_patterns = (
+        r'"(?:adStatus|listingStatus|status)"\s*:\s*"(?:DELETED|REMOVED)"',
+        r">\s*Gelöscht\s*<",
+        r"\bGelöscht\s*[•·]",
+    )
+    reserved_patterns = (
+        r'"(?:adStatus|listingStatus|status)"\s*:\s*"RESERVED"',
+        r'"(?:isReserved|reserved)"\s*:\s*true',
+        r">\s*Reserviert\s*<",
+        r"\bReserviert\s*[•·]",
+    )
+
+    if any(re.search(pattern, html, flags=re.IGNORECASE) for pattern in deleted_patterns):
+        return Listing.KleinanzeigenStatus.DELETED
+    if any(re.search(pattern, html, flags=re.IGNORECASE) for pattern in reserved_patterns):
+        return Listing.KleinanzeigenStatus.RESERVED
+
+    listing_markers = (
+        r'\bid\s*=\s*["\']viewad-title["\']',
+        r'\bid\s*=\s*["\']viewad-cntr-num["\']',
+        r'\bid\s*=\s*["\']viewad-main["\']',
+        r'"(?:adId|listingId)"\s*:',
+    )
+    if any(re.search(pattern, html, flags=re.IGNORECASE) for pattern in listing_markers):
+        return Listing.KleinanzeigenStatus.ACTIVE
+    return Listing.KleinanzeigenStatus.UNKNOWN
 
 
 def parse_views_count(page_html: str) -> int | None:
@@ -171,15 +208,21 @@ def _fetch_payload(url: str, *, opener, referer: str = "") -> bytes:
     return payload
 
 
-def fetch_listing_views(url: str, *, opener=None) -> int:
-    """Fetch a public listing and, when needed, its ViewCount response."""
+def fetch_listing_check(url: str, *, opener=None) -> ListingViewCheck:
+    """Fetch a listing once and extract both marketplace status and view count."""
 
     validated = validate_kleinanzeigen_url(url)
     opener = opener or build_opener(_NoRedirectHandler())
     page_payload = _fetch_payload(validated.normalized_url, opener=opener)
-    views_count = parse_views_count(page_payload.decode("utf-8", errors="replace"))
+    page_html = page_payload.decode("utf-8", errors="replace")
+    listing_status = parse_listing_status(page_html)
+
+    if listing_status == Listing.KleinanzeigenStatus.DELETED:
+        return ListingViewCheck(None, listing_status=listing_status)
+
+    views_count = parse_views_count(page_html)
     if views_count is not None:
-        return views_count
+        return ListingViewCheck(views_count, listing_status=listing_status)
 
     counter_payload = _fetch_payload(
         _view_counter_url(validated),
@@ -188,8 +231,21 @@ def fetch_listing_views(url: str, *, opener=None) -> int:
     )
     views_count = parse_view_counter_response(counter_payload)
     if views_count is None:
+        return ListingViewCheck(
+            None,
+            "listing_unavailable",
+            listing_status=listing_status,
+        )
+    return ListingViewCheck(views_count, listing_status=listing_status)
+
+
+def fetch_listing_views(url: str, *, opener=None) -> int:
+    """Fetch the public view count while keeping the legacy integer API."""
+
+    result = fetch_listing_check(url, opener=opener)
+    if result.views_count is None:
         raise KleinanzeigenTemporaryError("listing_unavailable")
-    return views_count
+    return result.views_count
 
 
 def verify_listing_url(value: str, *, opener=None) -> ListingViewCheck:
@@ -197,7 +253,7 @@ def verify_listing_url(value: str, *, opener=None) -> ListingViewCheck:
 
     validated = validate_kleinanzeigen_url(value)
     try:
-        return ListingViewCheck(fetch_listing_views(validated.normalized_url, opener=opener))
+        return fetch_listing_check(validated.normalized_url, opener=opener)
     except Exception:
         return ListingViewCheck(None, "listing_unavailable")
 
@@ -240,8 +296,17 @@ def repair_listing_view_counters(listings=None) -> int:
     return repaired
 
 
+def _save_listing_status(listing: Listing, result: ListingViewCheck) -> bool:
+    """Persist only a verified marketplace status, preserving the last known state on errors."""
+
+    if not result.status_verified or listing.kleinanzeigen_status == result.listing_status:
+        return False
+    listing.kleinanzeigen_status = result.listing_status
+    return True
+
+
 def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]:
-    """Update configured listings without allowing a public counter to move backwards."""
+    """Update listing status and views without allowing the public counter to move backwards."""
 
     checked = 0
     updated = 0
@@ -249,23 +314,41 @@ def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]
     for listing in Listing.objects.exclude(kleinanzeigen_url="").iterator():
         historical_floor = _repair_decreasing_view_history(listing)
 
+        # A deleted Kleinanzeigen ad is terminal. Keep its Argus history, but stop polling it.
+        if listing.kleinanzeigen_status == Listing.KleinanzeigenStatus.DELETED:
+            continue
         if listing.views_checked_at and listing.views_checked_at >= refresh_before:
             continue
+
         checked += 1
+        now = timezone.now()
         try:
             result = fetcher(listing.kleinanzeigen_url)
         except Exception:
             listing.views_error = "listing_unavailable"
-            listing.views_checked_at = timezone.now()
-            listing.save(update_fields=["views_error", "views_checked_at", "updated_at"])
-            continue
-        if not result.verified:
-            listing.views_error = result.error
-            listing.views_checked_at = timezone.now()
+            listing.views_checked_at = now
             listing.save(update_fields=["views_error", "views_checked_at", "updated_at"])
             continue
 
-        now = timezone.now()
+        status_changed = _save_listing_status(listing, result)
+        if result.listing_status == Listing.KleinanzeigenStatus.DELETED:
+            listing.views_error = ""
+            listing.views_checked_at = now
+            update_fields = ["views_error", "views_checked_at", "updated_at"]
+            if status_changed:
+                update_fields.append("kleinanzeigen_status")
+            listing.save(update_fields=update_fields)
+            continue
+
+        if not result.verified:
+            listing.views_error = result.error
+            listing.views_checked_at = now
+            update_fields = ["views_error", "views_checked_at", "updated_at"]
+            if status_changed:
+                update_fields.append("kleinanzeigen_status")
+            listing.save(update_fields=update_fields)
+            continue
+
         safe_floor = historical_floor
         if listing.views_count is not None:
             safe_floor = max(safe_floor or 0, listing.views_count)
@@ -273,16 +356,20 @@ def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]
         if safe_floor is not None and result.views_count < safe_floor:
             listing.views_error = "view_counter_decreased"
             listing.views_checked_at = now
-            listing.save(update_fields=["views_error", "views_checked_at", "updated_at"])
+            update_fields = ["views_error", "views_checked_at", "updated_at"]
+            if status_changed:
+                update_fields.append("kleinanzeigen_status")
+            listing.save(update_fields=update_fields)
             continue
 
         changed = listing.views_count != result.views_count
         listing.views_count = result.views_count
         listing.views_checked_at = now
         listing.views_error = ""
-        listing.save(
-            update_fields=["views_count", "views_checked_at", "views_error", "updated_at"]
-        )
+        update_fields = ["views_count", "views_checked_at", "views_error", "updated_at"]
+        if status_changed:
+            update_fields.append("kleinanzeigen_status")
+        listing.save(update_fields=update_fields)
         if changed:
             ListingViewStat.objects.create(listing=listing, views_count=result.views_count)
             updated += 1
