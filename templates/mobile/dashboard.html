@@ -49,7 +49,7 @@
 
         <a class="card dashboard-summary-card dashboard-listings-card" href="{% url 'mobile_listings' %}">
             <div class="title">🚗 Объявления</div>
-            <div class="dashboard-active-listings">Активных объявлений: {{ active_listings_count }}</div>
+            <div class="dashboard-active-listings">Все объявления: {{ active_listings_count }}</div>
             {% if active_listings %}
                 <div class="dashboard-listing-preview">
                     {% for listing in active_listings %}
@@ -141,7 +141,7 @@
     {% else %}
         <section>
             <h1>{% if view_mode == 'today' %}📅 {% trans "Today" %}{% elif view_mode == 'attention' %}📩 Непрочитанные{% elif view_mode == 'mine' %}🛠️ {% trans "My in-work leads" %}{% elif view_mode == 'ignored' %}🚫 {% trans "Ignored leads" %}{% elif view_mode == 'archived' %}📦 {% trans "Archive" %}{% elif view_mode == 'noise' %}🧹 {% trans "Spam and newsletters" %}{% elif view_mode == 'all' %}📋 {% trans "All leads" %}{% else %}📋 {% trans "Leads" %}{% endif %}</h1>
-            {% if alerts_page %}<div class="small">{% blocktrans with start=alerts_page.start_index end=alerts_page.end_index total=alerts_page.paginator.count page=alerts_page.number pages=alerts_page.paginator.num_pages %}Showing {{ start }}-{{ end }} of {{ total }} · page {{ page }} / {{ pages }}{% endblocktrans %}</div>{% endif %}
+            {% if alerts_page %}<div class="small">{% blocktrans with start=alerts_page.start_index end=alerts_page.end_index total=alerts_page.paginator.count page=alerts_page.number pages=alerts_page.paginator.num_pages %}Showing {{ start }}-{{ end }} of {{ total }} · page {{ alerts_page.number }} / {{ alerts_page.paginator.num_pages }}{% endblocktrans %}</div>{% endif %}
             {% for alert in alerts %}
                 <article class="card alert-card{% if view_mode == 'all' and alert.alert_status == 'archived' %} resolved-alert-card{% endif %}{% if alert.event_type == 'system_notice' %} system-notice-card{% endif %}">
                     <a class="alert-card-link" href="{% url 'mobile_alert_detail' alert.id %}" aria-label="{% blocktrans with id=alert.id %}Open lead #{{ id }}{% endblocktrans %}"></a>
