@@ -83,6 +83,14 @@
                             {% endif %}
                             {% if group.is_closed %}
                                 <span class="status-pill danger listing-status-pill"><span class="status-dot"></span>закрыто</span>
+                            {% elif group.statistics and group.statistics.kleinanzeigen_status == 'deleted' %}
+                                <span class="status-pill danger listing-status-pill"><span class="status-dot"></span>удалено</span>
+                            {% elif group.statistics and group.statistics.kleinanzeigen_status == 'reserved' %}
+                                <span class="status-pill warn listing-status-pill"><span class="status-dot"></span>зарезервировано</span>
+                            {% elif group.statistics and group.statistics.kleinanzeigen_status == 'active' %}
+                                <span class="status-pill ok listing-status-pill"><span class="status-dot"></span>активно</span>
+                            {% elif group.statistics and group.statistics.kleinanzeigen_url %}
+                                <span class="status-pill muted listing-status-pill"><span class="status-dot"></span>статус неизвестен</span>
                             {% elif group.open_count %}
                                 <span class="status-pill warn listing-status-pill"><span class="status-dot"></span>{{ group.open_count }} активных</span>
                             {% else %}
@@ -113,6 +121,15 @@
                         <div class="listing-action-box listing-statistics-box">
                             {% if group.statistics and group.statistics.kleinanzeigen_url %}
                                 <div class="listing-analytics-panel">
+                                    {% if group.statistics.kleinanzeigen_status == 'deleted' %}
+                                        <div>🔴 <strong>статус Kleinanzeigen:</strong> удалено</div>
+                                    {% elif group.statistics.kleinanzeigen_status == 'reserved' %}
+                                        <div>🟡 <strong>статус Kleinanzeigen:</strong> зарезервировано</div>
+                                    {% elif group.statistics.kleinanzeigen_status == 'active' %}
+                                        <div>🟢 <strong>статус Kleinanzeigen:</strong> активно</div>
+                                    {% else %}
+                                        <div>⚪ <strong>статус Kleinanzeigen:</strong> пока неизвестен</div>
+                                    {% endif %}
                                     <div>👁 <strong>просмотров за всё время:</strong> {{ group.statistics.views_count }}</div>
                                     <div>📈 <strong>за последние 24 ч:</strong> {% if group.statistics.views_delta_24h is not None %}+{{ group.statistics.views_delta_24h }}{% else %}данных пока нет{% endif %}</div>
                                     <div>📅 <strong>за последние 7 дней:</strong> {% if group.statistics.views_delta_7d is not None %}+{{ group.statistics.views_delta_7d }}{% else %}данных пока нет{% endif %}</div>
