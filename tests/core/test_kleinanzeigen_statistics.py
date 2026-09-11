@@ -8,6 +8,7 @@ from alerts.kleinanzeigen import (
     ListingViewCheck,
     VIEW_COUNTER_REFRESH_INTERVAL,
     fetch_listing_views,
+    parse_listing_status,
     parse_view_counter_response,
     parse_views_count,
     refresh_listing_view_stats,
@@ -43,6 +44,15 @@ def test_valid_listing_url_is_normalized_and_keeps_external_id():
 def test_only_direct_https_kleinanzeigen_listing_urls_are_accepted(url):
     with pytest.raises(KleinanzeigenURLValidationError):
         validate_kleinanzeigen_url(url)
+
+
+def test_listing_status_parser_handles_visible_and_escaped_state_labels():
+    assert parse_listing_status(r'{"title":"Gel\u00f6scht \u00b7 BMW 116i"}') == "deleted"
+    assert parse_listing_status(r'{"title":"Reserviert \u2022 Skoda Roomster"}') == "reserved"
+    assert parse_listing_status('<h1>Gelöscht &middot; BMW 116i</h1>') == "deleted"
+    assert parse_listing_status('<h1>Reserviert &#183; Skoda Roomster</h1>') == "reserved"
+    assert parse_listing_status('{"adStatus":"AD_STATUS_DELETED"}') == "deleted"
+    assert parse_listing_status('{"adStatus":"AD_STATUS_RESERVED"}') == "reserved"
 
 
 def test_views_parser_handles_structured_and_visible_counts():
