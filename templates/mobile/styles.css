@@ -89,6 +89,11 @@ header {
     gap: 8px;
 }
 
+.header-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
 h1 {
     margin: 0;
     font-size: 20px;
@@ -482,6 +487,84 @@ summary:focus-visible {
     justify-content: center;
     font-size: 18px;
     line-height: 1;
+}
+
+.icon-button:disabled {
+    cursor: wait;
+    opacity: .65;
+}
+
+body.gmail-refresh-active {
+    overflow: hidden;
+}
+
+.gmail-refresh-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, .66);
+}
+
+.gmail-refresh-modal[hidden] {
+    display: none;
+}
+
+.gmail-refresh-dialog {
+    width: min(360px, 100%);
+    min-height: 150px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 24px;
+    background: var(--panel);
+    color: var(--text);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+}
+
+.gmail-refresh-spinner {
+    width: 36px;
+    height: 36px;
+    border: 4px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: gmail-refresh-spin .8s linear infinite;
+}
+
+.gmail-refresh-description {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+@keyframes gmail-refresh-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .gmail-refresh-modal {
+        padding: 14px;
+    }
+
+    .gmail-refresh-dialog {
+        min-height: 136px;
+        padding: 20px 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gmail-refresh-spinner {
+        animation-duration: 1.8s;
+    }
 }
 
 @media (max-width: 380px) {

@@ -51,6 +51,20 @@
             </a>
             {% block header_actions %}
                 <div class="header-actions">
+                    {% if request.user.is_superuser or perms.alerts.add_mailboxaccount and perms.alerts.change_mailboxaccount and perms.alerts.delete_mailboxaccount %}
+                    <form id="gmail-refresh-form" method="post" action="{% url 'mobile_check_gmail_now' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button
+                            id="gmail-refresh-button"
+                            class="icon-button"
+                            type="submit"
+                            aria-label="Обновить Gmail"
+                            title="Обновить Gmail"
+                        >🔄</button>
+                    </form>
+                    {% endif %}
+
                     <button
                         id="theme-toggle"
                         class="icon-button"
@@ -156,6 +170,24 @@
         </script>
     {% endif %}
 </main>
+{% if request.user.is_superuser or perms.alerts.add_mailboxaccount and perms.alerts.change_mailboxaccount and perms.alerts.delete_mailboxaccount %}
+<div
+    id="gmail-refresh-modal"
+    class="gmail-refresh-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="gmail-refresh-modal-title"
+    aria-hidden="true"
+    tabindex="-1"
+    hidden
+>
+    <div class="gmail-refresh-dialog">
+        <span class="gmail-refresh-spinner" aria-hidden="true"></span>
+        <strong id="gmail-refresh-modal-title">Обновляем Gmail</strong>
+        <span class="gmail-refresh-description">Проверяем почту и объявления...</span>
+    </div>
+</div>
+{% endif %}
 <script>
     (() => {
         const toggle = document.getElementById("theme-toggle");
@@ -177,6 +209,42 @@
 
         setTheme(root.classList.contains("light-theme"));
         toggle.addEventListener("click", () => setTheme(!root.classList.contains("light-theme")));
+    })();
+</script>
+<script>
+    (() => {
+        const form = document.getElementById("gmail-refresh-form");
+        const button = document.getElementById("gmail-refresh-button");
+        const modal = document.getElementById("gmail-refresh-modal");
+        const backgroundRegions = [
+            document.querySelector("header"),
+            document.querySelector("main"),
+        ].filter(Boolean);
+
+        if (!form || !button || !modal) {
+            return;
+        }
+
+        const resetLoadingState = () => {
+            button.disabled = false;
+            modal.hidden = true;
+            modal.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("gmail-refresh-active");
+            document.body.removeAttribute("aria-busy");
+            backgroundRegions.forEach((region) => { region.inert = false; });
+        };
+
+        form.addEventListener("submit", () => {
+            button.disabled = true;
+            modal.hidden = false;
+            modal.setAttribute("aria-hidden", "false");
+            document.body.classList.add("gmail-refresh-active");
+            document.body.setAttribute("aria-busy", "true");
+            backgroundRegions.forEach((region) => { region.inert = true; });
+            modal.focus();
+        });
+
+        window.addEventListener("pageshow", resetLoadingState);
     })();
 </script>
 </body>

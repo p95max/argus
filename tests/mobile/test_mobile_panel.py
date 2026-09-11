@@ -398,6 +398,35 @@ def test_mobile_panel_global_mail_check_refreshes_listings(
 
 
 @pytest.mark.django_db
+def test_mobile_nav_shows_gmail_refresh_for_mailbox_manager(client, staff_user):
+    staff_user.is_superuser = True
+    staff_user.save(update_fields=["is_superuser"])
+    client.force_login(staff_user)
+
+    response = client.get(reverse("mobile_listings"))
+    body = response.content.decode("utf-8")
+
+    assert response.status_code == 200
+    assert 'id="gmail-refresh-form"' in body
+    assert f'action="{reverse("mobile_check_gmail_now")}"' in body
+    assert f'value="{reverse("mobile_listings")}"' in body
+    assert 'id="gmail-refresh-modal"' in body
+    assert "Обновляем Gmail" in body
+
+
+@pytest.mark.django_db
+def test_mobile_nav_hides_gmail_refresh_without_mailbox_permissions(client, staff_user):
+    client.force_login(staff_user)
+
+    response = client.get(reverse("mobile_listings"))
+    body = response.content.decode("utf-8")
+
+    assert response.status_code == 200
+    assert 'id="gmail-refresh-form"' not in body
+    assert 'id="gmail-refresh-modal"' not in body
+
+
+@pytest.mark.django_db
 def test_mobile_panel_shows_gmail_operational_card(client, staff_user, alert):
     alert.mailbox.last_checked_at = timezone.now()
     alert.mailbox.last_success_at = timezone.now()
