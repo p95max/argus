@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date, timedelta
+from html import unescape
 
 from django.utils import timezone
 
@@ -55,6 +56,18 @@ def parse_listing_publication_date(page_html: str, *, today: date | None = None)
 
     text = page_html or ""
     today = today or timezone.localdate()
+
+    creation_date_match = re.search(
+        r'<(?P<tag>[a-z0-9]+)\b[^>]*\bid=["\']vip-ad-creationdate["\'][^>]*>'
+        r'(?P<body>.*?)</(?P=tag)>',
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if creation_date_match:
+        creation_date_text = re.sub(r"<[^>]+>", " ", creation_date_match.group("body"))
+        parsed = _parse_publication_value(unescape(creation_date_text), today=today)
+        if parsed:
+            return parsed
 
     iso_patterns = (
         r'"datePosted"\s*:\s*"(\d{4}-\d{2}-\d{2})',
