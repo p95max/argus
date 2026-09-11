@@ -6,6 +6,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import timedelta
+from html import unescape
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -104,17 +105,38 @@ def canonicalize_kleinanzeigen_ad_id(value: str) -> str:
     return match.group("ad_id") if match else ""
 
 
+def _normalize_status_markup(page_html: str) -> str:
+    """Normalize HTML entities and JSON unicode escapes used in listing state labels."""
+
+    markup = unescape(page_html or "")
+    replacements = {
+        r"\u00f6": "ö",
+        r"\u00d6": "Ö",
+        r"\u00e4": "ä",
+        r"\u00c4": "Ä",
+        r"\u00fc": "ü",
+        r"\u00dc": "Ü",
+        r"\u00df": "ß",
+        r"\u00b7": "·",
+        r"\u2022": "•",
+        r"\u00a0": " ",
+    }
+    for escaped, literal in replacements.items():
+        markup = markup.replace(escaped, literal).replace(escaped.upper(), literal)
+    return markup
+
+
 def parse_listing_status(page_html: str) -> str:
     """Extract a stable Kleinanzeigen listing state from structured or visible page markers."""
 
-    html = page_html or ""
+    html = _normalize_status_markup(page_html)
     deleted_patterns = (
-        r'"(?:adStatus|listingStatus|status)"\s*:\s*"(?:DELETED|REMOVED)"',
+        r'"(?:adStatus|listingStatus|status)"\s*:\s*"(?:DELETED|REMOVED|AD_STATUS_DELETED|AD_STATUS_REMOVED)"',
         r">\s*Gelöscht\s*<",
         r"\bGelöscht\s*[•·]",
     )
     reserved_patterns = (
-        r'"(?:adStatus|listingStatus|status)"\s*:\s*"RESERVED"',
+        r'"(?:adStatus|listingStatus|status)"\s*:\s*"(?:RESERVED|AD_STATUS_RESERVED)"',
         r'"(?:isReserved|reserved)"\s*:\s*true',
         r">\s*Reserviert\s*<",
         r"\bReserviert\s*[•·]",
