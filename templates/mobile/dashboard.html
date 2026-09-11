@@ -54,7 +54,18 @@
                 <div class="dashboard-listing-preview">
                     {% for listing in active_listings %}
                         <div class="dashboard-listing-row">
-                            <span>{{ listing.title }}</span>
+                            <span class="dashboard-listing-main">
+                                {% if listing.kleinanzeigen_status == 'deleted' %}
+                                    <span class="dashboard-listing-status dashboard-listing-status-deleted" title="Удалено" aria-label="Удалено"></span>
+                                {% elif listing.kleinanzeigen_status == 'reserved' %}
+                                    <span class="dashboard-listing-status dashboard-listing-status-reserved" title="Зарезервировано" aria-label="Зарезервировано"></span>
+                                {% elif listing.kleinanzeigen_status == 'active' %}
+                                    <span class="dashboard-listing-status dashboard-listing-status-active" title="Активно" aria-label="Активно"></span>
+                                {% else %}
+                                    <span class="dashboard-listing-status dashboard-listing-status-unknown" title="Статус неизвестен" aria-label="Статус неизвестен"></span>
+                                {% endif %}
+                                <span class="dashboard-listing-title">{{ listing.title }}</span>
+                            </span>
                             <strong>👁 {% if listing.views_count is not None %}{{ listing.views_count }}{% else %}—{% endif %}</strong>
                         </div>
                     {% endfor %}
@@ -89,7 +100,13 @@
         .dashboard-analytics-metrics strong { color: var(--accent); font-size: 18px; }
         .dashboard-listing-preview { display: grid; gap: 6px; }
         .dashboard-listing-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 9px; border-radius: 6px; background: var(--panel-2); }
-        .dashboard-listing-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dashboard-listing-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .dashboard-listing-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dashboard-listing-status { flex: 0 0 auto; width: 11px; height: 11px; border-radius: 999px; box-shadow: 0 0 7px currentColor; background: currentColor; }
+        .dashboard-listing-status-deleted { color: var(--danger); }
+        .dashboard-listing-status-reserved { color: var(--warn); }
+        .dashboard-listing-status-active { color: var(--accent); }
+        .dashboard-listing-status-unknown { color: var(--muted); }
         .dashboard-listing-row strong { flex: 0 0 auto; color: var(--accent); }
         @media (max-width: 900px) { .dashboard-overview { grid-template-columns: 1fr; } }
     </style>
