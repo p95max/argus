@@ -236,6 +236,12 @@ class NoiseAlert(MarketplaceAlert):
 class Listing(TimestampedModel):
     """A Kleinanzeigen listing tracker optionally bound to a marketplace listing."""
 
+    class KleinanzeigenStatus(models.TextChoices):
+        UNKNOWN = "unknown", _("Unknown")
+        ACTIVE = "active", _("Active")
+        RESERVED = "reserved", _("Reserved")
+        DELETED = "deleted", _("Deleted")
+
     title = models.CharField(_("listing title"), max_length=255)
     source_alert = models.OneToOneField(
         MarketplaceAlert,
@@ -258,6 +264,12 @@ class Listing(TimestampedModel):
         _("Kleinanzeigen ad ID"),
         max_length=80,
         blank=True,
+    )
+    kleinanzeigen_status = models.CharField(
+        _("Kleinanzeigen status"),
+        max_length=16,
+        choices=KleinanzeigenStatus.choices,
+        default=KleinanzeigenStatus.UNKNOWN,
     )
     views_count = models.PositiveIntegerField(_("views"), null=True, blank=True)
     views_checked_at = models.DateTimeField(_("views checked at"), null=True, blank=True)
@@ -310,6 +322,7 @@ class Listing(TimestampedModel):
             self.kleinanzeigen_listing_id = validated.ad_id
         else:
             self.kleinanzeigen_listing_id = ""
+            self.kleinanzeigen_status = self.KleinanzeigenStatus.UNKNOWN
 
     def clean(self):
         super().clean()
