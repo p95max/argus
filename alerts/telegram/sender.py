@@ -5,7 +5,7 @@ from asgiref.sync import sync_to_async
 from django.utils import timezone
 from telegram import Bot
 
-from ..models import MarketplaceAlert
+from ..models import Listing, MarketplaceAlert
 from .config import get_telegram_config
 from .keyboards import build_alert_keyboard, build_unread_report_keyboard
 from .messages import (
@@ -74,7 +74,7 @@ def send_telegram_reminder_report(
 
 def _build_alert_reminder_message_for_language(alert: MarketplaceAlert, language: str) -> str:
     with override_argus_telegram_language(language):
-        return build_alert_reminder_message(alert)
+        return _with_listing_status(build_alert_reminder_message(alert), alert)
 
 
 async def async_send_telegram_alert(
@@ -123,7 +123,7 @@ async def async_send_telegram_alert(
         bot = Bot(token=config.bot_token)
 
     with override_argus_telegram_language(language):
-        text = build_alert_message(alert)
+        text = _with_listing_status(build_alert_message(alert), alert)
         reply_markup = build_alert_keyboard(alert)
 
     try:
@@ -454,7 +454,33 @@ async def _async_send_alert_message(
     return message
 
 
+def _with_listing_status(text: str, alert: MarketplaceAlert) -> str:
+    status = getattr(alert, "_telegram_listing_status", "")
+    if status == Listing.KleinanzeigenStatus.DELETED:
+        line = "❗ <b>Статус объявления:</b> удалено"
+    elif status == Listing.KleinanzeigenStatus.RESERVED:
+        line = "🟡 <b>Статус объявления:</b> зарезервировано"
+    elif status == Listing.KleinanzeigenStatus.ACTIVE:
+        line = "🟢 <b>Статус объявления:</b> активно"
+    elif status:
+        line = "⚪ <b>Статус объявления:</b> неизвестно"
+    else:
+        return text
+    return f"{text}\n{line}"
+
+
 def _preload_alert_message_fields(alert: MarketplaceAlert) -> None:
     alert._telegram_flag_names = ", ".join(alert.flags.values_list("name", flat=True))
     mailbox = alert.mailbox
     alert._telegram_mailbox_label = mailbox.name or telegram_gettext("Unknown")
+
+    listing = None
+    if alert.listing_id:
+        listing = Listing.objects.filter(
+            kleinanzeigen_listing_id=alert.listing_id,
+        ).only("kleinanzeigen_status").first()
+    if listing is None and alert.listing_title:
+        listing = Listing.objects.filter(
+            title__iexact=alert.listing_title,
+        ).only("kleinanzeigen_status").first()
+    alert._telegram_listing_status = listing.kleinanzeigen_status if listing else ""
