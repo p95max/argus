@@ -136,6 +136,7 @@ def build_ads_status_message() -> str:
         title = _truncate(group["title"], STATUS_TITLE_LIMIT)
         listing = analytics_listings.get(str(group["title"]).casefold())
         listing_url = listing.kleinanzeigen_url if listing else ""
+        status_icon, status_label = _listing_status(listing)
 
         mailbox = group["mailbox"]
         mailbox_label = mailbox.name or mailbox.email or "—"
@@ -157,7 +158,8 @@ def build_ads_status_message() -> str:
         lines.extend(
             [
                 "",
-                f"{index}. {html.escape(title)}",
+                f"{status_icon} {index}. {html.escape(title)}",
+                f"· Статус: {status_icon} {status_label}",
                 f"· 📬 Ящик: {html.escape(mailbox_label)}",
                 source_line,
                 f"· 📅 Опубликовано: {publication_label}",
@@ -170,6 +172,19 @@ def build_ads_status_message() -> str:
         lines.append(f"… +{hidden}")
 
     return "\n".join(lines)
+
+
+def _listing_status(listing: Listing | None) -> tuple[str, str]:
+    if listing is None:
+        return "⚪", "неизвестно"
+    status = listing.kleinanzeigen_status
+    if status == Listing.KleinanzeigenStatus.DELETED:
+        return "❗", "удалено"
+    if status == Listing.KleinanzeigenStatus.RESERVED:
+        return "🟡", "зарезервировано"
+    if status == Listing.KleinanzeigenStatus.ACTIVE:
+        return "🟢", "активно"
+    return "⚪", "неизвестно"
 
 
 def build_ads_status_keyboard():
