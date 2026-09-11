@@ -222,6 +222,8 @@ def fetch_listing_check(url: str, *, opener=None) -> ListingViewCheck:
 
     views_count = parse_views_count(page_html)
     if views_count is not None:
+        if listing_status == Listing.KleinanzeigenStatus.UNKNOWN:
+            listing_status = Listing.KleinanzeigenStatus.ACTIVE
         return ListingViewCheck(views_count, listing_status=listing_status)
 
     counter_payload = _fetch_payload(
@@ -236,6 +238,8 @@ def fetch_listing_check(url: str, *, opener=None) -> ListingViewCheck:
             "listing_unavailable",
             listing_status=listing_status,
         )
+    if listing_status == Listing.KleinanzeigenStatus.UNKNOWN:
+        listing_status = Listing.KleinanzeigenStatus.ACTIVE
     return ListingViewCheck(views_count, listing_status=listing_status)
 
 
@@ -317,7 +321,11 @@ def refresh_listing_view_stats(*, fetcher=verify_listing_url) -> tuple[int, int]
         # A deleted Kleinanzeigen ad is terminal. Keep its Argus history, but stop polling it.
         if listing.kleinanzeigen_status == Listing.KleinanzeigenStatus.DELETED:
             continue
-        if listing.views_checked_at and listing.views_checked_at >= refresh_before:
+        recently_checked = listing.views_checked_at and listing.views_checked_at >= refresh_before
+        if recently_checked and (
+            listing.kleinanzeigen_status != Listing.KleinanzeigenStatus.UNKNOWN
+            or listing.views_error
+        ):
             continue
 
         checked += 1
