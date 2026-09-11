@@ -1,4 +1,5 @@
 from datetime import timedelta
+from urllib.error import HTTPError
 
 import pytest
 from django.utils import timezone
@@ -7,6 +8,7 @@ from alerts.kleinanzeigen import (
     KleinanzeigenURLValidationError,
     ListingViewCheck,
     VIEW_COUNTER_REFRESH_INTERVAL,
+    fetch_listing_check,
     fetch_listing_views,
     parse_listing_status,
     parse_view_counter_response,
@@ -55,6 +57,28 @@ def test_listing_status_parser_handles_visible_and_escaped_state_labels():
     assert parse_listing_status('{"adStatus":"AD_STATUS_RESERVED"}') == "reserved"
 
 
+def test_listing_status_parser_handles_current_active_vip_markup():
+    current_active_markup = """
+        <script>
+            window.pageType = "VIP";
+            window.Belen = {
+                "adId": 3500093695,
+                "viewAdVisitCounterUrl":
+                    "https://api.kleinanzeigen.de/api/mweb/s-vac?adId=3500093695"
+            };
+        </script>
+    """
+
+    assert parse_listing_status(current_active_markup) == "active"
+    assert (
+        parse_listing_status("<div>Reserviert</div>" + current_active_markup)
+        == "reserved"
+    )
+    assert (
+        parse_listing_status("<div>Gelöscht</div>" + current_active_markup) == "deleted"
+    )
+
+
 def test_views_parser_handles_structured_and_visible_counts():
     assert parse_views_count('{"viewCount": "1.284"}') == 1284
     assert parse_views_count('<div id="viewad-cntr"><span id="viewad-cntr-num">101</span></div>') == 101
@@ -99,6 +123,40 @@ def test_fetch_uses_the_view_counter_when_the_page_has_no_static_counter():
     ]
 
 
+def test_fetch_treats_listing_redirect_to_search_results_as_deleted():
+    class Opener:
+        def open(self, request, timeout):
+            raise HTTPError(
+                request.full_url,
+                301,
+                "Moved Permanently",
+                {"Location": "/s-autos/berlin/c216l3331"},
+                None,
+            )
+
+    result = fetch_listing_check(VALID_URL, opener=Opener())
+
+    assert result.listing_status == "deleted"
+    assert result.views_count is None
+
+
+def test_fetch_does_not_follow_external_listing_redirect():
+    class Opener:
+        def open(self, request, timeout):
+            raise HTTPError(
+                request.full_url,
+                302,
+                "Found",
+                {"Location": "https://example.com/redirect"},
+                None,
+            )
+
+    result = verify_listing_url(VALID_URL, opener=Opener())
+
+    assert result.listing_status == "unknown"
+    assert result.error == "listing_unavailable"
+
+
 def test_temporary_verification_error_keeps_url_syntactically_valid(monkeypatch):
     monkeypatch.setattr(
         "alerts.kleinanzeigen.fetch_listing_views",
@@ -126,6 +184,27 @@ def test_snapshot_is_created_only_when_the_view_count_changes():
     refresh_listing_view_stats(fetcher=lambda _: ListingViewCheck(101))
 
     assert list(listing.view_stats.values_list("views_count", flat=True)) == [101, 100]
+
+
+@pytest.mark.django_db
+def test_refresh_changes_reserved_listing_back_to_active():
+    listing = Listing.objects.create(
+        title="VW Golf",
+        kleinanzeigen_url=VALID_URL,
+        kleinanzeigen_status=Listing.KleinanzeigenStatus.RESERVED,
+        views_count=100,
+        views_checked_at=timezone.now() - VIEW_COUNTER_REFRESH_INTERVAL,
+    )
+
+    refresh_listing_view_stats(
+        fetcher=lambda _: ListingViewCheck(
+            101,
+            listing_status=Listing.KleinanzeigenStatus.ACTIVE,
+        )
+    )
+
+    listing.refresh_from_db()
+    assert listing.kleinanzeigen_status == Listing.KleinanzeigenStatus.ACTIVE
 
 
 @pytest.mark.django_db

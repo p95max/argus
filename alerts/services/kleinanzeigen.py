@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from html import unescape
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urljoin, urlsplit, urlunsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from django.db.models import Max
@@ -153,6 +153,24 @@ def parse_listing_status(page_html: str) -> str:
     )
     if any(re.search(pattern, html, flags=re.IGNORECASE) for pattern in active_patterns):
         return Listing.KleinanzeigenStatus.ACTIVE
+
+    # Current mobile pages no longer render #viewad-main or an explicit ACTIVE
+    # value. A VIP page with its own visit-counter URL is the stable positive
+    # marker; inactive labels above intentionally take precedence.
+    current_vip_markers = (
+        r'\bwindow\.pageType\s*=\s*["\']VIP["\']',
+        r'"pageType"\s*:\s*"VIP"',
+    )
+    has_vip_page = any(
+        re.search(pattern, html, flags=re.IGNORECASE) for pattern in current_vip_markers
+    )
+    has_visit_counter = re.search(
+        r'"viewAdVisitCounterUrl"\s*:\s*"https://(?:api\.)?kleinanzeigen\.de/',
+        html,
+        flags=re.IGNORECASE,
+    )
+    if has_vip_page and has_visit_counter:
+        return Listing.KleinanzeigenStatus.ACTIVE
     return Listing.KleinanzeigenStatus.UNKNOWN
 
 
@@ -234,12 +252,48 @@ def _fetch_payload(url: str, *, opener, referer: str = "") -> bytes:
     return payload
 
 
+def _listing_redirect_status(exc: Exception, source_url: str) -> str:
+    """Classify Kleinanzeigen redirects without following an untrusted target."""
+
+    cause = exc.__cause__
+    if not isinstance(cause, HTTPError) or cause.code not in {301, 302, 303, 307, 308}:
+        return Listing.KleinanzeigenStatus.UNKNOWN
+
+    location = (cause.headers or {}).get("Location", "")
+    try:
+        parts = urlsplit(urljoin(source_url, location))
+        port = parts.port
+    except ValueError:
+        return Listing.KleinanzeigenStatus.UNKNOWN
+
+    if (
+        parts.scheme != "https"
+        or parts.hostname not in KLEINANZEIGEN_HOSTS
+        or port is not None
+        or parts.username is not None
+        or parts.password is not None
+    ):
+        return Listing.KleinanzeigenStatus.UNKNOWN
+
+    # Removed ads currently redirect from /s-anzeige/... to a category/search
+    # page such as /s-autos/<place>/c216l1234.
+    if re.match(r"^/s-(?!anzeige(?:/|$))", parts.path, flags=re.IGNORECASE):
+        return Listing.KleinanzeigenStatus.DELETED
+    return Listing.KleinanzeigenStatus.UNKNOWN
+
+
 def fetch_listing_check(url: str, *, opener=None) -> ListingViewCheck:
     """Fetch a listing once and extract both marketplace status and view count."""
 
     validated = validate_kleinanzeigen_url(url)
     opener = opener or build_opener(_NoRedirectHandler())
-    page_payload = _fetch_payload(validated.normalized_url, opener=opener)
+    try:
+        page_payload = _fetch_payload(validated.normalized_url, opener=opener)
+    except KleinanzeigenTemporaryError as exc:
+        redirect_status = _listing_redirect_status(exc, validated.normalized_url)
+        if redirect_status != Listing.KleinanzeigenStatus.UNKNOWN:
+            return ListingViewCheck(None, listing_status=redirect_status)
+        raise
     page_html = page_payload.decode("utf-8", errors="replace")
     listing_status = parse_listing_status(page_html)
 
