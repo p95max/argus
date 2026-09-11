@@ -10,12 +10,13 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from .backup_status import BackupJobStatus, BackupStatus, get_backup_status
-from ..models import MailboxAccount, MarketplaceAlert, ServiceEvent
+from ..models import GmailPollingSettings, MailboxAccount, MarketplaceAlert, ServiceEvent
 from ..seed_data import DEMO_MAILBOX_EMAIL
 from .server_timers import ServerTimerStatus, ServerTimersStatus, get_server_timers_status
 from ..telegram.config import get_telegram_config
 
 TELEGRAM_ERROR_LOOKBACK = timedelta(hours=24)
+GMAIL_STALE_GRACE_MINUTES = 5
 
 
 @dataclass(frozen=True)
@@ -123,13 +124,25 @@ def _check_recent_telegram_delivery_errors(now) -> HealthCheck:
 
 
 def _check_recent_gmail_check(now) -> HealthCheck:
+    polling = GmailPollingSettings.load()
+    local_now = timezone.localtime(now)
+
+    if polling.working_hours_enabled and not polling.is_working_time(local_now.time()):
+        return HealthCheck(
+            True,
+            "paused",
+            _("Gmail polling is paused outside configured working hours."),
+        )
+
     newest_check = MailboxAccount.objects.filter(is_active=True).aggregate(
         last_checked_at=Max("last_checked_at"),
     )["last_checked_at"]
     if newest_check is None:
         return HealthCheck(False, "warning", _("No Gmail check has run yet."))
 
-    stale_after = timedelta(minutes=settings.ARGUS_GMAIL_CHECK_STALE_MINUTES)
+    configured_stale_minutes = settings.ARGUS_GMAIL_CHECK_STALE_MINUTES
+    dynamic_stale_minutes = polling.interval_minutes * 2 + GMAIL_STALE_GRACE_MINUTES
+    stale_after = timedelta(minutes=max(configured_stale_minutes, dynamic_stale_minutes))
     age = now - newest_check
     if age > stale_after:
         minutes = int(age.total_seconds() // 60)
