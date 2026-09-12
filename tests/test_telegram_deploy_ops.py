@@ -10,7 +10,7 @@ def test_telegram_bot_registers_deploy_command():
     ).read_text()
 
     assert "from alerts.telegram.deploy_command import handle_deploy_command" in content
-    assert 'CommandHandler(\n                "deploy",\n                handle_deploy_command,' in content
+    assert 'CommandHandler("deploy", handle_deploy_command)' in content
 
 
 def test_sudoers_allows_only_enqueuing_existing_deploy_service():
