@@ -89,7 +89,9 @@ def test_run_telegram_bot_registers_handlers_and_polling_options(monkeypatch):
     assert len(app.error_handlers) == 1
     assert any(isinstance(handler, CallbackQueryHandler) for handler in app.handlers)
     assert frozenset({"help"}) in command_sets
-    assert frozenset({"status", "mailboxes"}) in command_sets
+    assert frozenset({"mailboxes_status"}) in command_sets
+    assert frozenset({"apps_status"}) in command_sets
+    assert frozenset({"analytics"}) in command_sets
     assert frozenset({"summary"}) in command_sets
     assert frozenset({"health"}) in command_sets
     assert frozenset({"doctor"}) in command_sets
