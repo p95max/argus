@@ -59,6 +59,18 @@ CLASSIFICATION_RULES = (
         "reason": "интерес к сервисной истории",
     },
     {
+        "code": "price_negotiation",
+        "priority": MarketplaceAlert.Priority.NORMAL,
+        "patterns": (
+            r"\bpreis(?:\s+von)?\s+\d[\d.,]*\s*(?:€|euro)?\s+akzeptieren\b",
+            r"\bwürden sie\s+\d[\d.,]*\s*(?:€|euro)?\s+akzeptieren\b",
+            r"\bich biete\s+(?:ihnen\s+)?\d[\d.,]*\s*(?:€|euro)?\b",
+            r"\bmein angebot(?: wäre| ist)?\s+\d[\d.,]*\s*(?:€|euro)?\b",
+            r"\bfür\s+\d[\d.,]*\s*(?:€|euro)\s+(?:nehmen|kaufen|abholen)\b",
+        ),
+        "reason": "торг / предложение цены",
+    },
+    {
         "code": "installment_payment",
         "priority": MarketplaceAlert.Priority.NORMAL,
         "patterns": (
