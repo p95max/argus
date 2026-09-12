@@ -13,9 +13,10 @@ def test_apps_analytics_message_is_compact_and_orders_precomputed_items():
     analytics = ListingAnalytics(
         total_views=1284,
         total_delta_24h=63,
+        total_delta_7d=141,
         listings=(
-            ListingAnalyticsItem(1, "VW Golf", 427, 31),
-            ListingAnalyticsItem(2, "iPhone", 286, 22),
+            ListingAnalyticsItem(1, "VW Golf", 427, 31, 78),
+            ListingAnalyticsItem(2, "iPhone", 286, 22, 63),
         ),
     )
 
