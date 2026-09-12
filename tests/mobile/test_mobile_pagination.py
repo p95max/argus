@@ -15,12 +15,12 @@ def staff_user(db):
 
 
 @pytest.mark.django_db
-def test_mobile_dashboard_paginates_alerts_by_five(client, staff_user):
+def test_mobile_dashboard_paginates_alerts_by_twenty(client, staff_user):
     mailbox = MailboxAccount.objects.create(
         name="Pagination inbox",
         email="pagination@example.local",
     )
-    for index in range(7):
+    for index in range(27):
         MarketplaceAlert.objects.create(
             mailbox=mailbox,
             listing_title=f"Paged alert {index}",
@@ -36,14 +36,14 @@ def test_mobile_dashboard_paginates_alerts_by_five(client, staff_user):
 
     assert first_page.status_code == 200
     first_body = first_page.content.decode("utf-8")
-    assert first_body.count('class="card alert-card"') == 5
-    assert "Showing 1-5 of 7" in first_body
+    assert first_body.count('class="card alert-card"') == 20
+    assert "Showing 1-20 of 27" in first_body
     assert "?view=all&amp;page=2" in first_body
     assert "Next" in first_body
 
     assert second_page.status_code == 200
     second_body = second_page.content.decode("utf-8")
-    assert second_body.count('class="card alert-card"') == 2
-    assert "Showing 6-7 of 7" in second_body
+    assert second_body.count('class="card alert-card"') == 7
+    assert "Showing 21-27 of 27" in second_body
     assert "?view=all&amp;page=1" in second_body
     assert "← Back" in second_body
