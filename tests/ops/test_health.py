@@ -224,8 +224,8 @@ def test_argus_check_deploy_allows_stale_gmail_warning(settings, healthy_env):
         name="Stale Gmail",
         email="stale-gmail@example.local",
         is_active=True,
-        last_checked_at=timezone.now() - timedelta(minutes=20),
-        last_success_at=timezone.now() - timedelta(minutes=20),
+        last_checked_at=timezone.now() - timedelta(minutes=60),
+        last_success_at=timezone.now() - timedelta(minutes=60),
     )
     stdout = StringIO()
 
