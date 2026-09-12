@@ -148,10 +148,10 @@ body.gmail-refresh-active { overflow: hidden; }
 .listing-card > .collapsible-summary::after { align-self: center; flex: 0 0 auto; margin-left: 4px; }
 .listing-card .listing-summary-title { width: 100%; display: grid; grid-template-rows: auto auto; gap: 14px; min-width: 0; }
 .listing-card .listing-summary-name { display: block; min-width: 0; padding-right: 4px; font-size: 18px; line-height: 1.3; }
-.listing-card .listing-summary-badges { display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; align-items: center; }
-.listing-card .listing-summary-counters { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.listing-card .listing-summary-badges { display: grid; grid-template-columns: 1fr; grid-template-rows: auto auto; gap: 8px; width: 100%; align-items: center; }
+.listing-card .listing-summary-counters { grid-row: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .listing-card .listing-summary-counters .status-pill { min-height: 34px; justify-content: center; padding: 6px 12px; font-size: 13px; }
-.listing-card .listing-publication-pill, .listing-card .listing-activity-pill { width: fit-content; min-height: 32px; justify-content: center; padding: 5px 10px; font-size: 13px; }
+.listing-card .listing-publication-pill, .listing-card .listing-activity-pill { grid-row: 2; grid-column: 1; width: fit-content; min-height: 32px; justify-content: center; justify-self: start; padding: 5px 10px; font-size: 13px; }
 .listing-card .listing-status-pill { position: absolute; top: 16px; right: 42px; min-height: 32px; max-width: 46%; justify-content: center; padding: 6px 10px; font-size: 13px; }
 
 @media (max-width: 560px) {
@@ -169,11 +169,4 @@ body.gmail-refresh-active { overflow: hidden; }
     .listing-card .listing-summary-name { padding-right: 104px; font-size: 16px; }
     .listing-card .listing-status-pill { right: 34px; max-width: 104px; font-size: 12px; padding-inline: 8px; }
     .listing-card .listing-summary-counters .status-pill, .listing-card .listing-publication-pill, .listing-card .listing-activity-pill { font-size: 12px; padding-inline: 8px; }
-}
-
-/* Keep publication/activity age on its own row below the counters. */
-.listing-card .listing-publication-pill,
-.listing-card .listing-activity-pill {
-    grid-column: 1;
-    justify-self: start;
 }
