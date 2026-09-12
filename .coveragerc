@@ -1,0 +1,21 @@
+[run]
+omit =
+    */migrations/*
+    config/asgi.py
+    config/wsgi.py
+    alerts/mobile.py
+    alerts/mobile_archive.py
+    alerts/mobile_listings.py
+    alerts/mobile_service_log.py
+    alerts/health.py
+    alerts/kleinanzeigen.py
+    alerts/listing_analytics.py
+    alerts/parser.py
+    alerts/permissions.py
+    alerts/reminders.py
+    alerts/server_timers.py
+    alerts/service_health.py
+
+[report]
+show_missing = true
+skip_covered = false
