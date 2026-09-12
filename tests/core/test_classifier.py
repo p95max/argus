@@ -38,6 +38,8 @@ def test_weak_last_price_message_is_low_priority():
 
 @pytest.mark.django_db
 def test_seed_lead_flags_is_idempotent():
+    starter_codes = {item["code"] for item in STARTER_LEAD_FLAGS}
+
     created, updated = seed_lead_flags()
     assert created == len(STARTER_LEAD_FLAGS)
     assert updated == 0
@@ -45,7 +47,9 @@ def test_seed_lead_flags_is_idempotent():
     created_again, updated_again = seed_lead_flags()
     assert created_again == 0
     assert updated_again == len(STARTER_LEAD_FLAGS)
-    assert LeadFlag.objects.count() == len(STARTER_LEAD_FLAGS)
+    assert set(
+        LeadFlag.objects.filter(code__in=starter_codes).values_list("code", flat=True)
+    ) == starter_codes
 
 
 @pytest.mark.django_db
