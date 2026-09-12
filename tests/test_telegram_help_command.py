@@ -34,8 +34,9 @@ def test_help_lists_all_registered_commands():
     assert list(command_descriptions) == [
         "help",
         "mailboxes_status",
-        "ads_status",
+        "apps_status",
         "summary",
+        "analytics",
         "unread",
         "checkmail",
         "polling",
@@ -44,7 +45,8 @@ def test_help_lists_all_registered_commands():
         "deploy",
     ]
     assert command_descriptions["mailboxes_status"] == "mailbox status"
-    assert command_descriptions["ads_status"] == "active ads status and statistics"
+    assert command_descriptions["apps_status"] == "active apps status and statistics"
+    assert command_descriptions["analytics"] == "saved listing view analytics"
     assert "production server" in command_descriptions["polling"]
     assert "production deploy" in command_descriptions["deploy"]
     assert "progress" in command_descriptions["deploy"]
@@ -105,7 +107,8 @@ def test_help_command_replies_with_html_for_allowed_update(monkeypatch):
     reply = update.effective_message.replies[0]
     assert "<b>Argus: what the bot can do</b>" in reply["text"]
     assert "/mailboxes_status" in reply["text"]
-    assert "/ads_status" in reply["text"]
+    assert "/apps_status" in reply["text"]
+    assert "/analytics" in reply["text"]
     assert "/status" not in reply["text"]
     assert reply["parse_mode"] == "HTML"
     assert reply["disable_web_page_preview"] is True
@@ -120,7 +123,8 @@ def test_telegram_bot_uses_dedicated_help_handler_and_publishes_menu():
     assert "await publish_telegram_command_menu(application.bot, language)" in content
     assert 'CommandHandler("help", handle_help_command)' in content
     assert 'CommandHandler("mailboxes_status", handle_mailboxes_status_command)' in content
-    assert 'CommandHandler("ads_status", handle_ads_status_command)' in content
+    assert 'CommandHandler("apps_status", handle_ads_status_command)' in content
+    assert 'CommandHandler("analytics", handle_analytics_command)' in content
     assert 'CommandHandler("status",' not in content
     assert 'CommandHandler("mailboxes",' not in content
     assert ".post_init(configure_bot_commands)" in content
