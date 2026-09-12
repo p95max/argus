@@ -66,7 +66,10 @@ def test_ads_status_message_contains_active_listing_stats_only():
     message = build_ads_status_message()
 
     assert "Listing: 1" in message
-    assert "• VW Golf\n· 💬 2 · 🆕 1 · 🛠 1" in message
+    assert "⚪ 1. VW Golf" in message
+    assert "· Статус: ⚪ неизвестно" in message
+    assert "· 📬 Ящик: Main" in message
+    assert "· Всего обращений: 💬 2" in message
     assert "Mailbox status" not in message
 
 
