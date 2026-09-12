@@ -116,7 +116,7 @@ def test_build_unread_reminder_report_uses_telegram_alert_style():
     assert "🔴 <b>Status:</b> needs attention" in message
     assert "🆕 <b>Unread:</b> 2" in message
     assert "📂 <b>Cases:</b> 2" in message
-    assert "🔥 <b>High/Urgent:</b> 1" in message
+    assert "🔥 <b>Срочных:</b> 1" in message
     assert "📱 <a" not in message
 
 
