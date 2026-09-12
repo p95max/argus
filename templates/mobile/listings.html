@@ -71,14 +71,18 @@
                     <span class="summary-title listing-summary-title">
                         <span class="listing-summary-name">🚗 {{ group.title }}</span>
                         <span class="listing-summary-badges">
-                            <span class="status-pill muted">💬 {{ group.alerts|length }}</span>
+                            <span class="listing-summary-counters">
+                                <span class="status-pill muted">💬 {{ group.alerts|length }}</span>
+                                {% if group.statistics and group.statistics.views_count is not None %}
+                                    <span class="status-pill ok listing-views-pill">👁 {{ group.statistics.views_count }}</span>
+                                {% endif %}
+                            </span>
                             {% if group.statistics and group.statistics.views_count is not None %}
-                                <span class="status-pill ok listing-views-pill">👁 {{ group.statistics.views_count }}</span>
                                 {% if group.statistics.publication_date %}
-                                    <span class="status-pill muted">{{ group.statistics.publication_icon }} {{ group.statistics.publication_age_label }}</span>
+                                    <span class="status-pill muted listing-publication-pill">{{ group.statistics.publication_icon }} {{ group.statistics.publication_age_label }}</span>
                                 {% endif %}
                                 {% if group.statistics.last_activity_stale %}
-                                    <span class="status-pill warn">⚠️ без активности {{ group.statistics.last_activity_age_days }} дн.</span>
+                                    <span class="status-pill warn listing-activity-pill">⚠️ без активности {{ group.statistics.last_activity_age_days }} дн.</span>
                                 {% endif %}
                             {% endif %}
                             {% if group.is_closed %}
@@ -281,7 +285,6 @@
         }
         .listing-summary-badges {
             display: grid;
-            grid-template-columns: auto auto minmax(0, 1fr) auto;
             align-items: center;
             gap: 7px;
             width: 100%;
