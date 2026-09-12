@@ -63,7 +63,8 @@ def test_mobile_listings_groups_multiple_leads_under_one_listing(client, staff_u
 
     assert response.status_code == 200
     body = response.content.decode("utf-8")
-    assert body.count("Skoda Octavia 1.4 tsi 122 ps, tüv neu") == 1
+    assert body.count('class="card collapsible-card listing-card"') == 2
+    assert "Skoda Octavia 1.4 tsi 122 ps, tüv neu" in body
     assert f"Обращение #{first.id}" in body
     assert f"Обращение #{second.id}" in body
     assert "Thomas" in body
