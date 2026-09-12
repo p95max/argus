@@ -37,3 +37,28 @@ def test_shipping_payment_story_is_marked_for_support_as_scam():
     assert "suspected_scam" in result.flag_codes
     assert result.priority == MarketplaceAlert.Priority.HIGH
     assert "службу поддержки" in result.reason
+
+
+def test_price_offer_is_detected():
+    result = classify_marketplace_message(
+        "Würden Sie den Preis von 3.700 Euro akzeptieren?"
+    )
+
+    assert "price_negotiation" in result.flag_codes
+    assert "торг / предложение цены" in result.reason
+
+
+def test_phone_number_is_not_detected_as_price_offer():
+    result = classify_marketplace_message(
+        "Sie können mich unter 0176 12345678 erreichen."
+    )
+
+    assert "price_negotiation" not in result.flag_codes
+
+
+def test_phone_number_near_offer_word_is_not_detected_as_price():
+    result = classify_marketplace_message(
+        "Mein Angebot: Rufen Sie mich bitte unter 0151 23456789 an."
+    )
+
+    assert "price_negotiation" not in result.flag_codes
