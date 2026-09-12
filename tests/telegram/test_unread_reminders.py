@@ -163,8 +163,8 @@ def test_async_send_telegram_reminder_saves_last_reminded_at(monkeypatch, mailbo
 
     alert.refresh_from_db()
     assert bot.calls[0]["chat_id"] == "42"
-    assert "Reminder" in bot.calls[0]["text"]
-    assert "Reminder inbox (reminders@example.local)" in bot.calls[0]["text"]
+    assert "unread lead reminder" in bot.calls[0]["text"]
+    assert "reminders@example.local" in bot.calls[0]["text"]
     assert bot.calls[0]["reply_markup"] is not None
     assert alert.last_reminded_at is not None
     assert alert.telegram_error == ""
