@@ -712,3 +712,117 @@ body.gmail-refresh-active {
     content: "";
     margin-top: 4px;
 }
+
+/* Listing cards: roomier mobile layout without thumbnails. */
+.listing-card > .collapsible-summary {
+    min-height: 122px;
+    padding: 16px 18px;
+    align-items: stretch;
+}
+
+.listing-card > .collapsible-summary::after {
+    align-self: center;
+    flex: 0 0 auto;
+    margin-left: 4px;
+}
+
+.listing-card .listing-summary-title {
+    width: 100%;
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: 14px;
+    min-width: 0;
+}
+
+.listing-card .listing-summary-name {
+    display: block;
+    min-width: 0;
+    padding-right: 4px;
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+.listing-card .listing-summary-badges {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    align-items: center;
+}
+
+.listing-card .listing-summary-badges > .status-pill:not(.listing-status-pill) {
+    min-height: 34px;
+    justify-content: center;
+    padding: 6px 9px;
+    font-size: 13px;
+}
+
+.listing-card .listing-status-pill {
+    position: absolute;
+    top: 16px;
+    right: 42px;
+    min-height: 32px;
+    max-width: 46%;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+.listing-card > .collapsible-summary {
+    position: relative;
+}
+
+@media (max-width: 560px) {
+    .listing-card > .collapsible-summary {
+        min-height: 132px;
+        padding: 17px 16px;
+    }
+
+    .listing-card .listing-summary-name {
+        padding-right: 118px;
+        font-size: 17px;
+        overflow-wrap: anywhere;
+    }
+
+    .listing-card .listing-summary-badges {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+    }
+
+    .listing-card .listing-summary-badges > .status-pill:not(.listing-status-pill) {
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .listing-card .listing-status-pill {
+        top: 17px;
+        right: 38px;
+        max-width: 116px;
+    }
+}
+
+@media (max-width: 390px) {
+    .listing-card > .collapsible-summary {
+        min-height: 140px;
+        padding: 16px 14px;
+    }
+
+    .listing-card .listing-summary-name {
+        padding-right: 104px;
+        font-size: 16px;
+    }
+
+    .listing-card .listing-status-pill {
+        right: 34px;
+        max-width: 104px;
+        font-size: 12px;
+        padding-inline: 8px;
+    }
+
+    .listing-card .listing-summary-badges > .status-pill:not(.listing-status-pill) {
+        font-size: 12px;
+        padding-inline: 6px;
+    }
+}
