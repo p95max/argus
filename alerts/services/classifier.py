@@ -20,6 +20,8 @@ BOILERPLATE_MARKERS = (
     "Impressum",
 )
 
+PRICE_AMOUNT_PATTERN = r"(?:[1-9]\d{1,5}|[1-9]\d{0,2}(?:\.\d{3})+)(?:,\d{1,2})?"
+
 
 CLASSIFICATION_RULES = (
     {
@@ -62,11 +64,11 @@ CLASSIFICATION_RULES = (
         "code": "price_negotiation",
         "priority": MarketplaceAlert.Priority.NORMAL,
         "patterns": (
-            r"\bpreis(?:\s+von)?\s+\d[\d.,]*\s*(?:€|euro)?\s+akzeptieren\b",
-            r"\bwürden sie\s+\d[\d.,]*\s*(?:€|euro)?\s+akzeptieren\b",
-            r"\bich biete\s+(?:ihnen\s+)?\d[\d.,]*\s*(?:€|euro)?\b",
-            r"\bmein angebot(?: wäre| ist)?\s+\d[\d.,]*\s*(?:€|euro)?\b",
-            r"\bfür\s+\d[\d.,]*\s*(?:€|euro)\s+(?:nehmen|kaufen|abholen)\b",
+            rf"\bpreis(?:\s+von)?\s+{PRICE_AMOUNT_PATTERN}\s*(?:€|euro)?\s+akzeptieren\b",
+            rf"\bwürden sie\s+{PRICE_AMOUNT_PATTERN}\s*(?:€|euro)?\s+akzeptieren\b",
+            rf"\bich biete\s+(?:ihnen\s+)?{PRICE_AMOUNT_PATTERN}\s*(?:€|euro)?\b",
+            rf"\bmein angebot(?: wäre| ist)?\s+{PRICE_AMOUNT_PATTERN}\s*(?:€|euro)?\b",
+            rf"\bfür\s+{PRICE_AMOUNT_PATTERN}\s*(?:€|euro)\s+(?:nehmen|kaufen|abholen)\b",
         ),
         "reason": "торг / предложение цены",
     },
