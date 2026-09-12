@@ -69,11 +69,9 @@ def alert(db):
 def test_build_alert_message_contains_main_details(alert):
     message = build_alert_message(alert)
 
-    assert "<b>New lead</b>" in message
-    assert "Mailbox" in message
-    assert "Inbox (inbox@example.local)" in message
+    assert message.startswith("🚗 <b>BMW 320d Touring</b>")
+    assert "📬 inbox@example.local" in message
     assert "Max" in message
-    assert "BMW 320d Touring" in message
     assert "Ich kann heute" in message
 
 
@@ -86,7 +84,6 @@ def test_build_alert_message_keeps_operational_event_separate_from_buyer_lead(al
 
     message = build_alert_message(alert)
 
-    assert "Kleinanzeigen" in message
     assert "BMW 320d Touring" in message
     assert "Deine Anzeige" in message
     assert "Max" not in message
@@ -195,40 +192,40 @@ def test_status_callback_does_not_change_alert_status(monkeypatch, alert):
 
 
 @pytest.mark.django_db
-def test_build_alert_message_contains_status(alert):
+def test_build_alert_message_contains_assignment_without_legacy_workflow_metadata(alert):
     alert.taken_by_label = "Telegram user 100"
     alert.classification_reason = "Есть признаки срочного покупателя."
     alert.save(update_fields=["taken_by_label", "classification_reason", "updated_at"])
 
     message = build_alert_message(alert)
 
-    assert "Status" in message
-    assert alert.get_alert_status_display() in message
     assert "Telegram user 100" in message
-    assert "Есть признаки" in message
+    assert "Status" not in message
+    assert alert.get_alert_status_display() not in message
+    assert "Есть признаки" not in message
 
 
 @pytest.mark.django_db
-def test_alert_keyboard_contains_open_mobile_link(settings, alert):
+def test_alert_keyboard_contains_mobile_listings_link(settings, alert):
     settings.ARGUS_PUBLIC_BASE_URL = "http://localhost:8000"
 
     keyboard = build_alert_keyboard(alert)
 
-    assert keyboard.inline_keyboard[-1][0].text == "Open mobile"
+    assert keyboard.inline_keyboard[-1][0].text == "📱 Обращения"
     url = keyboard.inline_keyboard[-1][0].url
-    assert url == f"http://localhost:8000/m/alerts/{alert.id}/"
+    assert url == "http://localhost:8000/m/listings/"
 
 
 @pytest.mark.django_db
-def test_unread_report_keyboard_uses_alert_actions_for_one_case(settings, alert):
+def test_unread_report_keyboard_links_to_mobile_listings(settings, alert):
     settings.ARGUS_PUBLIC_BASE_URL = "http://localhost:8000"
 
     keyboard = build_unread_report_keyboard([alert])
 
     assert keyboard is not None
-    assert keyboard.inline_keyboard[0][0].text == "Status"
-    assert keyboard.inline_keyboard[1][0].text == "Take to work"
-    assert keyboard.inline_keyboard[-1][0].url == f"http://localhost:8000/m/alerts/{alert.id}/"
+    assert keyboard.inline_keyboard == keyboard.inline_keyboard[-1:]
+    assert keyboard.inline_keyboard[0][0].text == "📱 Обращения"
+    assert keyboard.inline_keyboard[0][0].url == "http://localhost:8000/m/listings/"
 
 
 @pytest.mark.django_db(transaction=True)
@@ -322,7 +319,7 @@ def test_async_send_telegram_reminder_report_saves_error_for_all_alerts(monkeypa
 
 
 @pytest.mark.django_db(transaction=True)
-def test_async_send_telegram_reminder_report_sends_case_action_keyboard(monkeypatch, settings, alert):
+def test_async_send_telegram_reminder_report_sends_listings_keyboard(monkeypatch, settings, alert):
     monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "42")
     settings.ARGUS_PUBLIC_BASE_URL = "http://localhost:8000"
     bot = FakeTelegramBot()
@@ -336,8 +333,8 @@ def test_async_send_telegram_reminder_report_sends_case_action_keyboard(monkeypa
     )
 
     keyboard = bot.calls[0]["reply_markup"]
-    assert keyboard.inline_keyboard[0][0].text == "Status"
-    assert keyboard.inline_keyboard[-1][0].url == f"http://localhost:8000/m/alerts/{alert.id}/"
+    assert keyboard.inline_keyboard[0][0].text == "📱 Обращения"
+    assert keyboard.inline_keyboard[0][0].url == "http://localhost:8000/m/listings/"
 
 
 @pytest.mark.django_db(transaction=True)
@@ -459,6 +456,6 @@ def test_telegram_messages_follow_argus_russian_language(alert):
     message = build_alert_message(alert)
     keyboard = build_alert_keyboard(alert)
 
-    assert "<b>Новое обращение</b>" in message
-    assert "Ящик" in message
-    assert keyboard.inline_keyboard[0][0].text == "Статус"
+    assert message.startswith("🚗 <b>BMW 320d Touring</b>")
+    assert "📬 inbox@example.local" in message
+    assert keyboard.inline_keyboard[0][0].text == "📱 Обращения"
