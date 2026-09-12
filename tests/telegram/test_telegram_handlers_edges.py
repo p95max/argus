@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from telegram.error import BadRequest
 
 from alerts.gmail_polling import GmailPollingCommandError, GmailPollingStatus
-from alerts.telegram import handlers
+from alerts.telegram import doctor_command, handlers
 
 
 class FakeTelegramMessage:
@@ -210,9 +210,9 @@ def test_unread_command_replies_with_html(monkeypatch):
 
 def test_doctor_command_rejects_unknown_chat(monkeypatch):
     update = FakeUpdate(chat_id="99")
-    monkeypatch.setattr(handlers, "is_allowed_update", lambda update: False)
+    monkeypatch.setattr(doctor_command, "is_allowed_update", lambda update: False)
 
-    asyncio.run(handlers.handle_doctor_command(update, context=object()))
+    asyncio.run(doctor_command.handle_doctor_command(update, context=object()))
 
     assert update.effective_message.replies == [
         {"text": "This user or chat does not have access to Argus."}
@@ -221,10 +221,10 @@ def test_doctor_command_rejects_unknown_chat(monkeypatch):
 
 def test_doctor_command_replies_with_html(monkeypatch):
     update = FakeUpdate()
-    monkeypatch.setattr(handlers, "is_allowed_update", lambda update: True)
-    monkeypatch.setattr(handlers, "build_doctor_script_message", lambda: "<b>Doctor</b>")
+    monkeypatch.setattr(doctor_command, "is_allowed_update", lambda update: True)
+    monkeypatch.setattr(doctor_command, "build_doctor_script_message", lambda: "<b>Doctor</b>")
 
-    asyncio.run(handlers.handle_doctor_command(update, context=object()))
+    asyncio.run(doctor_command.handle_doctor_command(update, context=object()))
 
     assert update.effective_message.replies == [
         {
