@@ -25,7 +25,7 @@
                 z-index: 1;
             }
             .listing-card .listing-summary-badges {
-                padding-right: 150px;
+                padding-right: 0;
             }
         </style>
     {% endblock %}
@@ -178,73 +178,50 @@
     aria-modal="true"
     aria-labelledby="gmail-refresh-modal-title"
     aria-hidden="true"
-    tabindex="-1"
     hidden
 >
     <div class="gmail-refresh-dialog">
-        <span class="gmail-refresh-spinner" aria-hidden="true"></span>
-        <strong id="gmail-refresh-modal-title">Обновляем Gmail</strong>
-        <span class="gmail-refresh-description">Проверяем почту и объявления...</span>
+        <div class="gmail-refresh-spinner" aria-hidden="true"></div>
+        <strong id="gmail-refresh-modal-title">Проверяем Gmail…</strong>
+        <div class="gmail-refresh-description">Получаем новые обращения из подключённых ящиков.</div>
     </div>
 </div>
 {% endif %}
 <script>
     (() => {
-        const toggle = document.getElementById("theme-toggle");
-        if (!toggle) {
-            return;
-        }
-
         const root = document.documentElement;
-        const setTheme = (isLight) => {
-            root.classList.toggle("light-theme", isLight);
-            localStorage.setItem("argus-theme", isLight ? "light" : "dark");
+        const toggle = document.getElementById("theme-toggle");
+        const refreshForm = document.getElementById("gmail-refresh-form");
+        const refreshButton = document.getElementById("gmail-refresh-button");
+        const refreshModal = document.getElementById("gmail-refresh-modal");
+
+        const applyThemeButton = () => {
+            if (!toggle) return;
+            const isLight = root.classList.contains("light-theme");
             toggle.textContent = isLight ? "🌙" : "☀️";
-            toggle.setAttribute(
-                "aria-label",
-                isLight ? "Включить тёмную тему" : "Включить светлую тему"
-            );
-            toggle.title = toggle.getAttribute("aria-label");
+            toggle.setAttribute("aria-label", isLight ? "Включить тёмную тему" : "Включить светлую тему");
+            toggle.setAttribute("title", isLight ? "Включить тёмную тему" : "Включить светлую тему");
         };
 
-        setTheme(root.classList.contains("light-theme"));
-        toggle.addEventListener("click", () => setTheme(!root.classList.contains("light-theme")));
-    })();
-</script>
-<script>
-    (() => {
-        const form = document.getElementById("gmail-refresh-form");
-        const button = document.getElementById("gmail-refresh-button");
-        const modal = document.getElementById("gmail-refresh-modal");
-        const backgroundRegions = [
-            document.querySelector("header"),
-            document.querySelector("main"),
-        ].filter(Boolean);
+        applyThemeButton();
 
-        if (!form || !button || !modal) {
-            return;
+        if (toggle) {
+            toggle.addEventListener("click", () => {
+                const isLight = root.classList.toggle("light-theme");
+                localStorage.setItem("argus-theme", isLight ? "light" : "dark");
+                applyThemeButton();
+            });
         }
 
-        const resetLoadingState = () => {
-            button.disabled = false;
-            modal.hidden = true;
-            modal.setAttribute("aria-hidden", "true");
-            document.body.classList.remove("gmail-refresh-active");
-            document.body.removeAttribute("aria-busy");
-            backgroundRegions.forEach((region) => { region.inert = false; });
-        };
-
-        form.addEventListener("submit", () => {
-            button.disabled = true;
-            modal.hidden = false;
-            modal.setAttribute("aria-hidden", "false");
-            document.body.classList.add("gmail-refresh-active");
-            document.body.setAttribute("aria-busy", "true");
-            backgroundRegions.forEach((region) => { region.inert = true; });
-            modal.focus();
-        });
-
-        window.addEventListener("pageshow", resetLoadingState);
+        if (refreshForm && refreshButton && refreshModal) {
+            refreshForm.addEventListener("submit", () => {
+                refreshButton.disabled = true;
+                refreshButton.textContent = "⏳";
+                refreshModal.hidden = false;
+                refreshModal.setAttribute("aria-hidden", "false");
+                document.body.classList.add("gmail-refresh-active");
+            });
+        }
     })();
 </script>
 </body>
