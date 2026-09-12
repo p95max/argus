@@ -71,7 +71,7 @@ def test_mobile_panel_shows_needs_attention_and_empty_state(client, staff_user, 
     assert "Archive" in body
     assert "Spam" in body
     assert "Working hours" in body
-    assert "Needs attention" in body
+    assert "Непрочитанные" in body
     assert "Mobile inbox" in body
 
 
@@ -249,8 +249,8 @@ def test_mobile_panel_my_in_work_tab(client, staff_user, alert):
     assert response.status_code == 200
     body = response.content.decode("utf-8")
     assert "My in-work leads" in body
-    assert "Case resolved" in body
-    assert "✅ Take to work" not in body
+    assert "Обращение обработано" in body
+    assert "🛠️ В работу" not in body
     assert "Audi A4" in body
 
 
@@ -368,7 +368,7 @@ def test_mobile_panel_manual_mailbox_check(monkeypatch, client, staff_user, aler
     assert response.status_code == 200
     assert checked == [alert.mailbox_id]
     assert listing_refreshes == [{"force": True}]
-    assert "Mail checked" in response.content.decode("utf-8")
+    assert "Почта проверена" in response.content.decode("utf-8")
 
 
 @pytest.mark.django_db
