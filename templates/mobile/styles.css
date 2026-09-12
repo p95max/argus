@@ -170,3 +170,10 @@ body.gmail-refresh-active { overflow: hidden; }
     .listing-card .listing-status-pill { right: 34px; max-width: 104px; font-size: 12px; padding-inline: 8px; }
     .listing-card .listing-summary-counters .status-pill, .listing-card .listing-publication-pill, .listing-card .listing-activity-pill { font-size: 12px; padding-inline: 8px; }
 }
+
+/* Keep publication/activity age on its own row below the counters. */
+.listing-card .listing-publication-pill,
+.listing-card .listing-activity-pill {
+    grid-column: 1;
+    justify-self: start;
+}
