@@ -37,6 +37,52 @@ def _growth_events_by_listing():
     return events_by_listing
 
 
+def _build_all_listings_history(analytics):
+    """Build cumulative daily view history for every configured listing."""
+    if not analytics or not analytics.listings:
+        return {"labels": [], "series": []}
+
+    listing_titles = {item.listing_id: item.title for item in analytics.listings}
+    daily_values = {listing_id: {} for listing_id in listing_titles}
+    days = set()
+
+    stats = (
+        ListingViewStat.objects.filter(listing_id__in=listing_titles)
+        .order_by("created_at", "id")
+        .values("listing_id", "views_count", "created_at")
+    )
+    for stat in stats:
+        day = timezone.localtime(stat["created_at"]).date()
+        daily_values[stat["listing_id"]][day] = stat["views_count"]
+        days.add(day)
+
+    ordered_days = sorted(days)
+    series = []
+    for listing_id, title in listing_titles.items():
+        saved = daily_values.get(listing_id, {})
+        values = []
+        last_value = None
+        started = False
+        for day in ordered_days:
+            if day in saved:
+                last_value = saved[day]
+                started = True
+            values.append(last_value if started else None)
+        if any(value is not None for value in values):
+            series.append(
+                {
+                    "listing_id": listing_id,
+                    "title": title,
+                    "values": values,
+                }
+            )
+
+    return {
+        "labels": [day.strftime("%d.%m") for day in ordered_days],
+        "series": series,
+    }
+
+
 def _build_hourly_chart(events, now):
     local_now = timezone.localtime(now)
     start = local_now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=23)
@@ -131,5 +177,6 @@ def mobile_analytics(request):
         {
             "analytics": analytics,
             "chart_sets": chart_sets,
+            "all_listings_history": _build_all_listings_history(analytics),
         },
     )
