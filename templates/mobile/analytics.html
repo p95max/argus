@@ -35,6 +35,13 @@
         </section>
 
         <section class="analytics-chart-grid">
+            <article class="card analytics-chart-card analytics-chart-wide">
+                <div class="title">🚗 Динамика просмотров всех объявлений</div>
+                <div class="small">Просмотры по датам за всю сохранённую историю. Каждая линия — отдельное объявление.</div>
+                <div id="chart-all-listings-legend" class="analytics-line-legend"></div>
+                <canvas id="chart-all-listings" class="analytics-canvas" height="260"></canvas>
+            </article>
+
             <article class="card analytics-chart-card">
                 <div class="title">📈 Общие просмотры за 24 часа</div>
                 <div class="small" id="analytics-description-24h">Суммарный прирост просмотров всех объявлений за последние 24 часа, по часам.</div>
@@ -74,6 +81,7 @@
     {% endif %}
 
     {{ chart_sets|json_script:"analytics-chart-sets" }}
+    {{ all_listings_history|json_script:"analytics-all-listings-history" }}
 
     <style>
         .analytics-tabs {
@@ -139,6 +147,32 @@
             max-width: 100%;
             margin-top: 12px;
         }
+        .analytics-line-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px 10px;
+            margin-top: 10px;
+        }
+        .analytics-line-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .analytics-line-legend-swatch {
+            width: 18px;
+            height: 3px;
+            border-radius: 999px;
+            flex: 0 0 auto;
+        }
+        .analytics-line-legend-label {
+            max-width: 240px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .analytics-top-listing-card {
             display: grid;
             gap: 10px;
@@ -165,12 +199,16 @@
             .analytics-chart-wide {
                 grid-column: auto;
             }
+            .analytics-line-legend-label {
+                max-width: 165px;
+            }
         }
     </style>
 
     <script>
         (() => {
             const chartSets = JSON.parse(document.getElementById('analytics-chart-sets').textContent || '{}');
+            const allListingsHistory = JSON.parse(document.getElementById('analytics-all-listings-history').textContent || '{}');
             const css = getComputedStyle(document.documentElement);
             const accent = css.getPropertyValue('--accent').trim() || '#3cc7aa';
             const muted = css.getPropertyValue('--muted').trim() || '#8b95a5';
@@ -230,6 +268,122 @@
                 });
             };
 
+            const historyPalette = [
+                '#36c2a3', '#4f8cff', '#f6c85f', '#ff6b6b', '#b07cff',
+                '#35b6e8', '#ff9f43', '#72c472', '#e66fb5', '#9aa8b7'
+            ];
+
+            const drawAllListingsHistory = () => {
+                const canvas = document.getElementById('chart-all-listings');
+                const legend = document.getElementById('chart-all-listings-legend');
+                const labels = allListingsHistory.labels || [];
+                const series = allListingsHistory.series || [];
+                if (!canvas || !legend) return;
+
+                legend.innerHTML = '';
+                series.forEach((item, index) => {
+                    const legendItem = document.createElement('span');
+                    legendItem.className = 'analytics-line-legend-item';
+                    const swatch = document.createElement('span');
+                    swatch.className = 'analytics-line-legend-swatch';
+                    swatch.style.background = historyPalette[index % historyPalette.length];
+                    const label = document.createElement('span');
+                    label.className = 'analytics-line-legend-label';
+                    label.textContent = item.title;
+                    legendItem.append(swatch, label);
+                    legend.appendChild(legendItem);
+                });
+
+                const ratio = window.devicePixelRatio || 1;
+                const width = Math.max(canvas.clientWidth, 280);
+                const height = 260;
+                canvas.width = width * ratio;
+                canvas.height = height * ratio;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(ratio, ratio);
+                ctx.clearRect(0, 0, width, height);
+
+                if (!labels.length || !series.length) {
+                    ctx.fillStyle = muted;
+                    ctx.font = '13px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('История просмотров пока не накоплена.', width / 2, height / 2);
+                    return;
+                }
+
+                const numericValues = series.flatMap(item => item.values.filter(value => value !== null && value !== undefined).map(Number));
+                const maxValue = Math.max(...numericValues, 1);
+                const minValue = Math.min(...numericValues, 0);
+                const range = Math.max(maxValue - minValue, 1);
+                const pad = { top: 18, right: 14, bottom: 38, left: 44 };
+                const chartWidth = width - pad.left - pad.right;
+                const chartHeight = height - pad.top - pad.bottom;
+                const xAt = index => labels.length === 1
+                    ? pad.left + chartWidth / 2
+                    : pad.left + chartWidth * index / (labels.length - 1);
+                const yAt = value => pad.top + chartHeight - ((value - minValue) / range) * chartHeight;
+
+                ctx.font = '12px sans-serif';
+                ctx.textBaseline = 'middle';
+                ctx.lineWidth = 1;
+                for (let step = 0; step <= 4; step += 1) {
+                    const value = minValue + range * step / 4;
+                    const y = yAt(value);
+                    ctx.strokeStyle = line;
+                    ctx.beginPath();
+                    ctx.moveTo(pad.left, y);
+                    ctx.lineTo(width - pad.right, y);
+                    ctx.stroke();
+                    ctx.fillStyle = muted;
+                    ctx.textAlign = 'right';
+                    ctx.fillText(String(Math.round(value)), pad.left - 7, y);
+                }
+
+                const labelEvery = Math.max(Math.ceil(labels.length / 6), 1);
+                labels.forEach((label, index) => {
+                    if (index % labelEvery === 0 || index === labels.length - 1) {
+                        ctx.fillStyle = text;
+                        ctx.textAlign = 'center';
+                        ctx.fillText(label, xAt(index), height - 14);
+                    }
+                });
+
+                series.forEach((item, seriesIndex) => {
+                    const color = historyPalette[seriesIndex % historyPalette.length];
+                    ctx.strokeStyle = color;
+                    ctx.fillStyle = color;
+                    ctx.lineWidth = 2.5;
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    let hasPoint = false;
+                    item.values.forEach((rawValue, index) => {
+                        if (rawValue === null || rawValue === undefined) {
+                            hasPoint = false;
+                            return;
+                        }
+                        const x = xAt(index);
+                        const y = yAt(Number(rawValue));
+                        if (!hasPoint) {
+                            ctx.moveTo(x, y);
+                            hasPoint = true;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    });
+                    ctx.stroke();
+
+                    item.values.forEach((rawValue, index) => {
+                        if (rawValue === null || rawValue === undefined) return;
+                        const x = xAt(index);
+                        const y = yAt(Number(rawValue));
+                        ctx.beginPath();
+                        ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                });
+            };
+
             const formatDelta = (value) => value === null || value === undefined ? '—' : `+${value}`;
 
             const render = (key) => {
@@ -257,6 +411,7 @@
                     tab.setAttribute('aria-selected', selected ? 'true' : 'false');
                 });
 
+                drawAllListingsHistory();
                 draw('chart-24h', data.chart_24h, 4);
                 draw('chart-7d', data.chart_7d, 1);
                 draw('chart-hours-all-time', data.chart_hours_all_time, 3);
