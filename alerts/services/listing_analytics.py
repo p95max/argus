@@ -109,7 +109,19 @@ def get_listing_analytics(*, now=None) -> ListingAnalytics | None:
         previous_7d = _period_delta(
             snapshots, now - timedelta(days=14), cutoff_7d, listing.views_count, now
         )
-        if current_7d is not None and previous_7d is not None:
+        # A 7-day percentage is meaningful only when we have almost two full
+        # weeks of saved history. Otherwise the previous "7 days" can actually
+        # be a much shorter partial period and exaggerate the percentage.
+        has_full_7d_comparison = bool(
+            snapshots
+            and min(snapshot.created_at for snapshot in snapshots)
+            <= now - timedelta(days=13)
+        )
+        if (
+            has_full_7d_comparison
+            and current_7d is not None
+            and previous_7d is not None
+        ):
             period_deltas_7d.append((current_7d, previous_7d))
 
         items.append(
