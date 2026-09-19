@@ -52,8 +52,45 @@
                 ctx.fill();
             };
 
-            draw();
-            window.addEventListener('resize', draw);
+            const drawMetric = (canvas, sourceValues) => {
+                if (!canvas || sourceValues.length < 2) return;
+                const ratio = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                const width = Math.max(rect.width, 1);
+                const height = Math.max(rect.height, 1);
+                canvas.width = width * ratio;
+                canvas.height = height * ratio;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(ratio, ratio);
+                const min = Math.min(...sourceValues);
+                const max = Math.max(...sourceValues);
+                const range = Math.max(max - min, 1);
+                const pad = 4;
+                const x = index => pad + (width - pad * 2) * index / (sourceValues.length - 1);
+                const y = value => height - pad - ((value - min) / range) * (height - pad * 2);
+                const accent = getComputedStyle(document.documentElement)
+                    .getPropertyValue('--accent').trim() || '#36c2a3';
+                ctx.strokeStyle = accent;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                sourceValues.forEach((value, index) => {
+                    if (index === 0) ctx.moveTo(x(index), y(value));
+                    else ctx.lineTo(x(index), y(value));
+                });
+                ctx.stroke();
+            };
+
+            const drawAll = () => {
+                draw();
+                const allValues = points.map(point => Number(point.value) || 0);
+                document.querySelectorAll('.dashboard-metric-chart').forEach(metric => {
+                    const count = metric.dataset.period === '24h' ? Math.min(3, allValues.length) : Math.min(8, allValues.length);
+                    drawMetric(metric, allValues.slice(-count));
+                });
+            };
+
+            drawAll();
+            window.addEventListener('resize', drawAll);
         })();
     </script>
 {% endblock %}
@@ -96,7 +133,8 @@
             {% if listing_analytics %}
                 <div class="dashboard-analytics-total">👁 {{ listing_analytics.total_views }} просмотров</div>
                 <div class="dashboard-analytics-metrics">
-                    <div>
+                    <div class="dashboard-metric-card">
+                        <canvas class="dashboard-metric-chart" data-period="24h" aria-hidden="true"></canvas>
                         <span>📈 24 ч</span>
                         <strong>{% if listing_analytics.total_delta_24h is not None %}+{{ listing_analytics.total_delta_24h }}{% else %}—{% endif %}</strong>
                         {% if listing_analytics.total_change_24h_pct is not None %}
@@ -105,7 +143,8 @@
                             </small>
                         {% endif %}
                     </div>
-                    <div>
+                    <div class="dashboard-metric-card">
+                        <canvas class="dashboard-metric-chart" data-period="7d" aria-hidden="true"></canvas>
                         <span>📅 7 дней</span>
                         <strong>{% if listing_analytics.total_delta_7d is not None %}+{{ listing_analytics.total_delta_7d }}{% else %}—{% endif %}</strong>
                         {% if listing_analytics.total_change_7d_pct is not None %}
@@ -182,6 +221,20 @@
         .dashboard-active-listings { color: var(--accent); font-size: 20px; font-weight: 800; }
         .dashboard-analytics-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
         .dashboard-analytics-metrics div { display: grid; gap: 3px; padding: 8px 10px; border-radius: 6px; background: var(--panel-2); }
+        .dashboard-metric-card { position: relative; overflow: hidden; }
+        .dashboard-metric-card > span,
+        .dashboard-metric-card > strong,
+        .dashboard-metric-card > small { position: relative; z-index: 1; }
+        .dashboard-metric-chart {
+            position: absolute !important;
+            inset: 0;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            pointer-events: none;
+            opacity: .26;
+        }
         .dashboard-analytics-metrics span { color: var(--muted); font-size: 13px; }
         .dashboard-analytics-metrics strong { color: var(--accent); font-size: 18px; }
         .analytics-change { font-size: 12px; font-weight: 800; line-height: 1.1; }
