@@ -411,7 +411,7 @@ def test_mobile_nav_shows_gmail_refresh_for_mailbox_manager(client, staff_user):
     assert f'action="{reverse("mobile_check_gmail_now")}"' in body
     assert f'value="{reverse("mobile_listings")}"' in body
     assert 'id="gmail-refresh-modal"' in body
-    assert "Обновляем Gmail" in body
+    assert "Проверяем Gmail" in body
 
 
 @pytest.mark.django_db
