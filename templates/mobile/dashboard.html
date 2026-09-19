@@ -164,6 +164,18 @@
         .gmail-check-button { display: grid; place-items: center; min-width: 58px; min-height: 58px; padding: 0; font-size: 24px; }
         .dashboard-analytics-card,
         .dashboard-listings-card { display: grid; align-content: start; gap: 9px; text-decoration: none; color: inherit; }
+        .dashboard-analytics-card { position: relative; overflow: hidden; }
+        .dashboard-analytics-content { position: relative; z-index: 1; display: grid; gap: 9px; }
+        .dashboard-analytics-background {
+            position: absolute !important;
+            inset: 0;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            pointer-events: none;
+            opacity: .22;
+        }
         .dashboard-analytics-card:hover,
         .dashboard-listings-card:hover { border-color: var(--line-accent); }
         .dashboard-analytics-total,
@@ -186,7 +198,11 @@
         .dashboard-listing-status-active { color: var(--accent); }
         .dashboard-listing-status-unknown { color: var(--muted); }
         .dashboard-listing-row strong { flex: 0 0 auto; color: var(--accent); }
-        @media (max-width: 900px) { .dashboard-overview { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) {
+            .dashboard-overview { grid-template-columns: 1fr; }
+            .dashboard-summary-card { min-height: 166px; }
+            .dashboard-analytics-card { height: auto; min-height: 166px; }
+        }
     </style>
 
     <section>
