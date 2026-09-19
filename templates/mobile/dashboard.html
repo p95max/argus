@@ -39,8 +39,24 @@
             {% if listing_analytics %}
                 <div class="dashboard-analytics-total">👁 {{ listing_analytics.total_views }} просмотров</div>
                 <div class="dashboard-analytics-metrics">
-                    <div><span>📈 24 ч</span><strong>{% if listing_analytics.total_delta_24h is not None %}+{{ listing_analytics.total_delta_24h }}{% else %}—{% endif %}</strong></div>
-                    <div><span>📅 7 дней</span><strong>{% if listing_analytics.total_delta_7d is not None %}+{{ listing_analytics.total_delta_7d }}{% else %}—{% endif %}</strong></div>
+                    <div>
+                        <span>📈 24 ч</span>
+                        <strong>{% if listing_analytics.total_delta_24h is not None %}+{{ listing_analytics.total_delta_24h }}{% else %}—{% endif %}</strong>
+                        {% if listing_analytics.total_change_24h_pct is not None %}
+                            <small class="analytics-change {% if listing_analytics.total_change_24h_pct > 0 %}analytics-change-up{% elif listing_analytics.total_change_24h_pct < 0 %}analytics-change-down{% else %}analytics-change-flat{% endif %}">
+                                {% if listing_analytics.total_change_24h_pct > 0 %}▲ +{% elif listing_analytics.total_change_24h_pct < 0 %}▼ {% endif %}{{ listing_analytics.total_change_24h_pct|floatformat:1 }}%
+                            </small>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <span>📅 7 дней</span>
+                        <strong>{% if listing_analytics.total_delta_7d is not None %}+{{ listing_analytics.total_delta_7d }}{% else %}—{% endif %}</strong>
+                        {% if listing_analytics.total_change_7d_pct is not None %}
+                            <small class="analytics-change {% if listing_analytics.total_change_7d_pct > 0 %}analytics-change-up{% elif listing_analytics.total_change_7d_pct < 0 %}analytics-change-down{% else %}analytics-change-flat{% endif %}">
+                                {% if listing_analytics.total_change_7d_pct > 0 %}▲ +{% elif listing_analytics.total_change_7d_pct < 0 %}▼ {% endif %}{{ listing_analytics.total_change_7d_pct|floatformat:1 }}%
+                            </small>
+                        {% endif %}
+                    </div>
                 </div>
             {% else %}
                 <div class="small">Статистика просмотров пока недоступна.</div>
@@ -98,6 +114,10 @@
         .dashboard-analytics-metrics div { display: grid; gap: 3px; padding: 8px 10px; border-radius: 6px; background: var(--panel-2); }
         .dashboard-analytics-metrics span { color: var(--muted); font-size: 13px; }
         .dashboard-analytics-metrics strong { color: var(--accent); font-size: 18px; }
+        .analytics-change { font-size: 12px; font-weight: 800; line-height: 1.1; }
+        .analytics-change-up { color: var(--accent); }
+        .analytics-change-down { color: var(--danger); }
+        .analytics-change-flat { color: var(--muted); }
         .dashboard-listing-preview { display: grid; gap: 6px; }
         .dashboard-listing-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 9px; border-radius: 6px; background: var(--panel-2); }
         .dashboard-listing-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
