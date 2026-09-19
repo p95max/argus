@@ -157,6 +157,8 @@ def mobile_analytics(request):
             "views_count": analytics.total_views if analytics else 0,
             "delta_24h": analytics.total_delta_24h if analytics else None,
             "delta_7d": analytics.total_delta_7d if analytics else None,
+            "change_24h_pct": analytics.total_change_24h_pct if analytics else None,
+            "change_7d_pct": analytics.total_change_7d_pct if analytics else None,
             **_build_chart_set(all_events, now),
         }
     }
@@ -168,6 +170,8 @@ def mobile_analytics(request):
                 "views_count": item.views_count,
                 "delta_24h": item.views_delta_24h,
                 "delta_7d": item.views_delta_7d,
+                "change_24h_pct": None,
+                "change_7d_pct": None,
                 **_build_chart_set(events_by_listing.get(item.listing_id, []), now),
             }
 
