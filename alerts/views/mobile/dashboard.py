@@ -185,6 +185,31 @@ def mobile_dashboard(request):
     )
     active_listings_count = active_listings_queryset.count()
     listing_analytics = get_listing_analytics()
+
+    # Compact aggregate history for the decorative chart behind the analytics card.
+    analytics_background_points = []
+    if listing_analytics:
+        listing_ids = [item.listing_id for item in listing_analytics.listings]
+        stats = (
+            Listing.objects.filter(id__in=listing_ids)
+            .prefetch_related("view_stats")
+        )
+        totals_by_day = {}
+        for listing in stats:
+            for stat in listing.view_stats.all():
+                day = timezone.localtime(stat.created_at).date()
+                totals_by_day.setdefault(day, {})[listing.id] = stat.views_count
+
+        last_by_listing = {}
+        for day in sorted(totals_by_day):
+            last_by_listing.update(totals_by_day[day])
+            analytics_background_points.append(
+                {
+                    "label": day.strftime("%d.%m"),
+                    "value": sum(last_by_listing.values()),
+                }
+            )
+
     health_report = build_health_report()
 
     context = {
@@ -197,6 +222,7 @@ def mobile_dashboard(request):
         "active_listings": active_listings,
         "active_listings_count": active_listings_count,
         "listing_analytics": listing_analytics,
+        "analytics_background_points": analytics_background_points,
         "health_report": health_report,
         "view_mode": view_mode,
         "alert_counts": alert_counts,
