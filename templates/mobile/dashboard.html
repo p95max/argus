@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}Argus mobile
+{% block title %}Argus mobile{% endblock %}
+{% block extra_head %}
     {{ analytics_background_points|json_script:"dashboard-analytics-points" }}
     <script>
-        (() => {
+        document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.getElementById('dashboard-analytics-background');
             const source = document.getElementById('dashboard-analytics-points');
             if (!canvas || !source) return;
@@ -91,7 +92,7 @@
 
             drawAll();
             window.addEventListener('resize', drawAll);
-        })();
+        });
     </script>
 {% endblock %}
 {% block header_title %}Argus{% endblock %}
