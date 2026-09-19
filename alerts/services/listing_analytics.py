@@ -46,20 +46,30 @@ def _delta_since(listing, cutoff):
     return max(listing.views_count - baseline.views_count, 0)
 
 
-def _period_delta(snapshots, start, end, current_views, now):
-    """Return view growth inside a complete historical period."""
-    before_start = [snapshot for snapshot in snapshots if snapshot.created_at <= start]
-    if not before_start:
+def _closest_snapshot(snapshots, target):
+    """Return the saved counter closest to a period boundary."""
+    if not snapshots:
         return None
-    start_value = max(before_start, key=lambda snapshot: snapshot.created_at).views_count
+    return min(
+        snapshots,
+        key=lambda snapshot: abs((snapshot.created_at - target).total_seconds()),
+    )
+
+
+def _period_delta(snapshots, start, end, current_views, now):
+    """Return view growth between the counters closest to period boundaries."""
+    start_snapshot = _closest_snapshot(snapshots, start)
+    if start_snapshot is None:
+        return None
+    start_value = start_snapshot.views_count
 
     if end >= now:
         end_value = current_views
     else:
-        before_end = [snapshot for snapshot in snapshots if snapshot.created_at <= end]
-        if not before_end:
+        end_snapshot = _closest_snapshot(snapshots, end)
+        if end_snapshot is None or end_snapshot.created_at <= start_snapshot.created_at:
             return None
-        end_value = max(before_end, key=lambda snapshot: snapshot.created_at).views_count
+        end_value = end_snapshot.views_count
 
     return max(end_value - start_value, 0)
 
