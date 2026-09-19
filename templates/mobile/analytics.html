@@ -27,10 +27,12 @@
             <article class="card analytics-summary-card">
                 <span>📈 За 24 часа</span>
                 <strong id="analytics-delta-24h">{% if analytics.total_delta_24h is not None %}+{{ analytics.total_delta_24h }}{% else %}—{% endif %}</strong>
+                <small id="analytics-change-24h" class="analytics-change"></small>
             </article>
             <article class="card analytics-summary-card">
                 <span>📅 За 7 дней</span>
                 <strong id="analytics-delta-7d">{% if analytics.total_delta_7d is not None %}+{{ analytics.total_delta_7d }}{% else %}—{% endif %}</strong>
+                <small id="analytics-change-7d" class="analytics-change"></small>
             </article>
         </section>
 
@@ -129,6 +131,14 @@
             color: var(--accent);
             font-size: 26px;
         }
+        .analytics-change {
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .analytics-change-up { color: var(--accent); }
+        .analytics-change-down { color: var(--danger); }
+        .analytics-change-flat { color: var(--muted); }
         .analytics-chart-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -385,6 +395,26 @@
             };
 
             const formatDelta = (value) => value === null || value === undefined ? '—' : `+${value}`;
+            const renderChange = (elementId, value) => {
+                const element = document.getElementById(elementId);
+                if (!element) return;
+                element.className = 'analytics-change';
+                if (value === null || value === undefined) {
+                    element.textContent = '';
+                    return;
+                }
+                const numeric = Number(value);
+                if (numeric > 0) {
+                    element.classList.add('analytics-change-up');
+                    element.textContent = `▲ +${numeric.toFixed(1)}%`;
+                } else if (numeric < 0) {
+                    element.classList.add('analytics-change-down');
+                    element.textContent = `▼ ${numeric.toFixed(1)}%`;
+                } else {
+                    element.classList.add('analytics-change-flat');
+                    element.textContent = '0.0%';
+                }
+            };
 
             const render = (key) => {
                 const data = chartSets[key] || chartSets.all;
@@ -395,6 +425,8 @@
                 document.getElementById('analytics-total-views').textContent = data.views_count;
                 document.getElementById('analytics-delta-24h').textContent = formatDelta(data.delta_24h);
                 document.getElementById('analytics-delta-7d').textContent = formatDelta(data.delta_7d);
+                renderChange('analytics-change-24h', data.change_24h_pct);
+                renderChange('analytics-change-7d', data.change_7d_pct);
                 document.getElementById('analytics-description-24h').textContent = isAll
                     ? 'Суммарный прирост просмотров всех объявлений за последние 24 часа, по часам.'
                     : `Прирост просмотров «${data.title}» за последние 24 часа, по часам.`;
