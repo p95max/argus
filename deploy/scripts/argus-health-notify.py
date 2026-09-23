@@ -110,13 +110,20 @@ def check_health(env):
         except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
             return False, f"Full health check failed: {full_url} ({exc})"
 
-        if status != 200 or payload.get("status") != "ok":
+        if status != 200 or not payload.get("ok", payload.get("status") == "ok"):
             failed = _failed_health_checks(payload)
             detail = "; ".join(
                 f"{check['name']} [{check['status']}]: {check['detail']}"
                 for check in failed
             ) or payload.get("status", "unknown")
             return False, f"Full health degraded ({status}): {detail}"
+        if payload.get("status") == "degraded":
+            failed = _failed_health_checks(payload)
+            detail = "; ".join(
+                f"{check['name']} [{check['status']}]: {check['detail']}"
+                for check in failed
+            )
+            return True, f"Full health warning: {detail}"
         return True, f"Full health OK: {full_url}"
 
     simple_url = build_url(base_url, "/health/")
