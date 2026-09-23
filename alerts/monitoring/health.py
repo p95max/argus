@@ -50,10 +50,27 @@ def build_health_report(*, include_deploy_checks: bool = False) -> dict:
         )
         checks["demo_data"] = _check_no_demo_mailbox()
 
-    overall_ok = all(check.ok for check in checks.values())
+    critical_checks = {
+        "database",
+        "active_mailbox",
+        "telegram",
+        "backup",
+        "server_timers",
+        "secrets",
+        "debug",
+        "demo_data",
+    }
+    blocking_failures = [
+        key
+        for key, check in checks.items()
+        if not check.ok and key in critical_checks and check.status != "warning"
+    ]
+    degraded_checks = [key for key, check in checks.items() if not check.ok]
+    overall_ok = not blocking_failures
     return {
-        "status": "ok" if overall_ok else "degraded",
+        "status": "ok" if not degraded_checks else ("degraded" if overall_ok else "error"),
         "ok": overall_ok,
+        "blocking_failures": blocking_failures,
         "generated_at": now.isoformat(),
         "checks": {
             key: {
