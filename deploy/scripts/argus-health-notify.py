@@ -70,9 +70,33 @@ def request_json(url, *, token=""):
     if token:
         headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=8) as response:
-        body = response.read().decode("utf-8", errors="replace")
-        return response.status, json.loads(body)
+    try:
+        with urllib.request.urlopen(request, timeout=8) as response:
+            body = response.read().decode("utf-8", errors="replace")
+            return response.status, json.loads(body)
+    except urllib.error.HTTPError as exc:
+        # urllib raises for 4xx/5xx, but /health/full/ deliberately uses 503
+        # for a degraded report. Preserve its JSON body so the monitor can
+        # report the actual failed checks instead of only "HTTP Error 503".
+        body = exc.read().decode("utf-8", errors="replace")
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            raise exc
+        return exc.code, payload
+
+
+def _failed_health_checks(payload):
+    checks = payload.get("checks", {})
+    return [
+        {
+            "name": name,
+            "status": str(check.get("status", "error")).lower(),
+            "detail": check.get("detail") or check.get("status") or "failed",
+        }
+        for name, check in checks.items()
+        if not check.get("ok")
+    ]
 
 
 def check_health(env):
@@ -87,16 +111,12 @@ def check_health(env):
             return False, f"Full health check failed: {full_url} ({exc})"
 
         if status != 200 or payload.get("status") != "ok":
-            detail = payload.get("status", "unknown")
-            checks = payload.get("checks", {})
-            failed = [
-                f"{name}: {check.get('detail') or check.get('status')}"
-                for name, check in checks.items()
-                if not check.get("ok")
-            ]
-            if failed:
-                detail = "; ".join(failed)
-            return False, f"Full health degraded: {detail}"
+            failed = _failed_health_checks(payload)
+            detail = "; ".join(
+                f"{check['name']} [{check['status']}]: {check['detail']}"
+                for check in failed
+            ) or payload.get("status", "unknown")
+            return False, f"Full health degraded ({status}): {detail}"
         return True, f"Full health OK: {full_url}"
 
     simple_url = build_url(base_url, "/health/")
