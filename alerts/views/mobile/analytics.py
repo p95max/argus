@@ -5,7 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
 from django.utils import timezone
 
-from ...models import ListingViewStat
+from ...models import Listing, ListingViewStat
 from ...services.listing_analytics import get_listing_analytics
 
 
@@ -20,7 +20,11 @@ def _growth_events_by_listing():
     previous_by_listing = {}
     stats = (
         ListingViewStat.objects.select_related("listing")
-        .filter(listing__kleinanzeigen_url__gt="")
+        .filter(
+            listing__kleinanzeigen_url__gt="",
+            listing__is_active=True,
+            listing__kleinanzeigen_status=Listing.KleinanzeigenStatus.ACTIVE,
+        )
         .order_by("listing_id", "created_at", "id")
     )
 
