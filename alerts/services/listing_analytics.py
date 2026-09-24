@@ -91,7 +91,11 @@ def get_listing_analytics(*, now=None) -> ListingAnalytics | None:
     period_deltas_7d = []
     for listing in (
         Listing.objects.exclude(kleinanzeigen_url="")
-        .filter(views_count__isnull=False)
+        .filter(
+            views_count__isnull=False,
+            is_active=True,
+            kleinanzeigen_status=Listing.KleinanzeigenStatus.ACTIVE,
+        )
         .prefetch_related("view_stats")
     ):
         snapshots = list(listing.view_stats.all())
