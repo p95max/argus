@@ -136,7 +136,9 @@
                                 {% endif %}
                                 <span class="dashboard-listing-title">{{ listing.title }}</span>
                             </span>
-                            <strong>👁 {% if listing.views_count is not None %}{{ listing.views_count }}{% else %}—{% endif %}</strong>
+                            {% if listing.kleinanzeigen_status == 'active' %}
+                                <strong>👁 {% if listing.views_count is not None %}{{ listing.views_count }}{% else %}—{% endif %}</strong>
+                            {% endif %}
                         </div>
                     {% endfor %}
                 </div>
