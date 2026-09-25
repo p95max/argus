@@ -126,6 +126,30 @@ def _build_daily_chart(events, now):
     ]
 
 
+def _build_all_time_daily_chart(events):
+    """Aggregate saved view growth by day for the full listing history."""
+    if not events:
+        return []
+
+    values = {}
+    for created_at, delta in events:
+        day = timezone.localtime(created_at).date()
+        values[day] = values.get(day, 0) + delta
+
+    start = min(values)
+    end = max(values)
+    days = []
+    day = start
+    while day <= end:
+        days.append(day)
+        day += timedelta(days=1)
+
+    return [
+        {"label": day.strftime("%d.%m"), "value": values.get(day, 0)}
+        for day in days
+    ]
+
+
 def _build_all_time_hour_chart(events):
     """Aggregate all saved view growth by local hour of day."""
     values = {hour: 0 for hour in range(24)}
@@ -143,6 +167,7 @@ def _build_chart_set(events, now):
     return {
         "chart_24h": _build_hourly_chart(events, now),
         "chart_7d": _build_daily_chart(events, now),
+        "chart_all_time": _build_all_time_daily_chart(events),
         "chart_hours_all_time": _build_all_time_hour_chart(events),
     }
 
