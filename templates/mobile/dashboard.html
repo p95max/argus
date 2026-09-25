@@ -3,13 +3,12 @@
 
 {% block title %}Argus mobile{% endblock %}
 {% block extra_head %}
-    {{ analytics_background_points|json_script:"dashboard-analytics-points" }}
+    {{ dashboard_metric_charts|json_script:"dashboard-metric-charts" }}
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const source = document.getElementById('dashboard-analytics-points');
+            const source = document.getElementById('dashboard-metric-charts');
             if (!source) return;
-            const points = JSON.parse(source.textContent || '[]');
-            if (points.length < 2) return;
+            const chartData = JSON.parse(source.textContent || '{}');
 
             const drawMetric = (canvas, sourceValues) => {
                 if (!canvas || sourceValues.length < 2) return;
@@ -40,10 +39,9 @@
             };
 
             const drawAll = () => {
-                const allValues = points.map(point => Number(point.value) || 0);
                 document.querySelectorAll('.dashboard-metric-chart').forEach(metric => {
-                    const count = metric.dataset.period === '24h' ? Math.min(3, allValues.length) : Math.min(8, allValues.length);
-                    drawMetric(metric, allValues.slice(-count));
+                    const points = chartData[metric.dataset.period] || [];
+                    drawMetric(metric, points.map(point => Number(point.value) || 0));
                 });
             };
 
