@@ -42,7 +42,7 @@ def _growth_events_by_listing():
 
 
 def _build_all_listings_history(analytics):
-    """Build cumulative daily view history for every configured listing."""
+    """Build daily view gains for every active configured listing."""
     if not analytics or not analytics.listings:
         return {"labels": [], "series": []}
 
@@ -52,7 +52,7 @@ def _build_all_listings_history(analytics):
 
     stats = (
         ListingViewStat.objects.filter(listing_id__in=listing_titles)
-        .order_by("created_at", "id")
+        .order_by("listing_id", "created_at", "id")
         .values("listing_id", "views_count", "created_at")
     )
     for stat in stats:
@@ -65,13 +65,19 @@ def _build_all_listings_history(analytics):
     for listing_id, title in listing_titles.items():
         saved = daily_values.get(listing_id, {})
         values = []
-        last_value = None
-        started = False
+        previous_value = None
         for day in ordered_days:
-            if day in saved:
-                last_value = saved[day]
-                started = True
-            values.append(last_value if started else None)
+            current_value = saved.get(day)
+            if current_value is None:
+                values.append(None)
+                continue
+            if previous_value is None:
+                # The first snapshot is a baseline, not views gained that day.
+                values.append(None)
+            else:
+                values.append(max(current_value - previous_value, 0))
+            previous_value = current_value
+
         if any(value is not None for value in values):
             series.append(
                 {
@@ -85,7 +91,6 @@ def _build_all_listings_history(analytics):
         "labels": [day.strftime("%d.%m") for day in ordered_days],
         "series": series,
     }
-
 
 def _build_hourly_chart(events, now):
     local_now = timezone.localtime(now)
