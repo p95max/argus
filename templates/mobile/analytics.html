@@ -57,6 +57,12 @@
             </article>
 
             <article class="card analytics-chart-card analytics-chart-wide">
+                <div class="title">📊 Общая динамика за весь период</div>
+                <div class="small" id="analytics-description-all-time">Прирост просмотров всех объявлений по дням за всю сохранённую историю.</div>
+                <canvas id="chart-all-time" class="analytics-canvas" height="230"></canvas>
+            </article>
+
+            <article class="card analytics-chart-card analytics-chart-wide">
                 <div class="title">🕒 Наиболее активные часы</div>
                 <div class="small" id="analytics-description-hours">В какие часы суток все объявления набирали больше всего просмотров за всю сохранённую историю.</div>
                 <canvas id="chart-hours-all-time" class="analytics-canvas" height="230"></canvas>
@@ -433,6 +439,9 @@
                 document.getElementById('analytics-description-7d').textContent = isAll
                     ? 'Суммарный прирост просмотров всех объявлений за последние 7 дней, по дням.'
                     : `Прирост просмотров «${data.title}» за последние 7 дней, по дням.`;
+                document.getElementById('analytics-description-all-time').textContent = isAll
+                    ? 'Прирост просмотров всех объявлений по дням за всю сохранённую историю.'
+                    : `Прирост просмотров «${data.title}» по дням за всю сохранённую историю.`;
                 document.getElementById('analytics-description-hours').textContent = isAll
                     ? 'В какие часы суток все объявления набирали больше всего просмотров за всю сохранённую историю.'
                     : `В какие часы суток «${data.title}» набирало больше всего просмотров за всю сохранённую историю.`;
@@ -446,6 +455,7 @@
                 drawAllListingsHistory();
                 draw('chart-24h', data.chart_24h, 4);
                 draw('chart-7d', data.chart_7d, 1);
+                draw('chart-all-time', data.chart_all_time, Math.max(Math.ceil((data.chart_all_time || []).length / 7), 1));
                 draw('chart-hours-all-time', data.chart_hours_all_time, 3);
             };
 
