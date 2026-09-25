@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -16,7 +18,7 @@ from ...services.listing_analytics import get_listing_analytics
 from ...command_locks import CommandAlreadyRunning, command_lock
 from ...gmail.gmail import check_mailbox, mark_alert_gmail_message_read
 from ...monitoring.health import build_health_report
-from ...models import Listing, MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
+from ...models import Listing, ListingViewStat, MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 from ...permissions import can_manage_mailboxes, can_view_mailbox_operations
 
 
@@ -186,29 +188,47 @@ def mobile_dashboard(request):
     active_listings_count = active_listings_queryset.count()
     listing_analytics = get_listing_analytics()
 
-    # Compact aggregate history for the decorative chart behind the analytics card.
-    analytics_background_points = []
+    # Mini charts show actual view gains per period, not cumulative counters.
+    dashboard_metric_charts = {"24h": [], "7d": []}
     if listing_analytics:
         listing_ids = [item.listing_id for item in listing_analytics.listings]
-        stats = (
-            Listing.objects.filter(id__in=listing_ids)
-            .prefetch_related("view_stats")
+        now = timezone.now()
+        stats = list(
+            ListingViewStat.objects.filter(listing_id__in=listing_ids)
+            .order_by("listing_id", "created_at", "id")
+            .values("listing_id", "views_count", "created_at")
         )
-        totals_by_day = {}
-        for listing in stats:
-            for stat in listing.view_stats.all():
-                day = timezone.localtime(stat.created_at).date()
-                totals_by_day.setdefault(day, {})[listing.id] = stat.views_count
 
-        last_by_listing = {}
-        for day in sorted(totals_by_day):
-            last_by_listing.update(totals_by_day[day])
-            analytics_background_points.append(
-                {
-                    "label": day.strftime("%d.%m"),
-                    "value": sum(last_by_listing.values()),
-                }
-            )
+        events = []
+        previous_by_listing = {}
+        for stat in stats:
+            previous = previous_by_listing.get(stat["listing_id"])
+            if previous is not None:
+                delta = max(stat["views_count"] - previous, 0)
+                if delta:
+                    events.append((stat["created_at"], delta))
+            previous_by_listing[stat["listing_id"]] = stat["views_count"]
+
+        local_now = timezone.localtime(now)
+        hour_start = local_now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=23)
+        hours = [hour_start + timedelta(hours=index) for index in range(24)]
+        hourly = {hour: 0 for hour in hours}
+        today = local_now.date()
+        days = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        daily = {day: 0 for day in days}
+
+        for created_at, delta in events:
+            local_created = timezone.localtime(created_at)
+            hour = local_created.replace(minute=0, second=0, microsecond=0)
+            if hour in hourly:
+                hourly[hour] += delta
+            if local_created.date() in daily:
+                daily[local_created.date()] += delta
+
+        dashboard_metric_charts = {
+            "24h": [{"label": hour.strftime("%H:%M"), "value": hourly[hour]} for hour in hours],
+            "7d": [{"label": day.strftime("%d.%m"), "value": daily[day]} for day in days],
+        }
 
     health_report = build_health_report()
 
@@ -222,7 +242,7 @@ def mobile_dashboard(request):
         "active_listings": active_listings,
         "active_listings_count": active_listings_count,
         "listing_analytics": listing_analytics,
-        "analytics_background_points": analytics_background_points,
+        "dashboard_metric_charts": dashboard_metric_charts,
         "health_report": health_report,
         "view_mode": view_mode,
         "alert_counts": alert_counts,
