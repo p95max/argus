@@ -151,6 +151,29 @@ def _check_recent_gmail_check(now) -> HealthCheck:
             _("Gmail polling is paused outside configured working hours."),
         )
 
+    if polling.working_hours_enabled:
+        # At the beginning of the working window the previous successful check
+        # can legitimately be many hours old. Give the scheduler one normal
+        # polling cycle (plus the standard grace period) before freshness is
+        # evaluated, otherwise every morning starts with a false CRITICAL.
+        now_minutes = local_now.hour * 60 + local_now.minute
+        start_minutes = (
+            polling.working_hours_start.hour * 60
+            + polling.working_hours_start.minute
+        )
+        minutes_since_start = (now_minutes - start_minutes) % (24 * 60)
+        startup_grace_minutes = polling.interval_minutes + GMAIL_STALE_GRACE_MINUTES
+        if minutes_since_start < startup_grace_minutes:
+            return HealthCheck(
+                True,
+                "paused",
+                _(
+                    "Gmail polling is in startup grace after working hours began "
+                    "(%(minutes)s min remaining)."
+                )
+                % {"minutes": startup_grace_minutes - minutes_since_start},
+            )
+
     newest_check = MailboxAccount.objects.filter(is_active=True).aggregate(
         last_checked_at=Max("last_checked_at"),
     )["last_checked_at"]
