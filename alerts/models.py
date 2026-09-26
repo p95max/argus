@@ -321,7 +321,15 @@ class Listing(TimestampedModel):
             self.kleinanzeigen_url = validated.normalized_url
             self.kleinanzeigen_listing_id = validated.ad_id
         else:
-            self.kleinanzeigen_listing_id = ""
+            # ID-only trackers are valid: buyer-message emails often contain the
+            # Kleinanzeigen ID before Argus knows the public listing URL.
+            # Keep a canonical ID so those alerts group with the same tracker and
+            # the database uniqueness constraint can prevent duplicates.
+            from .services.kleinanzeigen import canonicalize_kleinanzeigen_ad_id
+
+            self.kleinanzeigen_listing_id = (
+                canonicalize_kleinanzeigen_ad_id(self.kleinanzeigen_listing_id) or ""
+            )
             self.kleinanzeigen_status = self.KleinanzeigenStatus.UNKNOWN
 
     def clean(self):
