@@ -129,6 +129,26 @@ def sync_listing_from_publication(alert: MarketplaceAlert) -> Listing | None:
         return existing
 
     title = (alert.listing_title or alert.subject or f"Kleinanzeigen {info['listing_id']}").strip()
+
+    # Repair trackers created by older ID-only logic, which accidentally lost
+    # their ID when no URL was present. Restrict the fallback to the same
+    # mailbox/title so unrelated listings cannot be merged.
+    legacy = (
+        Listing.objects.filter(
+            kleinanzeigen_listing_id="",
+            kleinanzeigen_url="",
+            mailbox=alert.mailbox,
+            title=title[:255],
+        )
+        .order_by("id")
+        .first()
+    )
+    if legacy is not None:
+        legacy.kleinanzeigen_listing_id = info["listing_id"]
+        legacy.source_alert = legacy.source_alert or alert
+        legacy.save(update_fields=["kleinanzeigen_listing_id", "source_alert", "updated_at"])
+        return legacy
+
     return Listing.objects.create(
         title=title[:255],
         source_alert=alert,
