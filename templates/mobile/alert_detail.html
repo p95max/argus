@@ -157,7 +157,11 @@
                 {% elif listing_info.state == 'deleted' %}
                     <button class="small-action" type="button" disabled>🗑️ Недавно удалено · ID {{ listing_info.listing_id }}</button>
                 {% elif listing_info.state == 'missing_url' %}
-                    <button class="small-action" type="button" disabled>🆔 ID {{ listing_info.listing_id }}</button>
+                    <form method="post" action="{% url 'mobile_add_listing_from_publication' alert.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="small-action" type="submit">➕ Добавить объявление · ID {{ listing_info.listing_id }}</button>
+                    </form>
                 {% elif listing_info.state == 'missing_id' %}
                     <button class="small-action" type="button" disabled>⚠️ Не найден ID объявления</button>
                 {% endif %}
