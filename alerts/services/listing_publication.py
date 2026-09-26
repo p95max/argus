@@ -107,30 +107,34 @@ def publication_listing_state(alert: MarketplaceAlert) -> str:
 
 
 def publication_listing_candidate(alert: MarketplaceAlert):
-    """Return a validated listing when this alert can create a tracker."""
+    """Return listing info when an alert can create a tracker."""
     info = listing_alert_info(alert)
-    if info["state"] != "available" or not info["listing_url"]:
+    if info["state"] not in {"available", "missing_url"}:
         return None
-    return validate_kleinanzeigen_url(info["listing_url"])
+    return info
 
 
 def sync_listing_from_publication(alert: MarketplaceAlert) -> Listing | None:
-    """Create a tracker from a publication or buyer-message alert when possible."""
-    candidate = publication_listing_candidate(alert)
-    if candidate is None:
+    """Create a tracker from a publication or buyer-message alert.
+
+    A known Kleinanzeigen ID is sufficient. The public URL can be attached
+    later; analytics remain unavailable until then.
+    """
+    info = publication_listing_candidate(alert)
+    if info is None:
         return None
 
-    existing = Listing.objects.filter(kleinanzeigen_listing_id=candidate.ad_id).first()
+    existing = Listing.objects.filter(kleinanzeigen_listing_id=info["listing_id"]).first()
     if existing is not None:
         return existing
 
-    title = (alert.listing_title or alert.subject or f"Kleinanzeigen {candidate.ad_id}").strip()
+    title = (alert.listing_title or alert.subject or f"Kleinanzeigen {info['listing_id']}").strip()
     return Listing.objects.create(
         title=title[:255],
         source_alert=alert,
         mailbox=alert.mailbox,
-        kleinanzeigen_url=candidate.normalized_url,
-        kleinanzeigen_listing_id=candidate.ad_id,
+        kleinanzeigen_url=info["listing_url"],
+        kleinanzeigen_listing_id=info["listing_id"],
         is_active=True,
     )
 
