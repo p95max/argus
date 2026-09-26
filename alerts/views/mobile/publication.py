@@ -49,6 +49,10 @@ def mobile_add_listing_from_publication(request, alert_id):
     if listing is None:
         messages.warning(request, "Не удалось добавить объявление из уведомления.")
     else:
-        messages.success(request, f"Объявление добавлено: {listing.title} · ID {candidate.ad_id}")
+        suffix = "" if candidate["listing_url"] else " · добавьте ссылку для статистики"
+        messages.success(
+            request,
+            f"Объявление добавлено: {listing.title} · ID {candidate['listing_id']}{suffix}",
+        )
 
     return redirect(_safe_next_url(request))
