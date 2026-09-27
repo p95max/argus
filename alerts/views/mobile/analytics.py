@@ -42,12 +42,17 @@ def _growth_events_by_listing():
 
 
 def _build_all_listings_history(analytics):
-    """Build daily view gains for every active configured listing."""
+    """Build per-day view gains from consecutive snapshots.
+
+    The first snapshot is a baseline, not views gained on its calendar day.
+    Deltas are attributed to the day of the later snapshot. A date is shown
+    only once at least one real delta exists for it.
+    """
     if not analytics or not analytics.listings:
         return {"labels": [], "series": []}
 
     listing_titles = {item.listing_id: item.title for item in analytics.listings}
-    daily_values = {listing_id: {} for listing_id in listing_titles}
+    daily_gains = {listing_id: {} for listing_id in listing_titles}
     days = set()
 
     stats = (
@@ -55,31 +60,26 @@ def _build_all_listings_history(analytics):
         .order_by("listing_id", "created_at", "id")
         .values("listing_id", "views_count", "created_at")
     )
+
+    previous_by_listing = {}
     for stat in stats:
-        day = timezone.localtime(stat["created_at"]).date()
-        daily_values[stat["listing_id"]][day] = stat["views_count"]
-        days.add(day)
+        listing_id = stat["listing_id"]
+        previous = previous_by_listing.get(listing_id)
+        if previous is not None:
+            day = timezone.localtime(stat["created_at"]).date()
+            delta = max(stat["views_count"] - previous, 0)
+            daily_gains[listing_id][day] = daily_gains[listing_id].get(day, 0) + delta
+            days.add(day)
+        previous_by_listing[listing_id] = stat["views_count"]
 
     ordered_days = sorted(days)
+    if not ordered_days:
+        return {"labels": [], "series": []}
+
     series = []
     for listing_id, title in listing_titles.items():
-        saved = daily_values.get(listing_id, {})
-        values = []
-        previous_value = None
-        for day in ordered_days:
-            current_value = saved.get(day)
-            if current_value is None:
-                values.append(None)
-                continue
-            if previous_value is None:
-                # The first snapshot is only a baseline. Do not turn it into a
-                # synthetic zero: Argus does not know how many views were
-                # actually gained before that snapshot.
-                values.append(None)
-            else:
-                values.append(max(current_value - previous_value, 0))
-            previous_value = current_value
-
+        gains = daily_gains.get(listing_id, {})
+        values = [gains.get(day) for day in ordered_days]
         if any(value is not None for value in values):
             series.append(
                 {
@@ -88,22 +88,6 @@ def _build_all_listings_history(analytics):
                     "values": values,
                 }
             )
-
-    # Drop leading dates for which every series has only a baseline/missing
-    # value. This avoids showing a misleading "0 views" day for a newly
-    # tracked listing while preserving real zero-growth days later on.
-    first_real_index = None
-    for index in range(len(ordered_days)):
-        if any(item["values"][index] is not None for item in series):
-            first_real_index = index
-            break
-
-    if first_real_index is None:
-        return {"labels": [], "series": []}
-
-    ordered_days = ordered_days[first_real_index:]
-    for item in series:
-        item["values"] = item["values"][first_real_index:]
 
     return {
         "labels": [day.strftime("%d.%m") for day in ordered_days],
