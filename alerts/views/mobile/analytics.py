@@ -72,7 +72,9 @@ def _build_all_listings_history(analytics):
                 values.append(None)
                 continue
             if previous_value is None:
-                # The first snapshot is a baseline, not views gained that day.
+                # The first snapshot is only a baseline. Do not turn it into a
+                # synthetic zero: Argus does not know how many views were
+                # actually gained before that snapshot.
                 values.append(None)
             else:
                 values.append(max(current_value - previous_value, 0))
@@ -86,6 +88,22 @@ def _build_all_listings_history(analytics):
                     "values": values,
                 }
             )
+
+    # Drop leading dates for which every series has only a baseline/missing
+    # value. This avoids showing a misleading "0 views" day for a newly
+    # tracked listing while preserving real zero-growth days later on.
+    first_real_index = None
+    for index in range(len(ordered_days)):
+        if any(item["values"][index] is not None for item in series):
+            first_real_index = index
+            break
+
+    if first_real_index is None:
+        return {"labels": [], "series": []}
+
+    ordered_days = ordered_days[first_real_index:]
+    for item in series:
+        item["values"] = item["values"][first_real_index:]
 
     return {
         "labels": [day.strftime("%d.%m") for day in ordered_days],
