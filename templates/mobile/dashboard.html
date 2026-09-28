@@ -71,7 +71,7 @@
             <div class="small">{% trans "Last success" %}: {{ gmail_summary.last_success_at|date:"H:i"|default:not_yet }}</div>
             </div>
 
-            {% if can_manage_mailboxes and mailboxes %}
+            {% if can_refresh_mailbox and mailboxes %}
                 <div class="actions compact-actions gmail-check-action">
                     <form method="post" action="{% url 'mobile_check_gmail_now' %}">
                         {% csrf_token %}
