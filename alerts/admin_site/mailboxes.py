@@ -13,7 +13,7 @@ from ..gmail.gmail_oauth import (
     complete_gmail_oauth_callback,
 )
 from ..models import MailboxAccount
-from ..permissions import can_manage_mailboxes, can_view_mailbox_operations
+from ..permissions import can_manage_mailboxes, can_refresh_mailbox, can_view_mailbox_operations
 from .ui import status_badge
 
 
@@ -216,6 +216,10 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         if not can_manage_mailboxes(request.user):
             raise PermissionDenied("You do not have permission to manage Gmail OAuth.")
 
+    def _require_mailbox_refresh_permission(self, request):
+        if not can_refresh_mailbox(request.user):
+            raise PermissionDenied("You do not have permission to refresh Gmail.")
+
     def _get_mailbox_or_redirect(self, request, object_id):
         mailbox = self.get_object(request, object_id)
         if mailbox is None:
@@ -303,7 +307,7 @@ class MailboxAccountAdmin(admin.ModelAdmin):
 
     @method_decorator(require_POST)
     def gmail_check_now_view(self, request, object_id):
-        self._require_mailbox_manage_permission(request)
+        self._require_mailbox_refresh_permission(request)
         mailbox = self._get_mailbox_or_redirect(request, object_id)
         if mailbox is None:
             return redirect("admin:alerts_mailboxaccount_changelist")

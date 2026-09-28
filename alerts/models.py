@@ -71,6 +71,9 @@ class MailboxAccount(TimestampedModel):
         ordering = ["email"]
         verbose_name = _("Mailbox")
         verbose_name_plural = _("Mailboxes")
+        permissions = [
+            ("refresh_mailboxaccount", "Can refresh Gmail mailbox"),
+        ]
 
     def build_gmail_search_query(self):
         base_query = re.sub(r"(?:^|\s)newer_than:(?:1d|7d)(?=\s|$)", " ", self.gmail_search_query or "")
