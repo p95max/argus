@@ -69,9 +69,9 @@ class Command(BaseCommand):
         user.set_password(password)
         changed_fields.append("password")
         user.save()
-        call_command("loaddata", "readonly_group", verbosity=0)
+        call_command("loaddata", "operator_group", verbosity=0)
         self.stdout.write(
-            self.style.SUCCESS("Loaded readonly group fixture.")
+            self.style.SUCCESS("Loaded operator group fixture.")
         )
 
         created_flags, updated_flags = seed_lead_flags()
