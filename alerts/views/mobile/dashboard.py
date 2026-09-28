@@ -19,7 +19,7 @@ from ...command_locks import CommandAlreadyRunning, command_lock
 from ...gmail.gmail import check_mailbox, mark_alert_gmail_message_read
 from ...monitoring.health import build_health_report
 from ...models import Listing, ListingViewStat, MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
-from ...permissions import can_manage_mailboxes, can_view_mailbox_operations
+from ...permissions import can_manage_mailboxes, can_refresh_mailbox, can_view_mailbox_operations
 
 
 MOBILE_ALERTS_PER_PAGE = 20
@@ -38,6 +38,11 @@ def _require_superuser(user):
 def _require_mailbox_manage_permission(user):
     if not can_manage_mailboxes(user):
         raise PermissionDenied("You do not have permission to manage mailboxes.")
+
+
+def _require_mailbox_refresh_permission(user):
+    if not can_refresh_mailbox(user):
+        raise PermissionDenied("You do not have permission to refresh Gmail.")
 
 
 def _safe_next_url(request, fallback_name="mobile_dashboard"):
@@ -249,6 +254,7 @@ def mobile_dashboard(request):
         "service_open_errors": service_open_errors,
         "telegram_settings": settings,
         "can_manage_mailboxes": can_manage_mailboxes(request.user),
+        "can_refresh_mailbox": can_refresh_mailbox(request.user),
         "admin_alert_changelist_url": reverse(
             "admin:alerts_marketplacealert_changelist"
         ),
@@ -449,7 +455,7 @@ def mobile_service_event_action(request, event_id):
 @login_required
 @require_POST
 def mobile_check_mailbox_now(request, mailbox_id):
-    _require_mailbox_manage_permission(request.user)
+    _require_mailbox_refresh_permission(request.user)
 
     mailbox = get_object_or_404(MailboxAccount, id=mailbox_id)
     result = check_mailbox(mailbox)
@@ -465,7 +471,7 @@ def mobile_check_mailbox_now(request, mailbox_id):
 @login_required
 @require_POST
 def mobile_check_gmail_now(request):
-    _require_mailbox_manage_permission(request.user)
+    _require_mailbox_refresh_permission(request.user)
 
     try:
         with command_lock("check_gmail"):
