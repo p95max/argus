@@ -164,6 +164,15 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         if not obj.pk:
             return _("Save the mailbox first.")
 
+        request = getattr(self, "_gmail_actions_request", None)
+        if request is None:
+            return ""
+
+        can_manage = can_manage_mailboxes(request.user)
+        can_refresh = can_refresh_mailbox(request.user)
+        if not can_manage and not can_refresh:
+            return ""
+
         connect_url = reverse("admin:alerts_mailboxaccount_gmail_connect", args=[obj.pk])
         disconnect_url = reverse(
             "admin:alerts_mailboxaccount_gmail_disconnect",
@@ -171,34 +180,45 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         )
         check_url = reverse("admin:alerts_mailboxaccount_gmail_check_now", args=[obj.pk])
 
+        actions = []
+        if can_manage:
+            actions.append(
+                format_html(
+                    '<a class="btn btn-sm btn-outline-info" href="{}">'
+                    '<i class="fas fa-plug"></i> OAuth</a>',
+                    connect_url,
+                )
+            )
+        if can_refresh:
+            actions.append(
+                format_html(
+                    '<button class="btn btn-sm btn-outline-success" type="submit" '
+                    'formmethod="post" formaction="{}">'
+                    '<i class="fas fa-play"></i> Check updates</button>',
+                    check_url,
+                )
+            )
+        if can_manage:
+            actions.append(
+                format_html(
+                    '<button class="btn btn-sm btn-outline-danger" type="submit" '
+                    'formmethod="post" formaction="{}">'
+                    '<i class="fas fa-times"></i> Disconnect</button>',
+                    disconnect_url,
+                )
+            )
+
         return format_html(
-            """
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <a class="btn btn-sm btn-outline-info" href="{}">
-                    <i class="fas fa-plug"></i> OAuth
-                </a>
-                <button
-                    class="btn btn-sm btn-outline-success"
-                    type="submit"
-                    formmethod="post"
-                    formaction="{}"
-                >
-                    <i class="fas fa-play"></i> Check updates
-                </button>
-                <button
-                    class="btn btn-sm btn-outline-danger"
-                    type="submit"
-                    formmethod="post"
-                    formaction="{}"
-                >
-                    <i class="fas fa-times"></i> Disconnect
-                </button>
-            </div>
-            """,
-            connect_url,
-            check_url,
-            disconnect_url,
+            '<div style="display: flex; gap: 8px; flex-wrap: wrap;">{}</div>',
+            format_html("{}", *actions),
         )
+
+    def get_form(self, request, obj=None, **kwargs):
+        self._gmail_actions_request = request
+        try:
+            return super().get_form(request, obj, **kwargs)
+        finally:
+            self._gmail_actions_request = None
 
     def has_view_permission(self, request, obj=None):
         return can_view_mailbox_operations(request.user)
