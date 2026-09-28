@@ -2,6 +2,7 @@ import os
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
 from alerts.seed_data import seed_demo_alerts, seed_lead_flags
@@ -68,6 +69,11 @@ class Command(BaseCommand):
         user.set_password(password)
         changed_fields.append("password")
         user.save()
+        call_command("loaddata", "readonly_group", verbosity=0)
+        self.stdout.write(
+            self.style.SUCCESS("Loaded readonly group fixture.")
+        )
+
         created_flags, updated_flags = seed_lead_flags()
 
         if created:
