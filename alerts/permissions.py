@@ -11,3 +11,9 @@ def can_manage_mailboxes(user):
 
 def can_view_mailbox_operations(user):
     return user.is_active and user.is_staff
+
+
+def can_refresh_mailbox(user):
+    return user.is_active and (
+        user.is_superuser or user.has_perm("alerts.refresh_mailboxaccount")
+    )
