@@ -209,9 +209,9 @@
                     </div>
                 </a>
             </div>
-            <div class="dashboard-analytics-dots" role="tablist" aria-label="Аналитика">
-                <button class="dashboard-analytics-dot active" type="button" data-analytics-slide-dot aria-selected="true" aria-label="Просмотры"></button>
-                <button class="dashboard-analytics-dot" type="button" data-analytics-slide-dot aria-selected="false" aria-label="Обращения"></button>
+            <div class="dashboard-analytics-switcher" role="tablist" aria-label="Аналитика">
+                <button class="dashboard-analytics-switch active" type="button" data-analytics-slide-dot aria-selected="true" aria-label="Просмотры" title="Просмотры">👁</button>
+                <button class="dashboard-analytics-switch" type="button" data-analytics-slide-dot aria-selected="false" aria-label="Обращения" title="Обращения">💬</button>
             </div>
         </article>
 
@@ -271,33 +271,45 @@
             width: 50%;
             flex: 0 0 50%;
             min-width: 0;
-            padding: 16px 16px 28px;
+            padding: 16px;
             text-decoration: none;
             color: inherit;
         }
-        .dashboard-analytics-content { position: relative; z-index: 1; display: grid; gap: 9px; }
-        .dashboard-analytics-dots {
+        .dashboard-analytics-content {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 9px;
+            padding-right: 78px;
+        }
+        .dashboard-analytics-switcher {
             position: absolute;
-            left: 50%;
-            bottom: 8px;
-            transform: translateX(-50%);
+            top: 12px;
+            right: 12px;
             display: flex;
-            gap: 7px;
+            gap: 6px;
             z-index: 3;
         }
-        .dashboard-analytics-dot {
-            width: 7px;
-            height: 7px;
+        .dashboard-analytics-switch {
+            display: grid;
+            place-items: center;
+            width: 32px;
+            height: 32px;
             padding: 0;
-            border: 0;
-            border-radius: 999px;
-            background: var(--muted);
-            opacity: .45;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel-2);
+            color: var(--muted);
+            font: inherit;
+            font-size: 16px;
+            line-height: 1;
+            opacity: .72;
             cursor: pointer;
         }
-        .dashboard-analytics-dot.active {
-            width: 18px;
-            background: var(--accent);
+        .dashboard-analytics-switch.active {
+            border-color: var(--line-accent);
+            background: rgba(54, 194, 163, .12);
+            color: var(--accent);
             opacity: 1;
         }
         .dashboard-analytics-background {
