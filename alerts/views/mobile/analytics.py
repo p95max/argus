@@ -5,7 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
 from django.utils import timezone
 
-from ...models import Listing, ListingViewStat, MarketplaceAlert
+from ...models import Listing, ListingInquiryEvent, ListingViewStat
 from ...services.listing_analytics import get_listing_analytics
 
 
@@ -181,44 +181,46 @@ def _percentage_change(current, previous):
 
 
 def _inquiry_events_by_listing(now):
-    """Group buyer-message events by tracked Kleinanzeigen listing."""
-    listings = list(
-        Listing.objects.filter(is_active=True)
-        .exclude(kleinanzeigen_listing_id="")
-        .only("id", "title", "kleinanzeigen_listing_id")
-        .order_by("title", "id")
-    )
-    by_external_id = {
-        listing.kleinanzeigen_listing_id: listing
-        for listing in listings
-    }
-    events_by_listing = {listing.id: [] for listing in listings}
+    """Group durable inquiry events by listing, including closed/deleted listings."""
+    events_by_listing = {}
+    refs_by_key = {}
 
-    alerts = (
-        MarketplaceAlert.objects.filter(
-            event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
-            listing_id__in=by_external_id,
+    rows = (
+        ListingInquiryEvent.objects.select_related("listing")
+        .filter(occurred_at__lte=now)
+        .order_by("occurred_at", "id")
+    )
+    for event in rows:
+        if event.listing_id:
+            key = str(event.listing_id)
+            title = event.listing.title if event.listing else event.listing_title
+        elif event.kleinanzeigen_listing_id:
+            key = f"deleted:{event.kleinanzeigen_listing_id}"
+            title = event.listing_title or event.kleinanzeigen_listing_id
+        else:
+            key = f"deleted-alert:{event.source_alert_id}"
+            title = event.listing_title or "Удалённое объявление"
+
+        refs_by_key.setdefault(
+            key,
+            {
+                "listing_key": key,
+                "title": title or "Объявление",
+            },
         )
-        .values("listing_id", "received_at", "created_at")
-        .order_by("received_at", "created_at", "id")
+        events_by_listing.setdefault(key, []).append((event.occurred_at, 1))
+
+    refs = sorted(
+        refs_by_key.values(),
+        key=lambda item: item["title"].casefold(),
     )
-    for alert in alerts:
-        listing = by_external_id.get(alert["listing_id"])
-        if listing is None:
-            continue
-        occurred_at = alert["received_at"] or alert["created_at"]
-        if occurred_at > now:
-            continue
-        events_by_listing[listing.id].append((occurred_at, 1))
-
-    return listings, events_by_listing
-
+    return refs, events_by_listing
 
 def _count_events_between(events, start, end):
     return sum(delta for created_at, delta in events if start < created_at <= end)
 
 
-def _build_inquiry_chart_sets(listings, events_by_listing, now):
+def _build_inquiry_chart_sets(listing_refs, events_by_listing, now):
     cutoff_24h = now - timedelta(hours=24)
     cutoff_48h = now - timedelta(hours=48)
     cutoff_7d = now - timedelta(days=7)
@@ -247,36 +249,39 @@ def _build_inquiry_chart_sets(listings, events_by_listing, now):
         }
 
     chart_sets = {"all": build("Все объявления", all_events)}
-    for listing in listings:
-        chart_sets[str(listing.id)] = build(
-            listing.title,
-            events_by_listing.get(listing.id, []),
+    for listing_ref in listing_refs:
+        key = listing_ref["listing_key"]
+        chart_sets[key] = build(
+            listing_ref["title"],
+            events_by_listing.get(key, []),
         )
     return chart_sets
 
 
-def _build_inquiry_all_listings_history(listings, events_by_listing):
+def _build_inquiry_all_listings_history(listing_refs, events_by_listing):
     days = set()
     daily_by_listing = {}
 
-    for listing in listings:
+    for listing_ref in listing_refs:
+        key = listing_ref["listing_key"]
         daily = {}
-        for created_at, delta in events_by_listing.get(listing.id, []):
+        for created_at, delta in events_by_listing.get(key, []):
             day = timezone.localtime(created_at).date()
             daily[day] = daily.get(day, 0) + delta
             days.add(day)
-        daily_by_listing[listing.id] = daily
+        daily_by_listing[key] = daily
 
     ordered_days = sorted(days)
     series = []
-    for listing in listings:
-        daily = daily_by_listing.get(listing.id, {})
+    for listing_ref in listing_refs:
+        key = listing_ref["listing_key"]
+        daily = daily_by_listing.get(key, {})
         values = [daily.get(day, 0) for day in ordered_days]
         if any(values):
             series.append(
                 {
-                    "listing_id": listing.id,
-                    "title": listing.title,
+                    "listing_id": key,
+                    "title": listing_ref["title"],
                     "values": values,
                 }
             )
@@ -324,9 +329,9 @@ def mobile_analytics(request):
                 **_build_chart_set(events_by_listing.get(item.listing_id, []), now),
             }
 
-    inquiry_listings, inquiry_events = _inquiry_events_by_listing(now)
+    inquiry_listing_refs, inquiry_events = _inquiry_events_by_listing(now)
     inquiry_chart_sets = _build_inquiry_chart_sets(
-        inquiry_listings,
+        inquiry_listing_refs,
         inquiry_events,
         now,
     )
@@ -337,9 +342,12 @@ def mobile_analytics(request):
         for item in analytics.listings:
             listing_tabs.append({"listing_id": item.listing_id, "title": item.title})
             seen_listing_ids.add(item.listing_id)
-    for listing in inquiry_listings:
-        if listing.id not in seen_listing_ids:
-            listing_tabs.append({"listing_id": listing.id, "title": listing.title})
+    for listing_ref in inquiry_listing_refs:
+        key = listing_ref["listing_key"]
+        if key not in {str(value) for value in seen_listing_ids}:
+            listing_tabs.append(
+                {"listing_id": key, "title": listing_ref["title"]}
+            )
 
     return render(
         request,
@@ -351,7 +359,7 @@ def mobile_analytics(request):
             "all_listings_history": _build_all_listings_history(analytics),
             "inquiry_chart_sets": inquiry_chart_sets,
             "inquiry_all_listings_history": _build_inquiry_all_listings_history(
-                inquiry_listings,
+                inquiry_listing_refs,
                 inquiry_events,
             ),
         },
