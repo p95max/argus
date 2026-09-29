@@ -3,11 +3,11 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.signals import user_logged_in, user_logged_out
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from .models import AdminLoginLog, Listing
+from .models import AdminLoginLog, Listing, ListingInquiryEvent, MarketplaceAlert
 from .security import _client_ip
 from .services.listing_publication import tombstone_listing_id
 
@@ -52,3 +52,28 @@ def remember_deleted_listing(sender, instance, **kwargs):
         tombstone_listing_id(instance.kleinanzeigen_listing_id)
     except Exception:
         logger.exception("Could not persist deleted listing ID %s", instance.kleinanzeigen_listing_id)
+
+
+@receiver(post_save, sender=MarketplaceAlert, dispatch_uid="alerts.persist_listing_inquiry_event")
+def persist_listing_inquiry_event(sender, instance, **kwargs):
+    if instance.event_type != MarketplaceAlert.EventType.BUYER_MESSAGE:
+        return
+
+    listing = None
+    if instance.listing_id:
+        listing = (
+            Listing.objects.filter(kleinanzeigen_listing_id=instance.listing_id)
+            .only("id")
+            .first()
+        )
+
+    occurred_at = instance.received_at or instance.created_at
+    ListingInquiryEvent.objects.update_or_create(
+        source_alert_id=instance.id,
+        defaults={
+            "listing": listing,
+            "kleinanzeigen_listing_id": instance.listing_id or "",
+            "listing_title": instance.listing_title or "",
+            "occurred_at": occurred_at,
+        },
+    )
