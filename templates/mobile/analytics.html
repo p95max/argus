@@ -374,7 +374,9 @@
                     return;
                 }
 
-                const numericValues = series.flatMap(item => item.values.map(Number));
+                const numericValues = series.flatMap(item => item.values
+                    .filter(value => value !== null && value !== undefined)
+                    .map(Number));
                 const maxValue = Math.max(...numericValues, 1);
                 const pad = { top: 18, right: 14, bottom: 38, left: 44 };
                 const chartWidth = width - pad.left - pad.right;
@@ -417,15 +419,25 @@
                     ctx.lineJoin = 'round';
                     ctx.lineCap = 'round';
                     ctx.beginPath();
+                    let hasPoint = false;
                     item.values.forEach((rawValue, index) => {
+                        if (rawValue === null || rawValue === undefined) {
+                            hasPoint = false;
+                            return;
+                        }
                         const x = xAt(index);
                         const y = yAt(rawValue);
-                        if (index === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
+                        if (!hasPoint) {
+                            ctx.moveTo(x, y);
+                            hasPoint = true;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
                     });
                     ctx.stroke();
 
                     item.values.forEach((rawValue, index) => {
+                        if (rawValue === null || rawValue === undefined) return;
                         ctx.beginPath();
                         ctx.arc(xAt(index), yAt(rawValue), 2.6, 0, Math.PI * 2);
                         ctx.fill();
