@@ -368,6 +368,48 @@ class ListingViewStat(TimestampedModel):
         return f"{self.listing}: {self.views_count}"
 
 
+class ListingInquiryEvent(models.Model):
+    """Persistent inquiry analytics event independent from operational alerts."""
+
+    listing = models.ForeignKey(
+        Listing,
+        verbose_name=_("listing"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inquiry_events",
+    )
+    source_alert_id = models.PositiveBigIntegerField(
+        _("source alert ID"),
+        unique=True,
+        db_index=True,
+    )
+    kleinanzeigen_listing_id = models.CharField(
+        _("Kleinanzeigen ad ID"),
+        max_length=80,
+        blank=True,
+        db_index=True,
+    )
+    listing_title = models.CharField(_("listing title"), max_length=255, blank=True)
+    occurred_at = models.DateTimeField(_("occurred at"), db_index=True)
+    created_at = models.DateTimeField(_("created at"), auto_now_add=True)
+
+    class Meta:
+        ordering = ["-occurred_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["kleinanzeigen_listing_id", "occurred_at"],
+                name="alerts_inq_listing_time_idx",
+            )
+        ]
+        verbose_name = _("Listing inquiry event")
+        verbose_name_plural = _("Listing inquiry events")
+
+    def __str__(self):
+        title = self.listing_title or self.kleinanzeigen_listing_id or "unknown listing"
+        return f"{title}: {self.occurred_at:%Y-%m-%d %H:%M}"
+
+
 class ProcessedEmail(TimestampedModel):
     mailbox = models.ForeignKey(
         MailboxAccount,
