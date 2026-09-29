@@ -9,89 +9,107 @@
         <a class="link-button small-action" href="{% url 'mobile_listings' %}">🚗 Объявления</a>
     </section>
 
-    {% if analytics %}
-        <section>
-            <div class="analytics-tabs" role="tablist" aria-label="Фильтр аналитики по объявлениям">
-                <button class="analytics-tab active" type="button" role="tab" aria-selected="true" data-analytics-key="all">🌐 Все</button>
-                {% for listing in analytics.listings %}
-                    <button class="analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-key="{{ listing.listing_id }}">🚗 {{ listing.title }}</button>
-                {% endfor %}
-            </div>
-        </section>
+    <section>
+        <div class="analytics-mode-tabs" role="tablist" aria-label="Тип аналитики">
+            <button class="analytics-mode-tab active" type="button" role="tab" aria-selected="true" data-analytics-mode="views">👁 Просмотры</button>
+            <button class="analytics-mode-tab" type="button" role="tab" aria-selected="false" data-analytics-mode="inquiries">💬 Обращения</button>
+        </div>
+    </section>
 
-        <section class="analytics-summary-grid">
-            <article class="card analytics-summary-card">
-                <span>👁 Всего просмотров</span>
-                <strong id="analytics-total-views">{{ analytics.total_views }}</strong>
-            </article>
-            <article class="card analytics-summary-card">
-                <span>📈 За 24 часа</span>
-                <strong id="analytics-delta-24h">{% if analytics.total_delta_24h is not None %}+{{ analytics.total_delta_24h }}{% else %}—{% endif %}</strong>
-                <small id="analytics-change-24h" class="analytics-change"></small>
-            </article>
-            <article class="card analytics-summary-card">
-                <span>📅 За 7 дней</span>
-                <strong id="analytics-delta-7d">{% if analytics.total_delta_7d is not None %}+{{ analytics.total_delta_7d }}{% else %}—{% endif %}</strong>
-                <small id="analytics-change-7d" class="analytics-change"></small>
-            </article>
-        </section>
+    <section>
+        <div class="analytics-tabs" role="tablist" aria-label="Фильтр аналитики по объявлениям">
+            <button class="analytics-tab active" type="button" role="tab" aria-selected="true" data-analytics-key="all">🌐 Все</button>
+            {% for listing in listing_tabs %}
+                <button class="analytics-tab" type="button" role="tab" aria-selected="false" data-analytics-key="{{ listing.listing_id }}">🚗 {{ listing.title }}</button>
+            {% endfor %}
+        </div>
+    </section>
 
-        <section class="analytics-chart-grid">
-            <article class="card analytics-chart-card analytics-chart-wide">
-                <div class="title">🚗 Просмотры по дням</div>
-                <div class="small">Сколько новых просмотров получено за каждый день. Каждая линия — отдельное объявление.</div>
-                <div id="chart-all-listings-legend" class="analytics-line-legend"></div>
-                <canvas id="chart-all-listings" class="analytics-canvas" height="260"></canvas>
-            </article>
+    <section class="analytics-summary-grid">
+        <article class="card analytics-summary-card">
+            <span id="analytics-total-label">👁 Всего просмотров</span>
+            <strong id="analytics-total-value">0</strong>
+        </article>
+        <article class="card analytics-summary-card">
+            <span id="analytics-24h-label">📈 За 24 часа</span>
+            <strong id="analytics-delta-24h">—</strong>
+            <small id="analytics-change-24h" class="analytics-change"></small>
+        </article>
+        <article class="card analytics-summary-card">
+            <span id="analytics-7d-label">📅 За 7 дней</span>
+            <strong id="analytics-delta-7d">—</strong>
+            <small id="analytics-change-7d" class="analytics-change"></small>
+        </article>
+    </section>
 
-            <article class="card analytics-chart-card">
-                <div class="title">📈 Общие просмотры за 24 часа</div>
-                <div class="small" id="analytics-description-24h">Суммарный прирост просмотров всех объявлений за последние 24 часа, по часам.</div>
-                <canvas id="chart-24h" class="analytics-canvas" height="230"></canvas>
-            </article>
+    <section class="analytics-chart-grid">
+        <article class="card analytics-chart-card analytics-chart-wide">
+            <div class="title" id="analytics-history-title">🚗 Просмотры по дням</div>
+            <div class="small" id="analytics-history-description">Сколько новых просмотров получено за каждый день. Каждая линия — отдельное объявление.</div>
+            <div id="chart-all-listings-legend" class="analytics-line-legend"></div>
+            <canvas id="chart-all-listings" class="analytics-canvas" height="260"></canvas>
+        </article>
 
-            <article class="card analytics-chart-card">
-                <div class="title">📅 Общие просмотры за 7 дней</div>
-                <div class="small" id="analytics-description-7d">Суммарный прирост просмотров всех объявлений за последние 7 дней, по дням.</div>
-                <canvas id="chart-7d" class="analytics-canvas" height="230"></canvas>
-            </article>
+        <article class="card analytics-chart-card">
+            <div class="title" id="analytics-title-24h">📈 Просмотры за 24 часа</div>
+            <div class="small" id="analytics-description-24h"></div>
+            <canvas id="chart-24h" class="analytics-canvas" height="230"></canvas>
+        </article>
 
-            <article class="card analytics-chart-card analytics-chart-wide">
-                <div class="title">📊 Общая динамика за весь период</div>
-                <div class="small" id="analytics-description-all-time">Прирост просмотров всех объявлений по дням за всю сохранённую историю.</div>
-                <canvas id="chart-all-time" class="analytics-canvas" height="230"></canvas>
-            </article>
+        <article class="card analytics-chart-card">
+            <div class="title" id="analytics-title-7d">📅 Просмотры за 7 дней</div>
+            <div class="small" id="analytics-description-7d"></div>
+            <canvas id="chart-7d" class="analytics-canvas" height="230"></canvas>
+        </article>
 
-            <article class="card analytics-chart-card analytics-chart-wide">
-                <div class="title">🕒 Наиболее активные часы</div>
-                <div class="small" id="analytics-description-hours">В какие часы суток все объявления набирали больше всего просмотров за всю сохранённую историю.</div>
-                <canvas id="chart-hours-all-time" class="analytics-canvas" height="230"></canvas>
-            </article>
-        </section>
+        <article class="card analytics-chart-card analytics-chart-wide">
+            <div class="title" id="analytics-title-all-time">📊 Общая динамика за весь период</div>
+            <div class="small" id="analytics-description-all-time"></div>
+            <canvas id="chart-all-time" class="analytics-canvas" height="230"></canvas>
+        </article>
 
-        <section>
-            <article class="card analytics-top-listing-card">
-                <div class="title">🏆 Топ объявление по просмотрам</div>
-                {% with top_listing=analytics.listings|dictsortreversed:"views_count"|first %}
-                    {% if top_listing %}
-                        <div class="analytics-top-listing-name">🚗 {{ top_listing.title }}</div>
-                        <div class="analytics-top-listing-metrics">
-                            <span>👁 {{ top_listing.views_count }}</span>
-                            <span>24 ч: {% if top_listing.views_delta_24h is not None %}+{{ top_listing.views_delta_24h }}{% else %}—{% endif %}</span>
-                            <span>7 дн.: {% if top_listing.views_delta_7d is not None %}+{{ top_listing.views_delta_7d }}{% else %}—{% endif %}</span>
-                        </div>
-                    {% endif %}
-                {% endwith %}
-            </article>
-        </section>
-    {% else %}
-        <div class="empty">Статистика просмотров пока недоступна.</div>
-    {% endif %}
+        <article class="card analytics-chart-card analytics-chart-wide">
+            <div class="title">🕒 Наиболее активные часы</div>
+            <div class="small" id="analytics-description-hours"></div>
+            <canvas id="chart-hours-all-time" class="analytics-canvas" height="230"></canvas>
+        </article>
+    </section>
 
-    {{ chart_sets|json_script:"analytics-chart-sets" }}
-    {{ all_listings_history|json_script:"analytics-all-listings-history" }}
+    <section>
+        <article class="card analytics-top-listing-card">
+            <div class="title" id="analytics-top-title">🏆 Топ объявление по просмотрам</div>
+            <div id="analytics-top-content"></div>
+        </article>
+    </section>
+
+    {{ chart_sets|json_script:"analytics-view-chart-sets" }}
+    {{ all_listings_history|json_script:"analytics-view-history" }}
+    {{ inquiry_chart_sets|json_script:"analytics-inquiry-chart-sets" }}
+    {{ inquiry_all_listings_history|json_script:"analytics-inquiry-history" }}
 
     <style>
+        .analytics-mode-tabs {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .analytics-mode-tab {
+            min-height: 44px;
+            padding: 9px 14px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: var(--panel-2);
+            color: var(--text);
+            font: inherit;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .analytics-mode-tab.active,
+        .analytics-tab.active {
+            border-color: var(--line-accent);
+            color: var(--accent);
+            background: rgba(54, 194, 163, .09);
+        }
         .analytics-tabs {
             display: flex;
             gap: 8px;
@@ -115,11 +133,6 @@
             white-space: nowrap;
             cursor: pointer;
         }
-        .analytics-tab.active {
-            border-color: var(--line-accent);
-            color: var(--accent);
-            background: rgba(54, 194, 163, .09);
-        }
         .analytics-summary-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -130,9 +143,7 @@
             gap: 7px;
             margin: 0;
         }
-        .analytics-summary-card span {
-            color: var(--muted);
-        }
+        .analytics-summary-card span { color: var(--muted); }
         .analytics-summary-card strong {
             color: var(--accent);
             font-size: 26px;
@@ -154,9 +165,7 @@
             min-width: 0;
             margin: 0;
         }
-        .analytics-chart-wide {
-            grid-column: 1 / -1;
-        }
+        .analytics-chart-wide { grid-column: 1 / -1; }
         .analytics-canvas {
             display: block;
             width: 100%;
@@ -189,10 +198,7 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        .analytics-top-listing-card {
-            display: grid;
-            gap: 10px;
-        }
+        .analytics-top-listing-card { display: grid; gap: 10px; }
         .analytics-top-listing-name {
             font-size: 18px;
             font-weight: 800;
@@ -201,6 +207,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+            margin-top: 8px;
         }
         .analytics-top-listing-metrics span {
             padding: 7px 10px;
@@ -212,29 +219,65 @@
             .analytics-chart-grid {
                 grid-template-columns: 1fr;
             }
-            .analytics-chart-wide {
-                grid-column: auto;
-            }
-            .analytics-line-legend-label {
-                max-width: 165px;
-            }
+            .analytics-chart-wide { grid-column: auto; }
+            .analytics-line-legend-label { max-width: 165px; }
         }
     </style>
 
     <script>
         (() => {
-            const chartSets = JSON.parse(document.getElementById('analytics-chart-sets').textContent || '{}');
-            const allListingsHistory = JSON.parse(document.getElementById('analytics-all-listings-history').textContent || '{}');
+            const modes = {
+                views: {
+                    sets: JSON.parse(document.getElementById('analytics-view-chart-sets').textContent || '{}'),
+                    history: JSON.parse(document.getElementById('analytics-view-history').textContent || '{}'),
+                    copy: {
+                        totalLabel: '👁 Всего просмотров',
+                        historyTitle: '🚗 Просмотры по дням',
+                        historyDescription: 'Сколько новых просмотров получено за каждый день. Каждая линия — отдельное объявление.',
+                        title24h: '📈 Просмотры за 24 часа',
+                        title7d: '📅 Просмотры за 7 дней',
+                        topTitle: '🏆 Топ объявление по просмотрам',
+                        noun: 'просмотров',
+                        emptyHistory: 'История просмотров пока не накоплена.'
+                    }
+                },
+                inquiries: {
+                    sets: JSON.parse(document.getElementById('analytics-inquiry-chart-sets').textContent || '{}'),
+                    history: JSON.parse(document.getElementById('analytics-inquiry-history').textContent || '{}'),
+                    copy: {
+                        totalLabel: '💬 Всего обращений',
+                        historyTitle: '🚗 Обращения по дням',
+                        historyDescription: 'Сколько обращений получено по каждому объявлению за день. Каждая линия — отдельное объявление.',
+                        title24h: '📈 Обращения за 24 часа',
+                        title7d: '📅 Обращения за 7 дней',
+                        topTitle: '🏆 Топ объявление по обращениям',
+                        noun: 'обращений',
+                        emptyHistory: 'История обращений пока не накоплена.'
+                    }
+                }
+            };
+
             const css = getComputedStyle(document.documentElement);
             const accent = css.getPropertyValue('--accent').trim() || '#3cc7aa';
             const muted = css.getPropertyValue('--muted').trim() || '#8b95a5';
             const line = css.getPropertyValue('--line').trim() || '#39414d';
             const text = css.getPropertyValue('--text').trim() || '#e8edf2';
+            const historyPalette = [
+                '#36c2a3', '#4f8cff', '#f6c85f', '#ff6b6b', '#b07cff',
+                '#35b6e8', '#ff9f43', '#72c472', '#e66fb5', '#9aa8b7'
+            ];
+            let activeMode = 'views';
             let activeKey = 'all';
+
+            const clearCanvas = (canvas) => {
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            };
 
             const draw = (canvasId, data, labelEvery) => {
                 const canvas = document.getElementById(canvasId);
-                if (!canvas || !data || !data.length) return;
+                if (!canvas) return;
 
                 const ratio = window.devicePixelRatio || 1;
                 const width = Math.max(canvas.clientWidth, 280);
@@ -243,6 +286,15 @@
                 canvas.height = height * ratio;
                 const ctx = canvas.getContext('2d');
                 ctx.scale(ratio, ratio);
+                ctx.clearRect(0, 0, width, height);
+
+                if (!data || !data.length) {
+                    ctx.fillStyle = muted;
+                    ctx.font = '13px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Данных пока нет.', width / 2, height / 2);
+                    return;
+                }
 
                 const pad = { top: 18, right: 12, bottom: 34, left: 38 };
                 const chartWidth = width - pad.left - pad.right;
@@ -284,18 +336,13 @@
                 });
             };
 
-            const historyPalette = [
-                '#36c2a3', '#4f8cff', '#f6c85f', '#ff6b6b', '#b07cff',
-                '#35b6e8', '#ff9f43', '#72c472', '#e66fb5', '#9aa8b7'
-            ];
-
-            const drawAllListingsHistory = () => {
+            const drawAllListingsHistory = (history, emptyText) => {
                 const canvas = document.getElementById('chart-all-listings');
                 const legend = document.getElementById('chart-all-listings-legend');
-                const labels = allListingsHistory.labels || [];
-                const series = allListingsHistory.series || [];
                 if (!canvas || !legend) return;
 
+                const labels = history.labels || [];
+                const series = history.series || [];
                 legend.innerHTML = '';
                 series.forEach((item, index) => {
                     const legendItem = document.createElement('span');
@@ -323,27 +370,25 @@
                     ctx.fillStyle = muted;
                     ctx.font = '13px sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText('История просмотров пока не накоплена.', width / 2, height / 2);
+                    ctx.fillText(emptyText, width / 2, height / 2);
                     return;
                 }
 
-                const numericValues = series.flatMap(item => item.values.filter(value => value !== null && value !== undefined).map(Number));
+                const numericValues = series.flatMap(item => item.values.map(Number));
                 const maxValue = Math.max(...numericValues, 1);
-                const minValue = Math.min(...numericValues, 0);
-                const range = Math.max(maxValue - minValue, 1);
                 const pad = { top: 18, right: 14, bottom: 38, left: 44 };
                 const chartWidth = width - pad.left - pad.right;
                 const chartHeight = height - pad.top - pad.bottom;
                 const xAt = index => labels.length === 1
                     ? pad.left + chartWidth / 2
                     : pad.left + chartWidth * index / (labels.length - 1);
-                const yAt = value => pad.top + chartHeight - ((value - minValue) / range) * chartHeight;
+                const yAt = value => pad.top + chartHeight - (Number(value) / maxValue) * chartHeight;
 
                 ctx.font = '12px sans-serif';
                 ctx.textBaseline = 'middle';
                 ctx.lineWidth = 1;
                 for (let step = 0; step <= 4; step += 1) {
-                    const value = minValue + range * step / 4;
+                    const value = maxValue * step / 4;
                     const y = yAt(value);
                     ctx.strokeStyle = line;
                     ctx.beginPath();
@@ -372,35 +417,25 @@
                     ctx.lineJoin = 'round';
                     ctx.lineCap = 'round';
                     ctx.beginPath();
-                    let hasPoint = false;
                     item.values.forEach((rawValue, index) => {
-                        if (rawValue === null || rawValue === undefined) {
-                            hasPoint = false;
-                            return;
-                        }
                         const x = xAt(index);
-                        const y = yAt(Number(rawValue));
-                        if (!hasPoint) {
-                            ctx.moveTo(x, y);
-                            hasPoint = true;
-                        } else {
-                            ctx.lineTo(x, y);
-                        }
+                        const y = yAt(rawValue);
+                        if (index === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
                     });
                     ctx.stroke();
 
                     item.values.forEach((rawValue, index) => {
-                        if (rawValue === null || rawValue === undefined) return;
-                        const x = xAt(index);
-                        const y = yAt(Number(rawValue));
                         ctx.beginPath();
-                        ctx.arc(x, y, 2.6, 0, Math.PI * 2);
+                        ctx.arc(xAt(index), yAt(rawValue), 2.6, 0, Math.PI * 2);
                         ctx.fill();
                     });
                 });
             };
 
-            const formatDelta = (value) => value === null || value === undefined ? '—' : `+${value}`;
+            const formatDelta = value =>
+                value === null || value === undefined ? '—' : `+${value}`;
+
             const renderChange = (elementId, value) => {
                 const element = document.getElementById(elementId);
                 if (!element) return;
@@ -422,51 +457,114 @@
                 }
             };
 
-            const render = (key) => {
-                const data = chartSets[key] || chartSets.all;
-                if (!data) return;
-                activeKey = key in chartSets ? key : 'all';
-                const isAll = activeKey === 'all';
+            const renderTopListing = (mode) => {
+                const entries = Object.entries(mode.sets || {})
+                    .filter(([key]) => key !== 'all')
+                    .map(([, value]) => value);
+                const top = entries.sort((a, b) => (Number(b.views_count) || 0) - (Number(a.views_count) || 0))[0];
+                const container = document.getElementById('analytics-top-content');
+                if (!top || !(Number(top.views_count) || 0)) {
+                    container.innerHTML = '<div class="small">Данных пока нет.</div>';
+                    return;
+                }
+                container.innerHTML = '';
+                const name = document.createElement('div');
+                name.className = 'analytics-top-listing-name';
+                name.textContent = `🚗 ${top.title}`;
+                const metrics = document.createElement('div');
+                metrics.className = 'analytics-top-listing-metrics';
+                const total = document.createElement('span');
+                total.textContent = `${top.views_count} ${mode.copy.noun}`;
+                const day = document.createElement('span');
+                day.textContent = `24 ч: ${formatDelta(top.delta_24h)}`;
+                const week = document.createElement('span');
+                week.textContent = `7 дн.: ${formatDelta(top.delta_7d)}`;
+                metrics.append(total, day, week);
+                container.append(name, metrics);
+            };
 
-                document.getElementById('analytics-total-views').textContent = data.views_count;
+            const render = () => {
+                const mode = modes[activeMode];
+                const data = mode.sets[activeKey] || mode.sets.all || {
+                    title: 'Все объявления',
+                    views_count: 0,
+                    delta_24h: 0,
+                    delta_7d: 0,
+                    change_24h_pct: null,
+                    change_7d_pct: null,
+                    chart_24h: [],
+                    chart_7d: [],
+                    chart_all_time: [],
+                    chart_hours_all_time: []
+                };
+                if (!(activeKey in mode.sets)) activeKey = 'all';
+                const isAll = activeKey === 'all';
+                const isViews = activeMode === 'views';
+                const noun = isViews ? 'просмотров' : 'обращений';
+
+                document.getElementById('analytics-total-label').textContent = mode.copy.totalLabel;
+                document.getElementById('analytics-total-value').textContent = data.views_count ?? 0;
                 document.getElementById('analytics-delta-24h').textContent = formatDelta(data.delta_24h);
                 document.getElementById('analytics-delta-7d').textContent = formatDelta(data.delta_7d);
                 renderChange('analytics-change-24h', data.change_24h_pct);
                 renderChange('analytics-change-7d', data.change_7d_pct);
-                document.getElementById('analytics-description-24h').textContent = isAll
-                    ? 'Суммарный прирост просмотров всех объявлений за последние 24 часа, по часам.'
-                    : `Прирост просмотров «${data.title}» за последние 24 часа, по часам.`;
-                document.getElementById('analytics-description-7d').textContent = isAll
-                    ? 'Суммарный прирост просмотров всех объявлений за последние 7 дней, по дням.'
-                    : `Прирост просмотров «${data.title}» за последние 7 дней, по дням.`;
-                document.getElementById('analytics-description-all-time').textContent = isAll
-                    ? 'Прирост просмотров всех объявлений по дням за всю сохранённую историю.'
-                    : `Прирост просмотров «${data.title}» по дням за всю сохранённую историю.`;
-                document.getElementById('analytics-description-hours').textContent = isAll
-                    ? 'В какие часы суток все объявления набирали больше всего просмотров за всю сохранённую историю.'
-                    : `В какие часы суток «${data.title}» набирало больше всего просмотров за всю сохранённую историю.`;
 
-                document.querySelectorAll('.analytics-tab').forEach(tab => {
-                    const selected = tab.dataset.analyticsKey === activeKey;
+                document.getElementById('analytics-history-title').textContent = mode.copy.historyTitle;
+                document.getElementById('analytics-history-description').textContent = mode.copy.historyDescription;
+                document.getElementById('analytics-title-24h').textContent = mode.copy.title24h;
+                document.getElementById('analytics-title-7d').textContent = mode.copy.title7d;
+                document.getElementById('analytics-top-title').textContent = mode.copy.topTitle;
+
+                document.getElementById('analytics-description-24h').textContent = isAll
+                    ? `Суммарное количество новых ${noun} всех объявлений за последние 24 часа, по часам.`
+                    : `Новые ${noun} «${data.title}» за последние 24 часа, по часам.`;
+                document.getElementById('analytics-description-7d').textContent = isAll
+                    ? `Суммарное количество новых ${noun} всех объявлений за последние 7 дней, по дням.`
+                    : `Новые ${noun} «${data.title}» за последние 7 дней, по дням.`;
+                document.getElementById('analytics-description-all-time').textContent = isAll
+                    ? `Динамика ${noun} всех объявлений по дням за весь сохранённый период.`
+                    : `Динамика ${noun} «${data.title}» по дням за весь сохранённый период.`;
+                document.getElementById('analytics-description-hours').textContent = isAll
+                    ? `В какие часы суток все объявления получали больше всего ${noun}.`
+                    : `В какие часы суток «${data.title}» получало больше всего ${noun}.`;
+
+                document.querySelectorAll('[data-analytics-mode]').forEach(tab => {
+                    const selected = tab.dataset.analyticsMode === activeMode;
+                    tab.classList.toggle('active', selected);
+                    tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+                });
+                document.querySelectorAll('[data-analytics-key]').forEach(tab => {
+                    const exists = tab.dataset.analyticsKey === 'all' || tab.dataset.analyticsKey in mode.sets;
+                    tab.hidden = !exists;
+                    const selected = exists && tab.dataset.analyticsKey === activeKey;
                     tab.classList.toggle('active', selected);
                     tab.setAttribute('aria-selected', selected ? 'true' : 'false');
                 });
 
-                drawAllListingsHistory();
+                drawAllListingsHistory(mode.history, mode.copy.emptyHistory);
                 draw('chart-24h', data.chart_24h, 4);
                 draw('chart-7d', data.chart_7d, 1);
                 draw('chart-all-time', data.chart_all_time, Math.max(Math.ceil((data.chart_all_time || []).length / 7), 1));
                 draw('chart-hours-all-time', data.chart_hours_all_time, 3);
+                renderTopListing(mode);
             };
 
+            document.querySelectorAll('[data-analytics-mode]').forEach(control => {
+                control.addEventListener('click', () => {
+                    activeMode = control.dataset.analyticsMode;
+                    activeKey = 'all';
+                    render();
+                });
+            });
             document.querySelectorAll('[data-analytics-key]').forEach(control => {
                 control.addEventListener('click', () => {
-                    render(control.dataset.analyticsKey);
+                    activeKey = control.dataset.analyticsKey;
+                    render();
                 });
             });
 
-            render('all');
-            window.addEventListener('resize', () => render(activeKey));
+            render();
+            window.addEventListener('resize', render);
         })();
     </script>
 {% endblock %}
