@@ -18,7 +18,7 @@ from ...services.listing_analytics import get_listing_analytics
 from ...command_locks import CommandAlreadyRunning, command_lock
 from ...gmail.gmail import check_mailbox, mark_alert_gmail_message_read
 from ...monitoring.health import build_health_report
-from ...models import Listing, ListingViewStat, MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
+from ...models import Listing, ListingInquiryEvent, ListingViewStat, MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
 from ...permissions import can_manage_mailboxes, can_refresh_mailbox, can_view_mailbox_operations
 
 
@@ -194,23 +194,11 @@ def mobile_dashboard(request):
     listing_analytics = get_listing_analytics()
     now = timezone.now()
 
-    tracked_listing_ids = list(
-        active_listings_queryset.exclude(kleinanzeigen_listing_id="")
-        .values_list("kleinanzeigen_listing_id", flat=True)
+    inquiry_events = list(
+        ListingInquiryEvent.objects.filter(occurred_at__lte=now)
+        .order_by("occurred_at", "id")
+        .values_list("occurred_at", flat=True)
     )
-    inquiry_rows = list(
-        MarketplaceAlert.objects.filter(
-            event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
-            listing_id__in=tracked_listing_ids,
-        )
-        .values("received_at", "created_at")
-        .order_by("received_at", "created_at", "id")
-    )
-    inquiry_events = [
-        row["received_at"] or row["created_at"]
-        for row in inquiry_rows
-        if (row["received_at"] or row["created_at"]) <= now
-    ]
 
     cutoff_24h = now - timedelta(hours=24)
     cutoff_48h = now - timedelta(hours=48)
