@@ -4,11 +4,16 @@
 {% block title %}Argus mobile{% endblock %}
 {% block extra_head %}
     {{ dashboard_metric_charts|json_script:"dashboard-metric-charts" }}
+    {{ dashboard_inquiry_charts|json_script:"dashboard-inquiry-charts" }}
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const source = document.getElementById('dashboard-metric-charts');
-            if (!source) return;
-            const chartData = JSON.parse(source.textContent || '{}');
+            const inquirySource = document.getElementById('dashboard-inquiry-charts');
+            if (!source || !inquirySource) return;
+            const chartData = {
+                views: JSON.parse(source.textContent || '{}'),
+                inquiries: JSON.parse(inquirySource.textContent || '{}'),
+            };
 
             const drawMetric = (canvas, sourceValues) => {
                 if (!canvas || sourceValues.length < 2) return;
@@ -40,12 +45,70 @@
 
             const drawAll = () => {
                 document.querySelectorAll('.dashboard-metric-chart').forEach(metric => {
-                    const points = chartData[metric.dataset.period] || [];
+                    const mode = metric.dataset.analyticsMode || 'views';
+                    const points = (chartData[mode] || {})[metric.dataset.period] || [];
                     drawMetric(metric, points.map(point => Number(point.value) || 0));
                 });
             };
 
-            drawAll();
+            const card = document.querySelector('.dashboard-analytics-card');
+            const track = card?.querySelector('.dashboard-analytics-track');
+            const dots = card?.querySelectorAll('[data-analytics-slide-dot]') || [];
+            let activeSlide = 0;
+            let touchStartX = null;
+            let touchStartY = null;
+            let didSwipe = false;
+
+            const showSlide = index => {
+                if (!track) return;
+                activeSlide = Math.max(0, Math.min(index, 1));
+                track.style.transform = `translateX(-${activeSlide * 50}%)`;
+                dots.forEach((dot, dotIndex) => {
+                    dot.classList.toggle('active', dotIndex === activeSlide);
+                    dot.setAttribute('aria-selected', dotIndex === activeSlide ? 'true' : 'false');
+                });
+                requestAnimationFrame(drawAll);
+            };
+
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    showSlide(index);
+                });
+            });
+
+            if (card) {
+                card.addEventListener('touchstart', event => {
+                    const touch = event.touches[0];
+                    touchStartX = touch.clientX;
+                    touchStartY = touch.clientY;
+                    didSwipe = false;
+                }, { passive: true });
+
+                card.addEventListener('touchend', event => {
+                    if (touchStartX === null || touchStartY === null) return;
+                    const touch = event.changedTouches[0];
+                    const deltaX = touch.clientX - touchStartX;
+                    const deltaY = touch.clientY - touchStartY;
+                    touchStartX = null;
+                    touchStartY = null;
+
+                    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                        didSwipe = true;
+                        showSlide(deltaX < 0 ? 1 : 0);
+                    }
+                }, { passive: true });
+
+                card.addEventListener('click', event => {
+                    if (didSwipe) {
+                        event.preventDefault();
+                        didSwipe = false;
+                    }
+                }, true);
+            }
+
+            showSlide(0);
             window.addEventListener('resize', drawAll);
         });
     </script>
@@ -82,38 +145,75 @@
             {% endif %}
         </article>
 
-        <a class="card dashboard-summary-card dashboard-analytics-card" href="{% url 'mobile_analytics' %}">
-<div class="dashboard-analytics-content">
-            <div class="title">📊 Аналитика</div>
-            {% if listing_analytics %}
-                <div class="dashboard-analytics-total">👁 {{ listing_analytics.total_views }} просмотров</div>
-                <div class="dashboard-analytics-metrics">
-                    <div class="dashboard-metric-card">
-                        <canvas class="dashboard-metric-chart" data-period="24h" aria-hidden="true"></canvas>
-                        <span>📈 24 ч</span>
-                        <strong>{% if listing_analytics.total_delta_24h is not None %}+{{ listing_analytics.total_delta_24h }}{% else %}—{% endif %}</strong>
-                        {% if listing_analytics.total_change_24h_pct is not None %}
-                            <small class="analytics-change {% if listing_analytics.total_change_24h_pct > 0 %}analytics-change-up{% elif listing_analytics.total_change_24h_pct < 0 %}analytics-change-down{% else %}analytics-change-flat{% endif %}">
-                                {% if listing_analytics.total_change_24h_pct > 0 %}▲ +{% elif listing_analytics.total_change_24h_pct < 0 %}▼ {% endif %}{{ listing_analytics.total_change_24h_pct|floatformat:1 }}%
-                            </small>
+        <article class="card dashboard-summary-card dashboard-analytics-card">
+            <div class="dashboard-analytics-track">
+                <a class="dashboard-analytics-slide" href="{% url 'mobile_analytics' %}?mode=views">
+                    <div class="dashboard-analytics-content">
+                        <div class="title">📊 Аналитика · Просмотры</div>
+                        {% if listing_analytics %}
+                            <div class="dashboard-analytics-total">👁 {{ listing_analytics.total_views }} просмотров</div>
+                            <div class="dashboard-analytics-metrics">
+                                <div class="dashboard-metric-card">
+                                    <canvas class="dashboard-metric-chart" data-analytics-mode="views" data-period="24h" aria-hidden="true"></canvas>
+                                    <span>📈 24 ч</span>
+                                    <strong>{% if listing_analytics.total_delta_24h is not None %}+{{ listing_analytics.total_delta_24h }}{% else %}—{% endif %}</strong>
+                                    {% if listing_analytics.total_change_24h_pct is not None %}
+                                        <small class="analytics-change {% if listing_analytics.total_change_24h_pct > 0 %}analytics-change-up{% elif listing_analytics.total_change_24h_pct < 0 %}analytics-change-down{% else %}analytics-change-flat{% endif %}">
+                                            {% if listing_analytics.total_change_24h_pct > 0 %}▲ +{% elif listing_analytics.total_change_24h_pct < 0 %}▼ {% endif %}{{ listing_analytics.total_change_24h_pct|floatformat:1 }}%
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                <div class="dashboard-metric-card">
+                                    <canvas class="dashboard-metric-chart" data-analytics-mode="views" data-period="7d" aria-hidden="true"></canvas>
+                                    <span>📅 7 дней</span>
+                                    <strong>{% if listing_analytics.total_delta_7d is not None %}+{{ listing_analytics.total_delta_7d }}{% else %}—{% endif %}</strong>
+                                    {% if listing_analytics.total_change_7d_pct is not None %}
+                                        <small class="analytics-change {% if listing_analytics.total_change_7d_pct > 0 %}analytics-change-up{% elif listing_analytics.total_change_7d_pct < 0 %}analytics-change-down{% else %}analytics-change-flat{% endif %}">
+                                            {% if listing_analytics.total_change_7d_pct > 0 %}▲ +{% elif listing_analytics.total_change_7d_pct < 0 %}▼ {% endif %}{{ listing_analytics.total_change_7d_pct|floatformat:1 }}%
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="small">Статистика просмотров пока недоступна.</div>
                         {% endif %}
                     </div>
-                    <div class="dashboard-metric-card">
-                        <canvas class="dashboard-metric-chart" data-period="7d" aria-hidden="true"></canvas>
-                        <span>📅 7 дней</span>
-                        <strong>{% if listing_analytics.total_delta_7d is not None %}+{{ listing_analytics.total_delta_7d }}{% else %}—{% endif %}</strong>
-                        {% if listing_analytics.total_change_7d_pct is not None %}
-                            <small class="analytics-change {% if listing_analytics.total_change_7d_pct > 0 %}analytics-change-up{% elif listing_analytics.total_change_7d_pct < 0 %}analytics-change-down{% else %}analytics-change-flat{% endif %}">
-                                {% if listing_analytics.total_change_7d_pct > 0 %}▲ +{% elif listing_analytics.total_change_7d_pct < 0 %}▼ {% endif %}{{ listing_analytics.total_change_7d_pct|floatformat:1 }}%
-                            </small>
-                        {% endif %}
+                </a>
+
+                <a class="dashboard-analytics-slide" href="{% url 'mobile_analytics' %}?mode=inquiries">
+                    <div class="dashboard-analytics-content">
+                        <div class="title">📊 Аналитика · Обращения</div>
+                        <div class="dashboard-analytics-total">💬 {{ inquiry_analytics.total }} обращений</div>
+                        <div class="dashboard-analytics-metrics">
+                            <div class="dashboard-metric-card">
+                                <canvas class="dashboard-metric-chart" data-analytics-mode="inquiries" data-period="24h" aria-hidden="true"></canvas>
+                                <span>📈 24 ч</span>
+                                <strong>+{{ inquiry_analytics.delta_24h }}</strong>
+                                {% if inquiry_analytics.change_24h_pct is not None %}
+                                    <small class="analytics-change {% if inquiry_analytics.change_24h_pct > 0 %}analytics-change-up{% elif inquiry_analytics.change_24h_pct < 0 %}analytics-change-down{% else %}analytics-change-flat{% endif %}">
+                                        {% if inquiry_analytics.change_24h_pct > 0 %}▲ +{% elif inquiry_analytics.change_24h_pct < 0 %}▼ {% endif %}{{ inquiry_analytics.change_24h_pct|floatformat:1 }}%
+                                    </small>
+                                {% endif %}
+                            </div>
+                            <div class="dashboard-metric-card">
+                                <canvas class="dashboard-metric-chart" data-analytics-mode="inquiries" data-period="7d" aria-hidden="true"></canvas>
+                                <span>📅 7 дней</span>
+                                <strong>+{{ inquiry_analytics.delta_7d }}</strong>
+                                {% if inquiry_analytics.change_7d_pct is not None %}
+                                    <small class="analytics-change {% if inquiry_analytics.change_7d_pct > 0 %}analytics-change-up{% elif inquiry_analytics.change_7d_pct < 0 %}analytics-change-down{% else %}analytics-change-flat{% endif %}">
+                                        {% if inquiry_analytics.change_7d_pct > 0 %}▲ +{% elif inquiry_analytics.change_7d_pct < 0 %}▼ {% endif %}{{ inquiry_analytics.change_7d_pct|floatformat:1 }}%
+                                    </small>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            {% else %}
-                <div class="small">Статистика просмотров пока недоступна.</div>
-            {% endif %}
+                </a>
             </div>
-        </a>
+            <div class="dashboard-analytics-dots" role="tablist" aria-label="Аналитика">
+                <button class="dashboard-analytics-dot active" type="button" data-analytics-slide-dot aria-selected="true" aria-label="Просмотры"></button>
+                <button class="dashboard-analytics-dot" type="button" data-analytics-slide-dot aria-selected="false" aria-label="Обращения"></button>
+            </div>
+        </article>
 
         <a class="card dashboard-summary-card dashboard-listings-card" href="{% url 'mobile_listings' %}">
             <div class="title">🚗 Объявления</div>
@@ -160,8 +260,46 @@
         .gmail-check-button { display: grid; place-items: center; min-width: 58px; min-height: 58px; padding: 0; font-size: 24px; }
         .dashboard-analytics-card,
         .dashboard-listings-card { display: grid; align-content: start; gap: 9px; text-decoration: none; color: inherit; }
-        .dashboard-analytics-card { position: relative; overflow: hidden; }
+        .dashboard-analytics-card { position: relative; overflow: hidden; padding: 0; }
+        .dashboard-analytics-track {
+            display: flex;
+            width: 200%;
+            transition: transform .24s ease;
+            will-change: transform;
+        }
+        .dashboard-analytics-slide {
+            width: 50%;
+            flex: 0 0 50%;
+            min-width: 0;
+            padding: 16px 16px 28px;
+            text-decoration: none;
+            color: inherit;
+        }
         .dashboard-analytics-content { position: relative; z-index: 1; display: grid; gap: 9px; }
+        .dashboard-analytics-dots {
+            position: absolute;
+            left: 50%;
+            bottom: 8px;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 7px;
+            z-index: 3;
+        }
+        .dashboard-analytics-dot {
+            width: 7px;
+            height: 7px;
+            padding: 0;
+            border: 0;
+            border-radius: 999px;
+            background: var(--muted);
+            opacity: .45;
+            cursor: pointer;
+        }
+        .dashboard-analytics-dot.active {
+            width: 18px;
+            background: var(--accent);
+            opacity: 1;
+        }
         .dashboard-analytics-background {
             position: absolute !important;
             inset: 0;
