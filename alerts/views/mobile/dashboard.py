@@ -192,12 +192,90 @@ def mobile_dashboard(request):
     )
     active_listings_count = active_listings_queryset.count()
     listing_analytics = get_listing_analytics()
+    now = timezone.now()
+
+    tracked_listing_ids = list(
+        active_listings_queryset.exclude(kleinanzeigen_listing_id="")
+        .values_list("kleinanzeigen_listing_id", flat=True)
+    )
+    inquiry_rows = list(
+        MarketplaceAlert.objects.filter(
+            event_type=MarketplaceAlert.EventType.BUYER_MESSAGE,
+            listing_id__in=tracked_listing_ids,
+        )
+        .values("received_at", "created_at")
+        .order_by("received_at", "created_at", "id")
+    )
+    inquiry_events = [
+        row["received_at"] or row["created_at"]
+        for row in inquiry_rows
+        if (row["received_at"] or row["created_at"]) <= now
+    ]
+
+    cutoff_24h = now - timedelta(hours=24)
+    cutoff_48h = now - timedelta(hours=48)
+    cutoff_7d = now - timedelta(days=7)
+    cutoff_14d = now - timedelta(days=14)
+
+    def count_inquiries(start, end):
+        return sum(1 for occurred_at in inquiry_events if start < occurred_at <= end)
+
+    def inquiry_change(current, previous):
+        if previous == 0:
+            return None
+        return round(((current - previous) / previous) * 100, 1)
+
+    inquiry_24h = count_inquiries(cutoff_24h, now)
+    inquiry_previous_24h = count_inquiries(cutoff_48h, cutoff_24h)
+    inquiry_7d = count_inquiries(cutoff_7d, now)
+    inquiry_previous_7d = count_inquiries(cutoff_14d, cutoff_7d)
+    inquiry_analytics = {
+        "total": len(inquiry_events),
+        "delta_24h": inquiry_24h,
+        "delta_7d": inquiry_7d,
+        "change_24h_pct": inquiry_change(inquiry_24h, inquiry_previous_24h),
+        "change_7d_pct": inquiry_change(inquiry_7d, inquiry_previous_7d),
+    }
+
+    local_now = timezone.localtime(now)
+    inquiry_hour_start = local_now.replace(
+        minute=0, second=0, microsecond=0
+    ) - timedelta(hours=23)
+    inquiry_hours = [
+        inquiry_hour_start + timedelta(hours=index)
+        for index in range(24)
+    ]
+    inquiry_hourly = {hour: 0 for hour in inquiry_hours}
+    inquiry_today = local_now.date()
+    inquiry_days = [
+        inquiry_today - timedelta(days=offset)
+        for offset in range(6, -1, -1)
+    ]
+    inquiry_daily = {day: 0 for day in inquiry_days}
+
+    for occurred_at in inquiry_events:
+        local_occurred = timezone.localtime(occurred_at)
+        hour = local_occurred.replace(minute=0, second=0, microsecond=0)
+        if hour in inquiry_hourly:
+            inquiry_hourly[hour] += 1
+        if local_occurred.date() in inquiry_daily:
+            inquiry_daily[local_occurred.date()] += 1
+
+    dashboard_inquiry_charts = {
+        "24h": [
+            {"label": hour.strftime("%H:%M"), "value": inquiry_hourly[hour]}
+            for hour in inquiry_hours
+        ],
+        "7d": [
+            {"label": day.strftime("%d.%m"), "value": inquiry_daily[day]}
+            for day in inquiry_days
+        ],
+    }
 
     # Mini charts show actual view gains per period, not cumulative counters.
     dashboard_metric_charts = {"24h": [], "7d": []}
     if listing_analytics:
         listing_ids = [item.listing_id for item in listing_analytics.listings]
-        now = timezone.now()
         stats = list(
             ListingViewStat.objects.filter(listing_id__in=listing_ids)
             .order_by("listing_id", "created_at", "id")
@@ -248,6 +326,8 @@ def mobile_dashboard(request):
         "active_listings_count": active_listings_count,
         "listing_analytics": listing_analytics,
         "dashboard_metric_charts": dashboard_metric_charts,
+        "inquiry_analytics": inquiry_analytics,
+        "dashboard_inquiry_charts": dashboard_inquiry_charts,
         "health_report": health_report,
         "view_mode": view_mode,
         "alert_counts": alert_counts,
