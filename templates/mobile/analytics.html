@@ -266,7 +266,8 @@
                 '#36c2a3', '#4f8cff', '#f6c85f', '#ff6b6b', '#b07cff',
                 '#35b6e8', '#ff9f43', '#72c472', '#e66fb5', '#9aa8b7'
             ];
-            let activeMode = 'views';
+            const requestedMode = new URLSearchParams(window.location.search).get('mode');
+            let activeMode = requestedMode === 'inquiries' ? 'inquiries' : 'views';
             let activeKey = 'all';
 
             const clearCanvas = (canvas) => {
