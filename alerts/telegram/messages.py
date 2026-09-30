@@ -12,7 +12,7 @@ from django.utils.translation import gettext as _
 from ..monitoring.health import build_health_report
 from ..gmail_polling import GmailPollingStatus, get_gmail_polling_status
 from ..services.listing_analytics import ListingAnalytics, get_listing_analytics
-from ..models import Listing, MailboxAccount, MarketplaceAlert
+from ..models import GmailPollingSettings, Listing, MailboxAccount, MarketplaceAlert
 from .i18n import use_argus_telegram_language
 from .quiet_hours import quiet_hours_allows_alert
 
@@ -376,8 +376,11 @@ def _system_message_status(title: str, details: str = "") -> tuple[str, str]:
     if "error" in text or "failed" in text or "ошибка" in text:
         return "🔴", _("Error")
 
-    if "recovered" in text or "restored" in text or "восстанов" in text:
-        return "🟢", _("Recovered")
+    if "resumed" in text or "started" in text or "recovered" in text or "restored" in text or "восстанов" in text:
+        return "🟢", _("Active")
+
+    if "paused" in text or "stopped" in text or "приостанов" in text:
+        return "⏸", _("Paused")
 
     if "warning" in text or "partial" in text or "предупреж" in text:
         return "🟠", _("Warning")
@@ -607,7 +610,10 @@ def build_health_message(bot_started_at=None) -> str:
 @use_argus_telegram_language
 def build_gmail_polling_message(status: GmailPollingStatus | None = None) -> str:
     status = status or get_gmail_polling_status()
-    status_icon = "⚪" if not status.is_available else "🟢" if status.is_enabled else "🔴"
+    polling = GmailPollingSettings.load()
+    app_enabled = polling.polling_enabled
+    status_icon = "🟢" if app_enabled else "⏸"
+    app_status = _("Active") if app_enabled else _("Paused")
     timer_icon = "⚪" if not status.is_available else "🟢" if status.is_active else "🟠"
 
     lines = [
@@ -615,11 +621,14 @@ def build_gmail_polling_message(status: GmailPollingStatus | None = None) -> str
         f"📅 <b>{_('Date')}:</b> {_format_date(timezone.localdate())}",
         f"🕒 <b>{_('Time')}:</b> {_format_time(timezone.now())}",
         "",
-        f"{status_icon} <b>{_('Status')}:</b> {html.escape(status.enabled_label)}",
+        f"{status_icon} <b>{_('Status')}:</b> {html.escape(str(app_status))}",
         f"{timer_icon} <b>{_('Timer')}:</b> {html.escape(status.active_label)}",
         f"⏭ <b>{_('Next run')}:</b> {html.escape(status.localized_next_run_label)}",
         f"⏱ <b>{_('Interval')}:</b> {html.escape(status.localized_interval_label)}",
     ]
+    if not app_enabled:
+        paused_label = _format_dt(polling.paused_at) if polling.paused_at else "—"
+        lines.append(f"⏸ <b>{_('Paused since')}:</b> {paused_label}")
     if status.error:
         lines.extend(
             [
