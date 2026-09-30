@@ -144,6 +144,14 @@ def _check_recent_gmail_check(now) -> HealthCheck:
     polling = GmailPollingSettings.load()
     local_now = timezone.localtime(now)
 
+    if not polling.polling_enabled:
+        detail = _("Automatic Gmail polling is paused.")
+        if polling.paused_at:
+            detail = _("Automatic Gmail polling is paused since %(timestamp)s.") % {
+                "timestamp": timezone.localtime(polling.paused_at).isoformat(),
+            }
+        return HealthCheck(True, "paused", detail)
+
     if polling.working_hours_enabled and not polling.is_working_time(local_now.time()):
         return HealthCheck(
             True,
