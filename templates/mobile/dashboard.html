@@ -108,6 +108,69 @@
                 }, true);
             }
 
+            const pollingDialog = document.getElementById('gmail-polling-confirm');
+            const pollingForms = document.querySelectorAll('.gmail-polling-toggle-form');
+            const pollingCancel = document.getElementById('gmail-polling-confirm-cancel');
+            const pollingSubmit = document.getElementById('gmail-polling-confirm-submit');
+            const pollingTitle = document.getElementById('gmail-polling-confirm-title');
+            const pollingText = document.getElementById('gmail-polling-confirm-text');
+            const pollingIcon = document.getElementById('gmail-polling-confirm-icon');
+            let pendingPollingForm = null;
+
+            pollingForms.forEach(form => {
+                form.addEventListener('submit', event => {
+                    event.preventDefault();
+                    pendingPollingForm = form;
+                    const action = form.querySelector('input[name="action"]')?.value;
+
+                    if (!pollingDialog || typeof pollingDialog.showModal !== 'function') {
+                        const confirmed = window.confirm(
+                            action === 'pause'
+                                ? 'Приостановить автоматические проверки Gmail? Ручная проверка останется доступной.'
+                                : 'Возобновить автоматические проверки Gmail?'
+                        );
+                        if (confirmed) form.submit();
+                        return;
+                    }
+
+                    const isPause = action === 'pause';
+                    pollingIcon.textContent = isPause ? '⏸' : '▶';
+                    pollingTitle.textContent = isPause
+                        ? 'Приостановить сервис?'
+                        : 'Возобновить сервис?';
+                    pollingText.textContent = isPause
+                        ? 'Автоматические запросы к Gmail будут остановлены. Ручная проверка почты останется доступной.'
+                        : 'Автоматические запросы к Gmail снова будут выполняться по расписанию.';
+                    pollingSubmit.textContent = isPause ? 'Приостановить' : 'Возобновить';
+                    pollingSubmit.classList.toggle('danger', isPause);
+                    pollingDialog.showModal();
+                });
+            });
+
+            pollingCancel?.addEventListener('click', () => {
+                pendingPollingForm = null;
+                pollingDialog?.close();
+            });
+
+            pollingSubmit?.addEventListener('click', () => {
+                if (!pendingPollingForm) return;
+                const form = pendingPollingForm;
+                pendingPollingForm = null;
+                pollingDialog?.close();
+                form.submit();
+            });
+
+            pollingDialog?.addEventListener('click', event => {
+                if (event.target === pollingDialog) {
+                    pendingPollingForm = null;
+                    pollingDialog.close();
+                }
+            });
+
+            pollingDialog?.addEventListener('cancel', () => {
+                pendingPollingForm = null;
+            });
+
             showSlide(0);
             window.addEventListener('resize', drawAll);
         });
@@ -147,7 +210,7 @@
                         </form>
                     {% endif %}
                     {% if can_toggle_gmail_polling %}
-                        <form method="post" action="{% url 'mobile_toggle_gmail_polling' %}">
+                        <form class="gmail-polling-toggle-form" method="post" action="{% url 'mobile_toggle_gmail_polling' %}">
                             {% csrf_token %}
                             <input type="hidden" name="next" value="{{ request.get_full_path }}">
                             {% if gmail_polling_settings.polling_enabled %}
@@ -162,6 +225,20 @@
                 </div>
             {% endif %}
         </article>
+
+        {% if can_toggle_gmail_polling %}
+            <dialog id="gmail-polling-confirm" class="gmail-polling-confirm">
+                <form method="dialog" class="gmail-polling-confirm-card">
+                    <div class="gmail-polling-confirm-icon" id="gmail-polling-confirm-icon" aria-hidden="true">⏸</div>
+                    <div class="title" id="gmail-polling-confirm-title">Подтвердить действие</div>
+                    <p class="small gmail-polling-confirm-text" id="gmail-polling-confirm-text"></p>
+                    <div class="gmail-polling-confirm-actions">
+                        <button class="small-action" type="button" id="gmail-polling-confirm-cancel">Отмена</button>
+                        <button class="small-action gmail-polling-confirm-submit" type="button" id="gmail-polling-confirm-submit">Подтвердить</button>
+                    </div>
+                </form>
+            </dialog>
+        {% endif %}
 
         <article class="card dashboard-summary-card dashboard-analytics-card">
             <div class="dashboard-analytics-track">
@@ -278,6 +355,51 @@
         .gmail-check-action form { display: flex; }
         .gmail-check-button,
         .gmail-pause-button { display: grid; place-items: center; min-width: 58px; min-height: 58px; padding: 0; font-size: 24px; }
+        .gmail-polling-confirm {
+            width: min(420px, calc(100vw - 32px));
+            padding: 0;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: var(--panel);
+            color: var(--text);
+            box-shadow: 0 18px 60px rgba(0, 0, 0, .42);
+        }
+        .gmail-polling-confirm::backdrop {
+            background: rgba(0, 0, 0, .62);
+            backdrop-filter: blur(2px);
+        }
+        .gmail-polling-confirm-card {
+            display: grid;
+            gap: 12px;
+            padding: 20px;
+        }
+        .gmail-polling-confirm-icon {
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--panel-2);
+            font-size: 24px;
+        }
+        .gmail-polling-confirm-text {
+            margin: 0;
+            line-height: 1.45;
+        }
+        .gmail-polling-confirm-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .gmail-polling-confirm-submit {
+            border-color: var(--line-accent);
+            color: var(--accent);
+        }
+        .gmail-polling-confirm-submit.danger {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
         .dashboard-analytics-card,
         .dashboard-listings-card { display: grid; align-content: start; gap: 9px; text-decoration: none; color: inherit; }
         .dashboard-analytics-card { position: relative; overflow: hidden; padding: 0; }
