@@ -122,6 +122,11 @@ urlpatterns = [
         name="mobile_check_gmail_now",
     ),
     path(
+        "m/gmail/polling/toggle/",
+        mobile.mobile_toggle_gmail_polling,
+        name="mobile_toggle_gmail_polling",
+    ),
+    path(
         "m/mailboxes/<int:mailbox_id>/check-now/",
         mobile.mobile_check_mailbox_now,
         name="mobile_check_mailbox_now",
