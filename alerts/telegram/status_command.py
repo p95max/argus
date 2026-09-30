@@ -11,7 +11,7 @@ from ..gmail_polling import get_gmail_polling_status
 from ..services.listing_analytics import get_listing_analytics
 from ..services.listing_metadata import fetch_listing_public_metadata
 from ..views.mobile.listings import LISTING_CLOSED_MARKER, _build_listing_group_keys
-from ..models import Listing, MailboxAccount, MarketplaceAlert
+from ..models import GmailPollingSettings, Listing, MailboxAccount, MarketplaceAlert
 from .i18n import use_argus_telegram_language
 from .permissions import is_allowed_update
 
@@ -77,15 +77,22 @@ def build_mailboxes_status_message() -> str:
         default=None,
     )
     polling_status = get_gmail_polling_status()
+    polling_settings = GmailPollingSettings.load()
     interval = polling_status.localized_interval_label or "—"
+    polling_label = "🟢 активен" if polling_settings.polling_enabled else "⏸ на паузе"
 
     lines.extend(
         [
             "",
+            f"🤖 Автопроверка Gmail: {polling_label}",
             f"✅ Последняя успешная синхронизация: {_format_time(last_success_at)}",
             f"⏱ Текущий интервал: {html.escape(interval)}",
         ]
     )
+    if not polling_settings.polling_enabled and polling_settings.paused_at:
+        lines.append(
+            f"⏸ Пауза с: {_format_time(polling_settings.paused_at)}"
+        )
 
     return "\n".join(lines)
 
