@@ -131,11 +131,15 @@ async def handle_gmail_polling_command(update, context):
         await update.effective_message.reply_text(telegram_gettext(PERMISSION_DENIED_MESSAGE))
         return
     status = await sync_to_async(get_gmail_polling_status, thread_sensitive=True)()
+    polling = await sync_to_async(GmailPollingSettings.load, thread_sensitive=True)()
     text = await sync_to_async(build_gmail_polling_message, thread_sensitive=True)(status)
     await update.effective_message.reply_text(
         text,
         parse_mode="HTML",
-        reply_markup=build_gmail_polling_keyboard(status.is_enabled, getattr(status, "is_available", True)),
+        reply_markup=build_gmail_polling_keyboard(
+            status.is_enabled and polling.polling_enabled,
+            getattr(status, "is_available", True),
+        ),
         disable_web_page_preview=True,
     )
 
