@@ -43,6 +43,9 @@ def _gmail_polling_skip_reason(mailboxes, *, force=False) -> str:
         return ""
 
     polling = GmailPollingSettings.load()
+    if not polling.polling_enabled:
+        return "automatic Gmail polling is paused"
+
     now = timezone.localtime()
     if not polling.is_working_time(now.time()):
         return (
