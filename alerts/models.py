@@ -552,6 +552,22 @@ class TelegramSettings(TimestampedModel):
 
 
 class GmailPollingSettings(TimestampedModel):
+    polling_enabled = models.BooleanField(
+        _("automatic Gmail polling enabled"),
+        default=True,
+        help_text=_(
+            "Disable to pause scheduled Gmail API checks. Manual checks remain available."
+        ),
+    )
+    paused_at = models.DateTimeField(_("paused at"), null=True, blank=True)
+    paused_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name=_("paused by"),
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
     working_hours_enabled = models.BooleanField(
         _("restrict Gmail checks to working hours"),
         default=True,
@@ -577,6 +593,9 @@ class GmailPollingSettings(TimestampedModel):
     class Meta:
         verbose_name = _("Gmail polling settings")
         verbose_name_plural = _("Gmail polling settings")
+        permissions = [
+            ("toggle_gmail_polling", "Can pause or resume automatic Gmail polling"),
+        ]
 
     def __str__(self):
         return _("Gmail polling: every %(minutes)s min") % {
