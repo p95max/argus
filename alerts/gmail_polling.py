@@ -130,6 +130,7 @@ def get_gmail_polling_status() -> GmailPollingStatus:
 def enable_gmail_polling() -> None:
     from .models import GmailPollingSettings
 
+    _run_systemctl_action(["enable", "--now", GMAIL_TIMER_UNIT])
     polling = GmailPollingSettings.load()
     polling.polling_enabled = True
     polling.paused_at = None
@@ -142,12 +143,12 @@ def enable_gmail_polling() -> None:
             "updated_at",
         ]
     )
-    _run_systemctl_action(["enable", "--now", GMAIL_TIMER_UNIT])
 
 
 def disable_gmail_polling() -> None:
     from .models import GmailPollingSettings
 
+    _run_systemctl_action(["disable", "--now", GMAIL_TIMER_UNIT])
     polling = GmailPollingSettings.load()
     polling.polling_enabled = False
     polling.paused_at = timezone.now()
@@ -160,7 +161,6 @@ def disable_gmail_polling() -> None:
             "updated_at",
         ]
     )
-    _run_systemctl_action(["disable", "--now", GMAIL_TIMER_UNIT])
 
 
 def run_gmail_check_now() -> None:
