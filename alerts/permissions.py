@@ -17,3 +17,9 @@ def can_refresh_mailbox(user):
     return user.is_active and (
         user.is_superuser or user.has_perm("alerts.refresh_mailboxaccount")
     )
+
+
+def can_toggle_gmail_polling(user):
+    return user.is_active and (
+        user.is_superuser or user.has_perm("alerts.toggle_gmail_polling")
+    )
