@@ -12,7 +12,7 @@ from django.utils.translation import gettext as _
 from telegram.error import BadRequest
 
 from ..gmail.gmail import check_mailbox
-from ..models import MailboxAccount, MarketplaceAlert
+from ..models import GmailPollingSettings, MailboxAccount, MarketplaceAlert
 from ..gmail_polling import (
     GmailPollingCommandError,
     apply_gmail_polling_action,
@@ -306,13 +306,27 @@ def handle_gmail_polling_callback_action(callback_data: str, chat_id: str, user_
     else:
         try:
             answer_text = apply_gmail_polling_action(action)
+            if action in {"enable", "disable"}:
+                from .sender import send_system_telegram_alert
+
+                title = "Gmail polling resumed" if action == "enable" else "Gmail polling paused"
+                details = (
+                    "Automatic Gmail checks are active again. Manual checks remain available."
+                    if action == "enable"
+                    else "Automatic Gmail checks are paused. Manual checks remain available."
+                )
+                try:
+                    send_system_telegram_alert(title, details)
+                except Exception:
+                    logger.exception("Could not send Gmail polling state notification.")
         except GmailPollingCommandError as exc:
             answer_text = _("Gmail polling action failed: %(error)s") % {"error": str(exc)}
     status = get_gmail_polling_status()
+    polling = GmailPollingSettings.load()
     return GmailPollingCallbackResult(
         answer_text=answer_text,
         message_text=build_gmail_polling_message(status),
-        is_enabled=status.is_enabled,
+        is_enabled=status.is_enabled and polling.polling_enabled,
         can_control=status.is_available,
     )
 
