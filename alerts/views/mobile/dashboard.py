@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -18,8 +19,8 @@ from ...services.listing_analytics import get_listing_analytics
 from ...command_locks import CommandAlreadyRunning, command_lock
 from ...gmail.gmail import check_mailbox, mark_alert_gmail_message_read
 from ...monitoring.health import build_health_report
-from ...models import Listing, ListingInquiryEvent, ListingViewStat, MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
-from ...permissions import can_manage_mailboxes, can_refresh_mailbox, can_view_mailbox_operations
+from ...models import GmailPollingSettings, Listing, ListingInquiryEvent, ListingViewStat, MailboxAccount, MarketplaceAlert, ServiceEvent, TelegramSettings
+from ...permissions import can_manage_mailboxes, can_refresh_mailbox, can_toggle_gmail_polling, can_view_mailbox_operations
 
 
 MOBILE_ALERTS_PER_PAGE = 20
@@ -125,6 +126,7 @@ def mobile_dashboard(request):
         ).order_by("-last_seen_at", "-created_at")
 
     settings = TelegramSettings.load()
+    gmail_polling_settings = GmailPollingSettings.load()
 
     alert_counts = base_alerts.aggregate(
         total=Count(
@@ -323,6 +325,8 @@ def mobile_dashboard(request):
         "telegram_settings": settings,
         "can_manage_mailboxes": can_manage_mailboxes(request.user),
         "can_refresh_mailbox": can_refresh_mailbox(request.user),
+        "can_toggle_gmail_polling": can_toggle_gmail_polling(request.user),
+        "gmail_polling_settings": gmail_polling_settings,
         "admin_alert_changelist_url": reverse(
             "admin:alerts_marketplacealert_changelist"
         ),
@@ -480,6 +484,65 @@ def mobile_send_system_notice(request, alert_id):
             )
         else:
             messages.success(request, _("System notification sent and case resolved."))
+
+    return redirect(_safe_next_url(request))
+
+
+@login_required
+@require_POST
+def mobile_toggle_gmail_polling(request):
+    _require_staff(request.user)
+    if not can_toggle_gmail_polling(request.user):
+        raise PermissionDenied("You do not have permission to pause or resume Gmail polling.")
+
+    action = request.POST.get("action", "")
+    if action not in {"pause", "resume"}:
+        raise PermissionDenied("Unknown Gmail polling action.")
+
+    with transaction.atomic():
+        polling = GmailPollingSettings.objects.select_for_update().order_by("id").first()
+        if polling is None:
+            polling = GmailPollingSettings.objects.create()
+
+        enable = action == "resume"
+        changed = polling.polling_enabled != enable
+        if changed:
+            polling.polling_enabled = enable
+            polling.paused_at = None if enable else timezone.now()
+            polling.paused_by = None if enable else request.user
+            polling.save(
+                update_fields=[
+                    "polling_enabled",
+                    "paused_at",
+                    "paused_by",
+                    "updated_at",
+                ]
+            )
+
+    if changed:
+        from ...telegram.sender import send_system_telegram_alert
+
+        title = "Gmail polling resumed" if enable else "Gmail polling paused"
+        details = (
+            "Automatic Gmail checks are active again. Manual checks remain available."
+            if enable
+            else "Automatic Gmail checks are paused. Manual checks remain available."
+        )
+        try:
+            send_system_telegram_alert(title, details)
+        except Exception:
+            messages.warning(
+                request,
+                _(
+                    "Gmail polling state changed, but the Telegram notification "
+                    "could not be sent."
+                ),
+            )
+
+    if enable:
+        messages.success(request, _("Automatic Gmail polling resumed."))
+    else:
+        messages.success(request, _("Automatic Gmail polling paused."))
 
     return redirect(_safe_next_url(request))
 
