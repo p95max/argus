@@ -128,19 +128,37 @@
                 <span class="badge {% if gmail_summary.status == 'OK' %}ok{% elif gmail_summary.status == 'ERROR' %}danger{% else %}warn{% endif %}">
                     {% trans "Status" %}: {{ gmail_summary.status }}
                 </span>
+                <span class="badge {% if gmail_polling_settings.polling_enabled %}ok{% else %}warn{% endif %}">
+                    {% if gmail_polling_settings.polling_enabled %}▶ {% trans "Active" %}{% else %}⏸ {% trans "Paused" %}{% endif %}
+                </span>
                 <span class="badge">{% trans "New today" %}: {{ gmail_summary.today_alerts }}</span>
             </div>
             <div class="small">{% trans "Last check" %}: {{ gmail_summary.last_checked_at|date:"H:i"|default:not_yet }}</div>
             <div class="small">{% trans "Last success" %}: {{ gmail_summary.last_success_at|date:"H:i"|default:not_yet }}</div>
             </div>
 
-            {% if can_refresh_mailbox and mailboxes %}
+            {% if mailboxes %}
                 <div class="actions compact-actions gmail-check-action">
-                    <form method="post" action="{% url 'mobile_check_gmail_now' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button class="small-action gmail-check-button" type="submit" aria-label="{% trans 'Check now' %}" title="{% trans 'Check now' %}">🔄</button>
-                    </form>
+                    {% if can_refresh_mailbox %}
+                        <form method="post" action="{% url 'mobile_check_gmail_now' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button class="small-action gmail-check-button" type="submit" aria-label="{% trans 'Check now' %}" title="{% trans 'Check now' %}">🔄</button>
+                        </form>
+                    {% endif %}
+                    {% if can_toggle_gmail_polling %}
+                        <form method="post" action="{% url 'mobile_toggle_gmail_polling' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            {% if gmail_polling_settings.polling_enabled %}
+                                <input type="hidden" name="action" value="pause">
+                                <button class="small-action gmail-pause-button" type="submit" aria-label="{% trans 'Pause automatic Gmail checks' %}" title="{% trans 'Pause automatic Gmail checks' %}">⏸</button>
+                            {% else %}
+                                <input type="hidden" name="action" value="resume">
+                                <button class="small-action gmail-pause-button" type="submit" aria-label="{% trans 'Resume automatic Gmail checks' %}" title="{% trans 'Resume automatic Gmail checks' %}">▶</button>
+                            {% endif %}
+                        </form>
+                    {% endif %}
                 </div>
             {% endif %}
         </article>
@@ -256,8 +274,10 @@
         .gmail-overview-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
         .gmail-overview-content { display: grid; gap: 7px; min-width: 0; }
         .gmail-check-action { align-self: center; margin: 0; }
+        .gmail-check-action { display: flex; gap: 8px; }
         .gmail-check-action form { display: flex; }
-        .gmail-check-button { display: grid; place-items: center; min-width: 58px; min-height: 58px; padding: 0; font-size: 24px; }
+        .gmail-check-button,
+        .gmail-pause-button { display: grid; place-items: center; min-width: 58px; min-height: 58px; padding: 0; font-size: 24px; }
         .dashboard-analytics-card,
         .dashboard-listings-card { display: grid; align-content: start; gap: 9px; text-decoration: none; color: inherit; }
         .dashboard-analytics-card { position: relative; overflow: hidden; padding: 0; }
