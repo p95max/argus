@@ -4,6 +4,8 @@ from dataclasses import dataclass
 import re
 import subprocess
 
+from django.core.management import call_command
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 
@@ -126,15 +128,43 @@ def get_gmail_polling_status() -> GmailPollingStatus:
 
 
 def enable_gmail_polling() -> None:
+    from .models import GmailPollingSettings
+
+    polling = GmailPollingSettings.load()
+    polling.polling_enabled = True
+    polling.paused_at = None
+    polling.paused_by = None
+    polling.save(
+        update_fields=[
+            "polling_enabled",
+            "paused_at",
+            "paused_by",
+            "updated_at",
+        ]
+    )
     _run_systemctl_action(["enable", "--now", GMAIL_TIMER_UNIT])
 
 
 def disable_gmail_polling() -> None:
+    from .models import GmailPollingSettings
+
+    polling = GmailPollingSettings.load()
+    polling.polling_enabled = False
+    polling.paused_at = timezone.now()
+    polling.paused_by = None
+    polling.save(
+        update_fields=[
+            "polling_enabled",
+            "paused_at",
+            "paused_by",
+            "updated_at",
+        ]
+    )
     _run_systemctl_action(["disable", "--now", GMAIL_TIMER_UNIT])
 
 
 def run_gmail_check_now() -> None:
-    _run_systemctl_action(["--no-block", "start", GMAIL_SERVICE_UNIT])
+    call_command("check_gmail", force=True)
 
 
 def apply_gmail_polling_action(action: str) -> str:
