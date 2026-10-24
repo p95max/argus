@@ -4,7 +4,8 @@
 {% block after_field_sets %}
     {{ block.super }}
 
-    {% if original and (can_manage_gmail_oauth or can_refresh_gmail) %}
+    {% if original %}
+        {% if can_manage_gmail_oauth or can_refresh_gmail %}
         <fieldset class="module aligned argus-gmail-actions">
             <h2>{% trans "Gmail actions" %}</h2>
             <div class="argus-gmail-actions__body">
@@ -140,5 +141,6 @@
                 }
             }
         </style>
+        {% endif %}
     {% endif %}
 {% endblock %}
