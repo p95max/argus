@@ -98,7 +98,7 @@
                     <div class="notice {{ message.tags }}">
                         {{ message|linebreaksbr }}
                         {% if mailbox_status and 'Почта проверена' in message|stringformat:'s' %}
-                            <br>📬 Подключено ящиков: {{ mailbox_status.total }}
+                            <br>📬 Активных ящиков: {{ mailbox_status.active }}
                         {% endif %}
                     </div>
                 {% endfor %}
@@ -183,7 +183,7 @@
     <div class="gmail-refresh-dialog">
         <div class="gmail-refresh-spinner" aria-hidden="true"></div>
         <strong id="gmail-refresh-modal-title">Проверяем Gmail…</strong>
-        <div class="gmail-refresh-description">Получаем новые обращения из подключённых ящиков.</div>
+        <div class="gmail-refresh-description">Получаем новые обращения из активных ящиков.</div>
     </div>
 </div>
 {% endif %}
