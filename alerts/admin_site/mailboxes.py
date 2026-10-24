@@ -29,9 +29,10 @@ class MailboxAccountAdmin(admin.ModelAdmin):
     )
     list_filter = ("is_active", "connection_status")
     search_fields = ("email", "name", "gmail_connected_email")
+    change_form_template = "admin/alerts/mailboxaccount/change_form.html"
+
     readonly_fields = (
         "email_display",
-        "gmail_oauth_actions",
         "gmail_connected_email",
         "gmail_oauth_connected_at",
         "gmail_oauth_last_refresh_at",
@@ -71,7 +72,6 @@ class MailboxAccountAdmin(admin.ModelAdmin):
                 "fields": (
                     "gmail_search_query",
                     "connection_status",
-                    "gmail_oauth_actions",
                     "gmail_connected_email",
                     "gmail_oauth_connected_at",
                     "gmail_oauth_last_refresh_at",
@@ -158,67 +158,6 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         if obj.email:
             return obj.email
         return _("Email is not connected yet. Connect Gmail through OAuth.")
-
-    @admin.display(description=_("Gmail actions"))
-    def gmail_oauth_actions(self, obj):
-        if not obj.pk:
-            return _("Save the mailbox first.")
-
-        request = getattr(self, "_gmail_actions_request", None)
-        if request is None:
-            return ""
-
-        can_manage = can_manage_mailboxes(request.user)
-        can_refresh = can_refresh_mailbox(request.user)
-        if not can_manage and not can_refresh:
-            return ""
-
-        connect_url = reverse("admin:alerts_mailboxaccount_gmail_connect", args=[obj.pk])
-        disconnect_url = reverse(
-            "admin:alerts_mailboxaccount_gmail_disconnect",
-            args=[obj.pk],
-        )
-        check_url = reverse("admin:alerts_mailboxaccount_gmail_check_now", args=[obj.pk])
-
-        actions = []
-        if can_manage:
-            actions.append(
-                format_html(
-                    '<a class="btn btn-sm btn-outline-info" href="{}">'
-                    '<i class="fas fa-plug"></i> OAuth</a>',
-                    connect_url,
-                )
-            )
-        if can_refresh:
-            actions.append(
-                format_html(
-                    '<button class="btn btn-sm btn-outline-success" type="submit" '
-                    'formmethod="post" formaction="{}">'
-                    '<i class="fas fa-play"></i> Check updates</button>',
-                    check_url,
-                )
-            )
-        if can_manage:
-            actions.append(
-                format_html(
-                    '<button class="btn btn-sm btn-outline-danger" type="submit" '
-                    'formmethod="post" formaction="{}">'
-                    '<i class="fas fa-times"></i> Disconnect</button>',
-                    disconnect_url,
-                )
-            )
-
-        return format_html(
-            '<div style="display: flex; gap: 8px; flex-wrap: wrap;">{}</div>',
-            format_html("{}", *actions),
-        )
-
-    def get_form(self, request, obj=None, **kwargs):
-        self._gmail_actions_request = request
-        try:
-            return super().get_form(request, obj, **kwargs)
-        finally:
-            self._gmail_actions_request = None
 
     def has_view_permission(self, request, obj=None):
         return can_view_mailbox_operations(request.user)
