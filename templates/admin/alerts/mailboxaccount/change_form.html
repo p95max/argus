@@ -1,0 +1,144 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block after_field_sets %}
+    {{ block.super }}
+
+    {% if original and (can_manage_gmail_oauth or can_refresh_gmail) %}
+        <fieldset class="module aligned argus-gmail-actions">
+            <h2>{% trans "Gmail actions" %}</h2>
+            <div class="argus-gmail-actions__body">
+                <div class="argus-gmail-actions__buttons">
+                    {% if can_manage_gmail_oauth %}
+                        <a
+                            class="argus-gmail-action argus-gmail-action--connect"
+                            href="{% url 'admin:alerts_mailboxaccount_gmail_connect' original.pk %}"
+                        >
+                            <span aria-hidden="true">🔌</span>
+                            <span>
+                                {% if original.gmail_oauth_token %}
+                                    {% trans "Reconnect Gmail" %}
+                                {% else %}
+                                    {% trans "Connect Gmail" %}
+                                {% endif %}
+                            </span>
+                        </a>
+                    {% endif %}
+
+                    {% if can_refresh_gmail %}
+                        <button
+                            class="argus-gmail-action argus-gmail-action--check"
+                            type="submit"
+                            formmethod="post"
+                            formaction="{% url 'admin:alerts_mailboxaccount_gmail_check_now' original.pk %}"
+                        >
+                            <span aria-hidden="true">🔄</span>
+                            <span>{% trans "Check updates" %}</span>
+                        </button>
+                    {% endif %}
+
+                    {% if can_manage_gmail_oauth and original.gmail_oauth_token %}
+                        <button
+                            class="argus-gmail-action argus-gmail-action--disconnect"
+                            type="submit"
+                            formmethod="post"
+                            formaction="{% url 'admin:alerts_mailboxaccount_gmail_disconnect' original.pk %}"
+                            onclick="return window.confirm('{% trans "Disconnect this Gmail account?" %}')"
+                        >
+                            <span aria-hidden="true">✕</span>
+                            <span>{% trans "Disconnect" %}</span>
+                        </button>
+                    {% endif %}
+                </div>
+
+                <div class="argus-gmail-actions__hint">
+                    {% if original.gmail_oauth_token %}
+                        {% trans "Gmail OAuth is connected. You can reconnect, check for updates, or disconnect the mailbox." %}
+                    {% else %}
+                        {% trans "Connect this mailbox to Gmail through OAuth. No password is stored in Argus." %}
+                    {% endif %}
+                </div>
+            </div>
+        </fieldset>
+
+        <style>
+            .argus-gmail-actions {
+                margin-top: 1rem;
+            }
+
+            .argus-gmail-actions__body {
+                padding: 14px 16px 16px;
+            }
+
+            .argus-gmail-actions__buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .argus-gmail-action {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                min-height: 42px;
+                padding: 9px 14px;
+                border: 1px solid rgba(255, 255, 255, .18);
+                border-radius: 8px;
+                background: rgba(255, 255, 255, .04);
+                color: inherit;
+                font: inherit;
+                font-weight: 600;
+                line-height: 1.2;
+                text-decoration: none !important;
+                cursor: pointer;
+                box-sizing: border-box;
+            }
+
+            .argus-gmail-action--connect {
+                border-color: rgba(74, 144, 226, .55);
+                background: rgba(74, 144, 226, .10);
+            }
+
+            .argus-gmail-action--check {
+                border-color: rgba(54, 194, 163, .55);
+                background: rgba(54, 194, 163, .10);
+            }
+
+            .argus-gmail-action--disconnect {
+                border-color: rgba(220, 84, 84, .55);
+                background: rgba(220, 84, 84, .09);
+            }
+
+            .argus-gmail-actions__hint {
+                margin-top: 12px;
+                color: rgba(255, 255, 255, .62);
+                font-size: .9rem;
+                line-height: 1.45;
+            }
+
+            @media (max-width: 767px) {
+                .argus-gmail-actions__body {
+                    padding: 12px;
+                }
+
+                .argus-gmail-actions__buttons {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 8px;
+                }
+
+                .argus-gmail-action {
+                    width: 100%;
+                    min-height: 46px;
+                    padding: 11px 14px;
+                    font-size: 16px;
+                }
+
+                .argus-gmail-actions__hint {
+                    font-size: 14px;
+                }
+            }
+        </style>
+    {% endif %}
+{% endblock %}
