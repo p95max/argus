@@ -7,6 +7,12 @@
                 <span class="summary-meta">
                     {% blocktrans count total=mailbox_status.total %}{{ total }} item{% plural %}{{ total }} items{% endblocktrans %}
                 </span>
+                {% if mailbox_status.total %}
+                    <span class="status-pill mailbox-active-count{% if mailbox_status.active %} ok{% else %} muted{% endif %}">
+                        <span class="status-dot"></span>
+                        {% blocktrans count active=mailbox_status.active %}{{ active }} active{% plural %}{{ active }} active{% endblocktrans %}
+                    </span>
+                {% endif %}
 
                 {% if mailbox_status.total == 0 %}
                     <span class="status-pill muted">
@@ -30,7 +36,7 @@
         <div class="collapsible-content">
             {% trans "not yet" as not_yet %}
             {% for mailbox in mailboxes %}
-                <article class="card nested-card">
+                <article class="card nested-card mailbox-status-card{% if mailbox.is_active %} mailbox-status-card-active{% else %} mailbox-status-card-disabled{% endif %}">
                     <div class="title">{{ mailbox.name }}</div>
                     <div class="meta">{{ mailbox.email }}</div>
 
@@ -66,3 +72,38 @@
         </div>
     </details>
 </section>
+
+<style>
+    .mailbox-active-count {
+        font-weight: 800;
+    }
+
+    .mailbox-status-card {
+        transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, opacity .18s ease;
+    }
+
+    .mailbox-status-card-active {
+        border-color: rgba(54, 194, 163, .34);
+        background: linear-gradient(
+            135deg,
+            rgba(54, 194, 163, .07),
+            rgba(54, 194, 163, .02)
+        );
+        box-shadow: inset 0 0 0 1px rgba(54, 194, 163, .025);
+    }
+
+    .mailbox-status-card-disabled {
+        opacity: .88;
+    }
+
+    @media (max-width: 767px) {
+        .mailbox-status-block .summary-title {
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .mailbox-active-count {
+            order: 3;
+        }
+    }
+</style>
