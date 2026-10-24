@@ -164,12 +164,14 @@ def mobile_dashboard(request):
         ],
     ).count()
 
-    mailboxes = MailboxAccount.objects.order_by("email")
+    mailboxes = MailboxAccount.objects.order_by("-is_active", "connection_status", "name", "email")
     if not can_view_mailbox_operations(request.user):
         mailboxes = MailboxAccount.objects.none()
 
     mailbox_status = mailboxes.aggregate(
         total=Count("id"),
+        active=Count("id", filter=Q(is_active=True)),
+        disabled=Count("id", filter=Q(is_active=False)),
         errors=Count(
             "id",
             filter=Q(connection_status=MailboxAccount.ConnectionStatus.ERROR),
