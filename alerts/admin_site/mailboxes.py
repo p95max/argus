@@ -97,6 +97,19 @@ class MailboxAccountAdmin(admin.ModelAdmin):
         ),
     )
 
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        extra_context = {
+            **(extra_context or {}),
+            "can_manage_gmail_oauth": can_manage_mailboxes(request.user),
+            "can_refresh_gmail": can_refresh_mailbox(request.user),
+        }
+        return super().changeform_view(
+            request,
+            object_id=object_id,
+            form_url=form_url,
+            extra_context=extra_context,
+        )
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
