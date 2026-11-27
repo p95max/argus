@@ -8,7 +8,6 @@ PYTHON_BIN="${PYTHON_BIN:-$PROJECT_DIR/.venv/bin/python}"
 GIT_BIN="${GIT_BIN:-/usr/bin/git}"
 RUN_DOCTOR="${RUN_DOCTOR:-1}"
 RESTART_SERVICES="${RESTART_SERVICES:-argus-web.service argus-telegram-bot.service}"
-AUTO_INSTALL_OPS="${AUTO_INSTALL_OPS:-0}"
 DEPLOY_NOTIFY_BIN="${DEPLOY_NOTIFY_BIN:-/usr/local/bin/argus-deploy-notify.py}"
 DEPLOY_RESULT="success"
 
@@ -82,15 +81,6 @@ log "Deploying $new_rev"
 
 "$GIT_BIN" reset --hard "$REMOTE_NAME/$DEPLOY_BRANCH"
 
-if [ "$ops_changed" = "1" ]; then
-    if [ "$AUTO_INSTALL_OPS" = "1" ]; then
-        log "Operational files changed; reinstalling systemd units, sudoers policy, and helper scripts"
-        bash deploy/install-ops.sh
-    else
-        log "Operational files changed; manual install required: bash deploy/install-ops.sh"
-    fi
-fi
-
 if printf '%s\n' "$changed_files" | grep -Eq '^(pyproject\.toml|poetry\.lock)$'; then
     command -v poetry >/dev/null 2>&1 || fail "dependencies changed but poetry is not installed"
     log "Dependencies changed; running poetry install"
@@ -109,17 +99,22 @@ log "Running Django deploy checks"
 log "Running Argus deploy readiness checks"
 "$PYTHON_BIN" manage.py argus_check_deploy
 
-log "Restarting services: $RESTART_SERVICES"
-# shellcheck disable=SC2086
-run_systemctl restart $RESTART_SERVICES
+if [ "$ops_changed" = "1" ]; then
+    OPS_INSTALLER="/usr/local/bin/argus-install-ops.sh"
+    if [ ! -x "$OPS_INSTALLER" ]; then
+        fail "ops installer is not bootstrapped: $OPS_INSTALLER; run ./deploy/install-ops.sh once"
+    fi
+    log "Operational files changed; synchronizing ops layer"
+    sudo -n "$OPS_INSTALLER"
+else
+    log "Restarting services: $RESTART_SERVICES"
+    # shellcheck disable=SC2086
+    run_systemctl restart $RESTART_SERVICES
+fi
 
 if [ "$RUN_DOCTOR" = "1" ]; then
-    if [ "$ops_changed" = "1" ] && [ "$AUTO_INSTALL_OPS" != "1" ]; then
-        log "Skipping full doctor because operational files changed and were not auto-installed"
-    else
-        log "Running Argus doctor"
-        bash deploy/scripts/argus-doctor.sh
-    fi
+    log "Running Argus doctor"
+    bash deploy/scripts/argus-doctor.sh
 fi
 
 DEPLOY_RESULT="updated"
