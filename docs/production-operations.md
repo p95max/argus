@@ -203,18 +203,16 @@ Default behavior:
 - restarts `argus-web.service` and `argus-telegram-bot.service`;
 - runs doctor unless ops files changed and were not auto-installed.
 
-Operational files are intentionally not auto-installed by default. If files under `deploy/systemd/`, `deploy/scripts/`, `deploy/sudoers/`, or `deploy/install-ops.sh` changed, the script logs that manual install is required:
+Operational files are synchronized automatically when files under `deploy/systemd/`, `deploy/scripts/`, `deploy/sudoers/`, or `deploy/install-ops.sh` change. Auto-deploy calls the allowlisted root-owned helper `/usr/local/bin/argus-install-ops.sh`, which validates sudoers, installs the ops files, reloads systemd, restarts the runtime services and timers, and clears stale failed states for Argus oneshot jobs.
+
+A server upgraded from an older deployment needs one bootstrap run:
 
 ```bash
 cd /opt/argus
 ./deploy/install-ops.sh
 ```
 
-Opt-in auto-install is possible with:
-
-```bash
-AUTO_INSTALL_OPS=1 /usr/local/bin/argus-auto-deploy.sh
-```
+After that bootstrap, future ops changes require no manual installation step.
 
 Run manually through systemd:
 
