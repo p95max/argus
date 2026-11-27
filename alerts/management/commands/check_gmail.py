@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from alerts.command_locks import CommandAlreadyRunning, command_lock
@@ -103,7 +103,18 @@ class Command(BaseCommand):
         raw_mailboxes = list(queryset)
 
         if not raw_mailboxes:
-            raise CommandError("No active mailboxes found.")
+            checked_views, updated_views = refresh_listing_view_stats()
+            self.stdout.write(
+                self.style.WARNING(
+                    "Gmail check skipped: no active mailboxes configured."
+                )
+            )
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Listing views checked {checked_views}, updated {updated_views}."
+                )
+            )
+            return
 
         skip_reason = _gmail_polling_skip_reason(
             raw_mailboxes,
