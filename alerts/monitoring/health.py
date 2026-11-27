@@ -98,7 +98,11 @@ def _check_database() -> HealthCheck:
 def _check_active_mailbox() -> HealthCheck:
     count = MailboxAccount.objects.filter(is_active=True).count()
     if count < 1:
-        return HealthCheck(False, "error", _("No active mailboxes configured."))
+        return HealthCheck(
+            True,
+            "idle",
+            _("No active mailboxes configured. Gmail monitoring is idle."),
+        )
     return HealthCheck(
         True,
         "ok",
@@ -141,6 +145,14 @@ def _check_recent_telegram_delivery_errors(now) -> HealthCheck:
 
 
 def _check_recent_gmail_check(now) -> HealthCheck:
+    active_mailboxes = MailboxAccount.objects.filter(is_active=True)
+    if not active_mailboxes.exists():
+        return HealthCheck(
+            True,
+            "idle",
+            _("No active mailboxes configured. Gmail freshness check is not applicable."),
+        )
+
     polling = GmailPollingSettings.load()
     local_now = timezone.localtime(now)
 
@@ -182,7 +194,7 @@ def _check_recent_gmail_check(now) -> HealthCheck:
                 % {"minutes": startup_grace_minutes - minutes_since_start},
             )
 
-    newest_check = MailboxAccount.objects.filter(is_active=True).aggregate(
+    newest_check = active_mailboxes.aggregate(
         last_checked_at=Max("last_checked_at"),
     )["last_checked_at"]
     if newest_check is None:
@@ -371,6 +383,7 @@ def _build_health_labels() -> dict:
         "details": _("Details"),
         "status_ok": _("OK"),
         "status_warning": _("Needs attention"),
+        "status_idle": _("Idle"),
         "status_error": _("Problem"),
         "load_error": _("Could not load service status."),
         "empty": _("—"),
